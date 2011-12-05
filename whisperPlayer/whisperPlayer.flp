@@ -1,0 +1,33 @@
+﻿<flash_project name="whisperPlayer" version="1">
+    <project_folder name="whispercast" expanded="true">
+        <project_folder name="osd" expanded="true">
+            <project_file path="./whispercast/osd/Overlay.as" filetype="as" />
+            <project_file path="./whispercast/osd/Color.as" filetype="as" />
+            <project_file path="./whispercast/osd/Crawler.as" filetype="as" />
+            <project_file path="./whispercast/osd/Osd.as" filetype="as" />
+            <project_file path="./whispercast/osd/Element.as" filetype="as" />
+        </project_folder>
+        <project_folder name="player" expanded="true">
+            <project_file path="./whispercast/player/CommonEvent.as" filetype="as" />
+            <project_file path="./whispercast/player/CommonState.as" filetype="as" />
+            <project_file path="./whispercast/player/ControlBar.as" filetype="as" />
+            <project_file path="./whispercast/player/ControlBarNormal.as" filetype="as" />
+            <project_file path="./whispercast/player/ControlBarSimple.as" filetype="as" />
+            <project_file path="./whispercast/player/DisplayEvent.as" filetype="as" />
+            <project_file path="./whispercast/player/Player.as" filetype="as" />
+            <project_file path="./whispercast/player/PlayerEvent.as" filetype="as" />
+            <project_file path="./whispercast/player/PlayerState.as" filetype="as" />
+            <project_file path="./whispercast/player/UI.as" filetype="as" />
+        </project_folder>
+        <project_folder name="addons" expanded="true">
+            <project_file path="./whispercast/addons/LiveRail.as" filetype="as" />
+            <project_file path="./whispercast/addons/AddonEvent.as" filetype="as" />
+            <project_file path="./whispercast/addons/Addon.as" filetype="as" />
+        </project_folder>
+        <project_file path="./whispercast/BasePlayer.as" filetype="as" />
+        <project_file path="./whispercast/Logger.as" filetype="as" />
+    </project_folder>
+    <project_file path="./JSON.as" filetype="as" />
+    <project_file path="./whisperPlayer.fla" filetype="fla" profile="" def_file="true" />
+    <project_file path="./whisperPlayer.as" filetype="as" />
+</flash_project>

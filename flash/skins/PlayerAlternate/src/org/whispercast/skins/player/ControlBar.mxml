@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.*"
+		xmlns:whispercast_player="org.whispercast.player.*"
+		xmlns:whispercast_osd="org.whispercast.osd.*"
+		xmlns:whispercast_skins="org.whispercast.skins.player.*"
+		creationComplete="onCreationComplete(event)"
+		addedToStage="onAddedToStageHandler(event)"
+		currentState="noProgress" styleName="controlBar">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("org.whispercast.player.ControlBar")]
+	</fx:Metadata>
+
+	<fx:Declarations>
+		<s:Parallel id="transitionEffect" duration="250">
+			<s:Fade target="{progressBarGroup}"/>
+			<s:Fade target="{timeGroup}"/>
+		</s:Parallel>
+	</fx:Declarations>
+	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		@namespace whispercast "org.whispercast.*";
+		@namespace whispercast_player "org.whispercast.player.*";
+		@namespace whispercast_osd "org.whispercast.osd.*";
+		@namespace whispercast_skins "org.whispercast.skins.player.*";
+		
+		* {
+			foreColorLow: #6683cc;
+			foreColorHigh: #99b3ff;
+			
+			backColorLow: #000000;
+			backColorHigh: #202020;
+			
+			borderColorLow: #252525;
+			borderColorHigh: #353535;
+			
+			disabledColorLow: #707070;
+			disabledColorHigh: #c0c0c0;
+			
+			selectedColorLow: #cc9000;
+			selectedColorHigh: #ffc000;
+			
+			textColorLow: #909090;
+			textColorHigh: #c0c0c0;
+		}
+	</fx:Style>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Menu;
+			import mx.core.FlexGlobals;
+			import mx.core.UIComponent;
+			import mx.events.EffectEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			
+			import org.whispercast.player.*;
+			
+			protected function formatTime(time:Number):String
+			{
+				var h:Number = Math.floor(time/3600);
+				time = time-3600*h;
+				var m:Number = Math.floor(time/60);
+				time = time-60*m;
+				var s:Number = Math.floor(time);
+				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s;
+			}
+			protected function formatTimeScrubBar(time:Number):String
+			{
+				var h:Number = Math.floor(time/3600);
+				time = time-3600*h;
+				var m:Number = Math.floor(time/60);
+				time = time-60*m;
+				var s:Number = Math.floor(time);
+				//time = Math.floor(1000*(time-s));
+				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s;//+"."+(time<10 ? "00":(time<100 ? "0" : ""))+time ;
+			}
+			protected function formatVolumeVolumeBar(volume:Number):String
+			{
+				return Math.round(100*volume)+'';
+			}
+			
+			protected function onCreationComplete(event:FlexEvent):void
+			{
+				setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
+				setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
+				setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
+				setStyle('backColorHigh', scrubBar.getStyle('backColorHigh'));
+				setStyle('borderColorLow', scrubBar.getStyle('borderColorLow'));
+				setStyle('borderColorHigh', scrubBar.getStyle('borderColorHigh'));
+				setStyle('selectedColorLow', scrubBar.getStyle('selectedColorLow'));
+				setStyle('selectedColorHigh', scrubBar.getStyle('selectedColorHigh'));
+				setStyle('textColorLow', scrubBar.getStyle('textColorLow'));
+				setStyle('textColorHigh', scrubBar.getStyle('textColorHigh'));
+				
+				scrubBar.dataTipFormatFunction = formatTimeScrubBar;
+				volumeBar.dataTipFormatFunction = formatVolumeVolumeBar;
+			}
+			
+			private var progressBarHidden_:Boolean = true;
+			private var mouseOffStage_:Boolean = false;
+			
+			protected function onAddedToStageHandler(event:Event):void
+			{
+				var checkControlBarExpansionTimer:Timer = new Timer(1500);
+				checkControlBarExpansionTimer.addEventListener(TimerEvent.TIMER, function(e:Event):void {
+					progressBarHidden_ = true;
+					updateProgressBarState_();
+				});
+				
+				systemManager.addEventListener(MouseEvent.MOUSE_OUT, function(event:MouseEvent):void {
+					mouseOffStage_ = event.relatedObject == null;
+					updateProgressBarState_();
+				});
+				systemManager.addEventListener(MouseEvent.MOUSE_MOVE, function(event:MouseEvent):void {
+					mouseOffStage_ = false;
+					
+					progressBarHidden_ = false;
+					checkControlBarExpansionTimer.reset();
+					checkControlBarExpansionTimer.start();
+					
+					updateProgressBarState_();
+				});
+				checkControlBarExpansionTimer.start();
+			}
+			
+			private var progressBarThumbPressed_:Boolean = false;
+			protected function onProgressBarThumbPress(event:Event):void
+			{
+				progressBarThumbPressed_ = true;
+				updateProgressBarState_();
+			}
+			protected function onProgressBarThumbRelease(event:Event):void
+			{
+				progressBarThumbPressed_ = false;
+				updateProgressBarState_();
+			}
+			
+			protected function updateProgressBarState_():void
+			{ 
+				var expanded:Boolean = !progressBarHidden_ ||
+					(progressBarThumbPressed_ || (!mouseOffStage_ && controlBar.hitTestPoint(stage.mouseX, stage.mouseY)));
+				
+				switch (scrubBar.skin.currentState) {
+					case "normal":
+					case "normalExpanded":
+						scrubBar.skin.currentState = expanded ? "normalExpanded" : "normal";
+						break;
+					case "disabled":
+					case "disabledExpanded":
+						scrubBar.skin.currentState = expanded ? "disabledExpanded" : "disabled";
+						break;
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="noProgress" stateGroups="noProgressGroup"/>
+		<s:State name="noTime" stateGroups="noTimeGroup"/>
+		<s:State name="noProgressOrTime" stateGroups="noProgressGroup,noTimeGroup"/>
+	</s:states>
+	
+	<s:transitions>
+		<s:Transition effect="{transitionEffect}"/>
+	</s:transitions>
+	
+	<s:Group id="controlBar" width="100%">
+		<!-- Control bar background -->
+		<s:Rect width="100%" height="100%">
+			<s:fill>
+				<s:LinearGradient rotation="90">
+					<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+					<s:GradientEntry color="{getStyle('backColorLow')}"/>
+				</s:LinearGradient>
+			</s:fill>
+		</s:Rect>
+		<s:HGroup width="100%" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5" verticalAlign="middle" gap="10">
+			<!-- Play/Stop  button -->
+			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="22" height="22" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
+			<!-- OSD area -->
+			<s:Group width="100%">
+				<!-- OSD area background -->
+				<!--
+				<s:Rect width="100%" height="100%">
+					<s:fill>
+						<s:SolidColor color="{getStyle('backColorLow')}"/>
+					</s:fill>
+				</s:Rect>
+				-->
+				<s:HGroup width="100%" height="20" verticalAlign="middle">
+					<s:Label id="osd_area" text="" lineBreak="explicit" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
+				</s:HGroup>
+				<!-- OSD area border -->
+				<!--
+				<s:Rect width="100%" height="100%">
+					<s:stroke>
+						<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+							<s:GradientEntry color="{getStyle('borderColorLow')}"/>
+							<s:GradientEntry color="{getStyle('borderColorHigh')}"/>
+						</s:LinearGradientStroke>
+					</s:stroke>
+				</s:Rect>
+				-->
+			</s:Group>
+			<!-- Controls -->
+			<s:HGroup>
+				<s:Group id="timeGroup" visible="true" visible.noTimeGroup="false">
+					<!-- Time background -->
+					<s:Rect width="100%" height="100%">
+						<s:fill>
+							<s:SolidColor color="{getStyle('backColorLow')}"/>
+						</s:fill>
+					</s:Rect>
+					<!-- Time -->
+					<s:HGroup verticalAlign="middle" gap="0" paddingTop="6" paddingBottom="3">
+						<s:Label id="time" text="-:--:--" lineBreak="explicit" width="42" textAlign="right" fontSize="11" color="{getStyle('textColorHigh')}"/>
+						<s:Label text="/" lineBreak="explicit" width="7" textAlign="center" fontSize="11" color="{getStyle('textColorLow')}"/>
+						<s:Label id="duration" text="-:--:--" lineBreak="explicit" width="43" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
+					</s:HGroup>
+					<!-- Time border -->
+					<s:Rect width="100%" height="100%">
+						<s:stroke>
+							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+								<s:GradientEntry color="{getStyle('borderColorLow')}"/>
+								<s:GradientEntry color="{getStyle('borderColorHigh')}"/>
+							</s:LinearGradientStroke>
+						</s:stroke>
+					</s:Rect>
+				</s:Group>
+				<!-- Volume + mute button -->
+				<s:HGroup gap="-4" verticalAlign="middle">
+					<s:ToggleButton id="mute" toolTip="Mute" width="20" height="20" label="Mute" buttonMode="true" selected="{hostComponent.output.muted}" skinClass="org.whispercast.skins.player.MuteButton"/>
+					<whispercast:HSliderBar id="volumeBar" width="40" height="18" minimum="0" maximum="1" slideDuration="0" value="{hostComponent.output.volume}" snapInterval="0" showDataTip="false" skinClass="org.whispercast.skins.player.VolumeBar"/>
+				</s:HGroup>
+				<!-- Switch button -->
+				<s:ToggleButton id="toggleSecondary" toolTip="Toggle Picture-In-Picture" skinClass="org.whispercast.skins.player.ToggleButton" buttonMode="true" enabled="{parentApplication.isSecondaryAvailable}" selected="{!parentApplication.isSecondaryVisible}"/>
+				<!-- Fullscreen button -->
+				<s:ToggleButton id="fullScreen" toolTip="Toggle Fullscreen" skinClass="org.whispercast.skins.player.FullscreenButton" buttonMode="true" selected="{parentApplication.isFullscreen}"/>
+			</s:HGroup>
+		</s:HGroup>
+		<!-- Progress bar group -->
+		<s:Group id="progressBarGroup" width="100%" top="{-progressBarGroup.height+1}" visible.noProgressGroup="false">
+			<!-- Progress bar background -->
+			<s:Rect width="100%" height="100%">
+				<s:fill>
+					<s:SolidColor color="{getStyle('backColorLow')}"/>
+				</s:fill>
+			</s:Rect>
+			<s:Group id="progressBarProgress" width="100%" height="100%">
+				<!-- Progress bar progress -->
+				<s:Group width="100%" height="100%">
+					<s:Group id="progressBar" width="100%" height="100%">
+						<s:Rect width="100%" height="100%">
+							<s:fill>
+								<s:LinearGradient rotation="90">
+									<s:GradientEntry color="{getStyle('foreColorHigh')}"/>
+									<s:GradientEntry color="{getStyle('foreColorLow')}"/>
+								</s:LinearGradient>
+							</s:fill>
+						</s:Rect>
+					</s:Group>
+				</s:Group>
+			</s:Group>
+			<!-- Progress bar scrubber -->
+			<whispercast:HSliderBar id="scrubBar" depth="10" width="100%" height="100%" minimum="0" maximum="{hostComponent.output.duration}" snapInterval="0" slideDuration="0" liveDragging="false" visible="{hostComponent.output.seekable}" enabled="{hostComponent.output.isPlaying &amp;&amp; hostComponent.output.seekable}" updateOnMouseDown="true" skinClass="org.whispercast.skins.player.ScrubBar" thumbPress="onProgressBarThumbPress(event)" thumbRelease="onProgressBarThumbRelease(event)"/>
+		</s:Group>
+	</s:Group>
+</s:Skin>

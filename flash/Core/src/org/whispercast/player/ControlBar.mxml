@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SkinnableComponent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					  xmlns:s="library://ns.adobe.com/flex/spark" 
+					  xmlns:mx="library://ns.adobe.com/flex/mx"
+					  xmlns:whispercast="org.whispercast.*"
+					  xmlns:whispercast_osd="org.whispercast.osd.*"
+					  xmlns:whispercast_player="org.whispercast.player.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Metadata>
+		[SkinState("normal")]
+		[SkinState("noProgress")]
+		[SkinState("noProgressOrTime")]
+		
+		[Style(name="foreColorLow",inherit=true,type="uint",format="Color")]
+		[Style(name="foreColorHigh",inherit=true,type="uint",format="Color")]
+		[Style(name="backColorLow",inherit=true,type="uint",format="Color")]
+		[Style(name="backColorHigh",inherit=true,type="uint",format="Color")]
+		[Style(name="disabledColorLow",inherit=true,type="uint",format="Color")]
+		[Style(name="disabledColorHigh",inherit=true,type="uint",format="Color")]
+		[Style(name="textColorLow",inherit=true,type="uint",format="Color")]
+		[Style(name="textColorHigh",inherit=true,type="uint",format="Color")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.binding.utils.ChangeWatcher;
+			import mx.core.*;
+			import mx.events.*;
+			
+			import org.whispercast.*;
+			
+			import spark.components.Label;
+			import spark.components.ToggleButton;
+			import spark.components.supportClasses.SliderBase;
+			import spark.components.supportClasses.TextBase;
+			import spark.components.supportClasses.TrackBase;
+			import spark.events.TrackBaseEvent;
+			
+			[SkinPart(required="true", type="spark.components.ToggleButton")]
+			public var playAndStop:spark.components.ToggleButton;
+			[SkinPart(required="false", type="spark.components.ToggleButton")]
+			public var pauseAndResume:spark.components.ToggleButton;
+			[SkinPart(required="false", type="spark.components.ToggleButton")]
+			public var toggleSecondary:spark.components.ToggleButton;
+			[SkinPart(required="false", type="spark.components.ToggleButton")]
+			public var fullScreen:spark.components.ToggleButton;
+			
+			[SkinPart(required="false", type="mx.core.IDataRender")]
+			public var progress:mx.core.IDataRenderer;
+			[SkinPart(required="false", type="mx.core.UIComponent")]
+			public var progressBar:mx.core.UIComponent;
+			
+			[SkinPart(required="true", type="spark.components.ToggleButton")]
+			public var mute:spark.components.ToggleButton;
+			[SkinPart(required="false", type="spark.components.supportClasses.TrackBase")]
+			public var volumeBar:spark.components.supportClasses.TrackBase;
+			
+			[SkinPart(required="false", type="spark.components.supportClasses.TrackBase")]
+			public var scrubBar:spark.components.supportClasses.TrackBase;
+			
+			[SkinPart(required="true", type="spark.components.supportClasses.TextBase")]
+			public var time:spark.components.supportClasses.TextBase;
+			[SkinPart(required="true", type="spark.components.supportClasses.TextBase")]
+			public var duration:spark.components.supportClasses.TextBase;
+			
+			private var volume_:Number = 0.7;
+			[Bindable]
+			public function get volume():Number
+			{
+				return volume_;
+			}
+			public function set volume(volume:Number):void
+			{
+				volume_ = volume;
+			}
+			
+			private var muted_:Boolean = false;
+			[Bindable]
+			public function get muted():Boolean
+			{
+				return muted_;
+			}
+			public function set muted(muted:Boolean):void
+			{
+				muted_ = muted;
+			}
+			
+			private var scrubBarChangeWatcher_:ChangeWatcher = null;
+			
+			private function formatTime_(time:Number):String
+			{
+				var h:Number = Math.floor(time/3600);
+				time = time-3600*h;
+				var m:Number = Math.floor(time/60);
+				time = time-60*m;
+				var s:Number = Math.floor(time);
+				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s;
+			}
+			private function updateTime_(e:Event):void
+			{
+				if (!isNaN(output.duration))
+				{
+					if (duration)
+						duration.text = formatTime_(output.duration);
+					
+					if (!isNaN(output.time))
+					{
+						if (time)
+							time.text = formatTime_(output.time);
+						
+						var percent:Number = 100*output.time/output.duration;
+						if (progress)
+							progress.data = percent;
+						if (progressBar)
+							progressBar.percentWidth = percent;
+						if (scrubBar && !isTracking_)
+							scrubBar.value = output.time;
+						return;
+					}
+					
+					if (time)
+						time.text = '-:--:--';
+					return;
+				}
+				
+				if (progress)
+					progress.data = 0;
+				if (progressBar)
+					progressBar.percentWidth = 0;
+				if (scrubBar && !isTracking_)
+					scrubBar.value = 0;
+				
+				if (time)
+					time.text = '-:--:--';
+			}
+			private function updateDuration_(e:Event):void
+			{
+				updateTime_(null);
+				invalidateSkinState();
+			}
+			private function updatePlaying_(e:Event):void
+			{
+				updateTime_(null);
+				invalidateSkinState();
+			}
+			
+			private function updateUrl_(e:Event):void {
+				invalidateSkinState();
+			}
+			
+			private var urlWatcher_:ChangeWatcher = null; 
+				
+			private var output_:VideoOutput;
+			[Bindable]
+			public function get output():VideoOutput
+			{
+				return output_;
+			}
+			public function set output(output:VideoOutput):void
+			{
+				if (output_)
+				{
+					urlWatcher_.unwatch();
+					urlWatcher_ = null;
+					
+					output.removeEventListener("Whispercast_VideoOutput_duration", updateDuration_);
+					output.removeEventListener("Whispercast_VideoOutput_time", updateTime_);
+					output.removeEventListener("Whispercast_VideoOutput_isPlaying", updatePlaying_);
+				}
+				output_ = output;
+				if (output_)
+				{
+					output.addEventListener("Whispercast_VideoOutput_isPlaying", updatePlaying_);
+					output.addEventListener("Whispercast_VideoOutput_time", updateTime_);
+					output.addEventListener("Whispercast_VideoOutput_duration", updateDuration_);
+					
+					urlWatcher_ = ChangeWatcher.watch(output_, "url", function(e:Event):void {
+						invalidateSkinState();
+					});
+					
+					updateDuration_(null);
+				}
+				else
+					invalidateSkinState();
+			}
+			
+			protected function playAndStop_clickHandler(event:Event):void
+			{
+				if (pauseAndResume)
+					output.togglePlay();
+				else
+					output.togglePlayOrPause();
+				
+				dispatchEvent(new FlexEvent("Whispercast_ControlBar_playAndStop_Clicked"));
+			}
+			protected function pauseAndResume_clickHandler(event:Event):void
+			{
+				output.togglePause();
+				
+				dispatchEvent(new FlexEvent("Whispercast_ControlBar_pauseAndResume_Clicked"));
+			}
+			protected function toggleSecondary_clickHandler(event:MouseEvent):void
+			{
+				FlexGlobals.topLevelApplication.toggleSecondary();
+			}
+			protected function fullScreen_clickHandler(event:MouseEvent):void
+			{
+				FlexGlobals.topLevelApplication.setIsFullscreen_(!FlexGlobals.topLevelApplication.isFullscreen);
+			}
+			protected function mute_clickHandler(event:Event):void
+			{
+				muted = !muted
+			}
+			protected function volumeBar_changeHandler(event:Event):void
+			{
+				muted = false;
+				volume = (event.target as spark.components.supportClasses.TrackBase).value;
+			}
+			
+			private var isTracking_:Boolean = false;
+			[Bindable(event="Whispercast_VideoPlayer_isTracking")]
+			public function get isTracking():Boolean
+			{
+				return isTracking_;
+			}
+			private function setIsTracking_(value:Boolean):void
+			{
+				if (value != isTracking_)
+				{
+					isTracking_ = value;
+					dispatchEvent(new FlexEvent("Whispercast_VideoPlayer_isTracking"));
+				}
+			}
+			
+			protected function scrubBar_changeHandler(event:Event):void
+			{
+				output_.seek(scrubBar.value);
+			}
+			protected function scrubBar_thumbPressHandler(event:TrackBaseEvent):void
+			{
+				setIsTracking_(true);
+			}
+			protected function scrubBar_thumbReleaseHandler(event:TrackBaseEvent):void
+			{
+				setIsTracking_(false);
+			}
+			
+			protected function initializeTrackBar_():void
+			{
+				if (output && scrubBar)
+				{
+					ChangeWatcher.watch(output, ['time'], function(event:Event):void {
+						if (!isTracking_)
+							scrubBar.value = output.time;
+					});
+				}
+			}
+			
+			override protected function partAdded(partName:String, instance:Object):void
+			{
+				super.partAdded(partName, instance);
+				
+				switch (partName)
+				{
+					case "playAndStop":
+						(instance as spark.components.ToggleButton).addEventListener(MouseEvent.CLICK, playAndStop_clickHandler);
+						break;
+					case "pauseAndResume":
+						(instance as spark.components.ToggleButton).addEventListener(MouseEvent.CLICK, pauseAndResume_clickHandler);
+						break;
+					case "mute":
+						(instance as spark.components.ToggleButton).addEventListener(MouseEvent.CLICK, mute_clickHandler);
+						break;
+					case "volumeBar":
+						(instance as spark.components.supportClasses.TrackBase).addEventListener(Event.CHANGE, volumeBar_changeHandler);
+						break;
+					case "toggleSecondary":
+						(instance as spark.components.ToggleButton).addEventListener(MouseEvent.CLICK, toggleSecondary_clickHandler);
+						break;
+					case "fullScreen":
+						(instance as spark.components.ToggleButton).addEventListener(MouseEvent.CLICK, fullScreen_clickHandler);
+						break;
+					case "scrubBar":
+						(instance as spark.components.supportClasses.TrackBase).addEventListener(Event.CHANGE, scrubBar_changeHandler);
+						(instance as spark.components.supportClasses.TrackBase).addEventListener(TrackBaseEvent.THUMB_PRESS, scrubBar_thumbPressHandler);
+						(instance as spark.components.supportClasses.TrackBase).addEventListener(TrackBaseEvent.THUMB_RELEASE, scrubBar_thumbReleaseHandler);
+						
+						initializeTrackBar_();
+						break;
+				}
+			}
+			
+			override protected function getCurrentSkinState():String
+			{
+				if (!output || output.url == null || isNaN(output.duration))
+					return "noProgressOrTime";
+				return "normal";
+			}
+		]]>
+	</fx:Script>
+</s:SkinnableComponent>

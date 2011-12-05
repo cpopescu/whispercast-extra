@@ -1,0 +1,103 @@
+// Copyright 2009 WhisperSoft s.r.l.
+// Author: Catalin Popescu
+//
+//
+// This contains the rpc-types for creating policies and elements defined
+// in the library of osd elements
+//
+
+///////////
+
+Verbatim cc {
+#include <whisperstreamlib/elements/auto/factory_types.h>
+}
+
+Verbatim Python {
+from factory import *
+}
+
+//////////
+
+// An element that decodes OSD control tags from FLV tags received from
+// received tag
+Type OsdDecoderElementSpec {
+}
+
+/////////
+
+// An element that encoded OSD control tags into FLV tags
+Type OsdEncoderElementSpec {
+}
+
+//////////
+
+// An element that can inject OSD control tags in a media flow received from
+// a driven element.
+// What OSD to inject are given via. RPC with the provided service path
+Type OsdInjectorElementSpec {
+}
+
+//////////
+
+// An element that associates OSDs with media path
+Type OsdAssociatorElementSpec {
+}
+
+//////////
+
+// An element that associates OSDs with media path, using remote configuration.
+Type OsdAssociatorClientElementSpec {
+}
+
+//////////
+
+// An element that saves the  OSD state received through a media flow that
+// passes through us. The idea is to save the state of OSD elements between
+// different runs of the same server.
+Type OsdStateKeeperElementSpec {
+  string media_name_;            // the media we filter (TODO: do we need this?)
+  optional bigint state_timeout_sec_;
+                                 // when the state for this source expires
+  optional bool use_only_memory_;
+                                 // don't save the state on disk (default false)
+  optional bool clear_on_switch_;
+                                 // on source switch tags we clear state
+}
+
+//////////
+
+Service OsdLibraryService {
+  //
+  // Functions for adding specifications for different element types
+  //
+  MediaOperationErrorData AddOsdDecoderElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdDecoderElementSpec spec);
+  MediaOperationErrorData AddOsdEncoderElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdEncoderElementSpec spec);
+  MediaOperationErrorData AddOsdInjectorElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdInjectorElementSpec spec);
+  MediaOperationErrorData AddOsdAssociatorElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdAssociatorElementSpec spec);
+  MediaOperationErrorData AddOsdStateKeeperElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdStateKeeperElementSpec spec);
+  MediaOperationErrorData AddOsdAssociatorClientElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      OsdAssociatorClientElementSpec spec);
+}

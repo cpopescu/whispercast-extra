@@ -1,0 +1,301 @@
+// Copyright 2009 WhisperSoft s.r.l.
+// Author: Catalin Popescu
+//
+//
+// This contains the rpc-types for creating policies and elements defined
+// in the library of osd elements
+//
+
+///////////
+
+Verbatim cc {
+#include <whisperstreamlib/elements/auto/factory_types.h>
+}
+
+Verbatim Python {
+from factory import *
+}
+
+////////////////////
+
+Type FeatureSpec {
+  string feature_name_;
+  string feature_file_;         // media dir based
+  int length_ms_;       // the feature may represent the first N ms of a clip
+                        // to be detected, this is the total length of the clip
+
+  optional float max_distance_C0_;
+  optional float max_distance_C1_;
+  optional float max_distance_C2_;
+  optional float max_distance_C3_;
+}
+
+Type FeatureDetectorElementSpec {
+  array<FeatureSpec> features_;
+  string media_name_;           // we detect features in this media
+}
+
+//////////
+
+Type TimeRangeElementSpec {
+  string home_dir_;             // Directory to be exported (under the server's
+                                // media storage directory)
+  string root_media_path_;      // we prepend this path to access the files
+                                // in our internal structures
+  string file_prefix_;          // we consider files w/ this prefix in home_dir
+                                // they should be in the 'buildup' form
+                                // produced  by whisperproc
+  optional bool utc_requests_;  // if true, we consider the times we receive
+                                // as UTC (default false). The timestamps
+                                // are always UTC
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
+Type TimeDelayPolicySpec {
+  string home_dir_;             // Directory to be exported (under the server's
+                                // media storage directory)
+  string root_media_path_;      // we prepend this path to access the files
+                                // in our internal structures
+  string file_prefix_;          // we consider files w/ this prefix in home_dir
+                                // they should be in the 'buildup' form
+                                // produced  by whisperproc
+  int time_delay_sec_;          // we delay play
+
+  optional bool disable_rpc_;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type HttpAuthorizerSpec {
+  array<string> servers_;
+  string query_path_format_;
+  array<ExtraHeaders> http_headers_;
+  array<string> body_lines_;
+  bool include_auth_headers_;
+  optional string success_body_;
+  optional int header_escapement_;        // default ESC_URL(1)
+  optional int body_escapement_;          // default ESC_URL(1)
+  optional int default_allowed_ms_;       // default 0
+  optional bool parse_json_authorizer_reply_;
+                                          // default false
+  optional string force_host_header_;     // default true
+  optional int num_retries_;              // default 3
+  optional int max_concurrent_requests_;  // default 1
+  optional int req_timeout_ms_;           // default 10000
+}
+
+//////////
+
+Type SchedulePlaylistItemSpec {
+  // item id
+  bigint id_;
+  // stream name to be played
+  string media_;
+  // local time specification, when this item will play
+  TimeSpec start_time_;
+}
+
+Type SchedulePlaylistPolicySpec {
+  // default media to be played when there's nothing to play from playlist.
+  string default_media_;
+  // playlist items.
+  array<SchedulePlaylistItemSpec> playlist_;
+  // to avoid short lived switches, set this (or to enforce them set this to
+  // zero) default: 3000
+  optional int min_switch_delta_ms_;
+
+  optional bool disable_rpc_;
+}
+
+Type SetSchedulePlaylistPolicySpec {
+  optional string default_media_;
+  optional bool switch_now_;
+  optional array<SchedulePlaylistItemSpec> playlist_;
+}
+
+Type SchedulePlayInfo {
+  // To specify default_media:
+  //    next_.id_ == -1 and
+  //    next_.media_ == default_media_
+  // If nothing info_ is not there
+  optional SchedulePlaylistItemSpec info_;
+  // [ms from epoch] the moment this item will play or started playing
+  // If nothing is next, then begin_ts_ == 0.
+  bigint begin_ts_;
+}
+
+Type ScheduleProgramElement {
+  bigint id_;
+  string media_;
+  bigint start_time_;
+  string readable_start_time_;   // for debug
+}
+
+Type ScheduleProgram {
+  int error_;
+  optional string description_;
+  optional array<ScheduleProgramElement> program_;
+}
+
+//////////
+
+// An element that joins multiple sources into one stream and assigns flavours
+// to them
+
+Type FlavouringSpec {
+  int flavour_mask_;       // we mask the tags that come on this path
+                           // with this flavour..
+  string media_prefix_;    // the media that prefixes the received request
+                           // e.g. if we get a request into the flavoring
+                           //      source named "f" for f/some/stuff,
+                           // for a "media_prefix_" of abc/
+                           //      rewrite it to "abc/some/stuff"
+}
+Type FlavouringElementSpec {
+  array<FlavouringSpec> flavours_;
+}
+
+
+//////////
+
+// When in a state we can take an action based on this type of info:
+Type LogicAction {
+  int tag_type_;     // the tag type on which to take action
+                     // - LAST_STREAM_TYPE
+                     // (e.g. for TYPE_SOURCE_CHANGED  = (1<<30) + 1
+                     //  use just 1)
+  optional string tag_param_;   // a parameter to consider this action a hit
+                                // (to match the control_tag->ToString())
+  optional int num_to_switch_;  // switch to the other state after these
+                                // many tags of type observed (default 1)
+  string new_state_name_;       // when the action condition is met switch
+                                // to this other logic state
+  optional int extra_media_id_;   // if this action happend in an extra media
+}
+Type LogicState {
+  string name_;                 // name of the state
+  optional string media_;       // if set, when switching to this state we
+                                // also switch the media to this
+  array<LogicAction> actions_;   // these desctibe how to transition from
+                                 // this state ..
+                     // (Default we transition on EOS to default_state_name_)
+  optional int max_state_time_ms_;      // after this time in this state we
+                                        // switch automatically to
+                                        // timeout_state_name_
+  optional string timeout_state_name_;  // where to switch on a timeout (above)
+}
+
+Type LogicPlaylistSpec {
+  string default_state_name_;    // we play this by default (also start
+                                 // by playing this..)
+  array<LogicState> states_;
+}
+Type LogicPlaylistPolicySpec {
+  LogicPlaylistSpec playlist_;
+  optional array<string> extra_media_;  // also watch these things
+}
+
+////////////////////
+
+Service ExtraLibraryService {
+  MediaOperationErrorData AddFeatureDetectorElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      FeatureDetectorElementSpec spec);
+  MediaOperationErrorData AddTimeRangeElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      TimeRangeElementSpec spec);
+  MediaOperationErrorData AddFlavouringElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      FlavouringElementSpec spec);
+  MediaOperationErrorData AddTimeDelayPolicySpec(
+      string name,
+      TimeDelayPolicySpec spec);
+  MediaOperationErrorData AddSchedulePlaylistPolicySpec(
+      string name,
+      SchedulePlaylistPolicySpec spec);
+  MediaOperationErrorData AddLogicPlaylistPolicySpec(
+      string name,
+      LogicPlaylistPolicySpec spec);
+
+  MediaOperationErrorData AddHttpAuthorizerSpec(
+      string name,
+      HttpAuthorizerSpec spec);
+
+}
+
+Service LogicPlaylistPolicyService {
+  LogicPlaylistSpec GetPlaylist();
+  MediaOperationErrorData SetPlaylist(LogicPlaylistSpec spec);
+  string GetCurrentState();
+  bool SetCurrentState(string state_name);
+}
+
+Service SchedulePlaylistPolicyService {
+  // returns an array of all items in playlist + default media
+  SchedulePlaylistPolicySpec GetPlaylist();
+  // clears playlist, sets new items + default media
+  MediaOperationErrorData SetPlaylist(SetSchedulePlaylistPolicySpec playlist);
+
+  // return default media name
+  string GetDefaultMedia();
+  // set default media
+  void SetDefaultMedia(string default_media, bool switch_now);
+
+  // Returns the next item to be played.
+  SchedulePlayInfo GetNextPlay();
+
+  // Returns the schedule .. simple..
+  ScheduleProgram GetProgram(string query_date, int num_schedules);
+
+  // Returns the current item playing.
+  // Using the same convention with NextSchedulePlaylistItemSpec:
+  //  - if default_media is playing then
+  //     id_ == -1
+  //     media_ == default_media_
+  SchedulePlayInfo GetCurrentPlay();
+}
+
+Service TimeDelayPolicyService {
+  // TODO: !!
+}
+
+Service TimeRangeElementService {
+  // Returns the <startdata>/<enddate> of the range
+  string GetRange(string range_name);
+  // Returns all the ranges we know about (list of names)
+  array<string> GetAllRangeNames();
+  // Sets / adds / removes arange. Set an empty range_dates string
+  // to remove.
+  // Returns true if the range was set / added or false if it was
+  // removed / error
+  bool SetRange(string range_name, string range_dates);
+}
+
+Service FlavouringElementService {
+  // add a flavour.
+  // returns: true, success.
+  //          false, the new flavour overlaps with an existing flavour.
+  MediaOperationErrorData AddFlavour(FlavouringSpec spec);
+  
+  // delete a flavour.
+  // returns: true, success.
+  //          false, flavour not found.
+  MediaOperationErrorData DelFlavour(int flavour_mask);
+  
+  // returns all flavours
+  array<FlavouringSpec> GetFlavours();
+  
+  // set all flavours.
+  // returns: true, success.
+  //          false, the new flavours are not exclusive. Some new flavours mask
+  //          overlap.
+  MediaOperationErrorData SetFlavours(array<FlavouringSpec> flavours);
+}

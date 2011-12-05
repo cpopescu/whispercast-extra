@@ -1,0 +1,178 @@
+//
+// Author: Cosmin Tudorache
+
+//NOTE:
+// The FileTranscodingStatus is defined in "status.rpc".
+// You have to process both "status.rpc" and "manager.rpc" at once.
+
+Type FileOutputDir {
+  string dir_;
+  array<string> files_;
+}
+
+// This is the result for a single file, on a single slave.
+Type FileSlaveOutput {
+  // use this username to scp files
+  string scp_username_;
+  // the ip of the machine containing the files.
+  string ip_;
+  // list of result files. Absolute paths.
+  //array<string> files_;
+  array<FileOutputDir> dirs_;
+}
+
+// This structure travels between slave->master.
+Type FileState {
+  // file identifier. 
+  // Can be -1 (invalid) (e.g. on file NOT_FOUND) 
+  bigint id_;
+  
+  // FileState codes:
+  //  "Transferring" - the file is being transferred
+  //  "Transferred" - the file is transferred and no transcoding is in progress
+  //  "Transcoding" - the file is being transcoded
+  //  "PostProcessing" - the file is being post processed
+  //  "Outputting" - result is duplicated between all output dirs
+  //  "Distributing" - result is duplicated between all slaves
+  //  "Ready" - the result is ready in all output dirs
+  //  "TransferError" - transfer error
+  //  "TranscodeError" - transcode error
+  //  "PostProcessError" - post process error
+  //  "NotFound" - no such file_id
+  //  "Duplicate" - duplicate file_id
+  //  "InvalidParameter" - invalid parameter
+  //  "DiskError" - failed to move file, failed to create directory
+  //  "Idle" - file is just on master, no slave was selected for processing
+  //  "ConnectionError" - master lost connection to file associated slave
+  //  "BadSlaveState" - the slave reported an invalid status value.
+  string state_;
+  
+  // May indicate an error description.
+  // If state_ is not an error, this is empty (""); 
+  string error_;
+
+  // Path to ouput (transcoded) files if state_ == READY,
+  // else this is empty. 
+  FileSlaveOutput output_;
+
+  // the transcoding progress & status for the input file.
+  FileTranscodingStatus transcoding_status_;
+}
+
+Service SlaveManager {
+  //  Copy file from remote "file_url" and store it locally.
+  //  Announce completion with RPC MasterManager::NotifyStateChange 
+  //   using ip/port/protocol/path/codec from "master_uri".
+  //  If IP is 0.0.0.0, use IP from the transport layer of current rpc.
+  // file_url: file path on master. Does not contain IP.
+  //           You have to obtain IP from transport.
+  // master_uri: e.g. "http://192.168.1.2:8080/rpc/master?codec=json"
+  //                  "tcp://192.168.1.2:6542?codec=binary"
+  //                  "tcp://0.0.0.0:3456?codec=binary" => use IP from transport layer
+  // slave_id: this value must be specified in every NotifyStateChange.
+  // Returns new file state (after copy starts).
+  FileState Copy(string file_url, bigint file_id,
+                 string process_cmd, map<string,string> process_params,
+                 string master_uri, string slave_id);
+  
+  //  Start processing a transferred file.
+  //  Announce completion with RPC MasterManager::NotifyStateChange 
+  //  using ip/port/protocol/path/codec from "master_uri".
+  //  If IP is 0.0.0.0, use IP from the transport layer of current rpc.
+  // Returns new file state (after process starts).
+  FileState Process(bigint file_id);
+  
+  // Check file state.
+  FileState GetFileState(bigint file_id);
+  
+  // Forget about given "file_id".
+  // Clear download and transcode directories.
+  //  erase_output: if true, clears output directory.
+  // After this call, a subsequent "GetFileState" returns state: NOT_FOUND.
+  void Delete(bigint file_id, bool erase_output);
+  
+  // returns internal state
+  string DebugToString();
+}
+
+Service MasterManager {
+  // Notify file state change. Called by the SlaveManager.
+  //input:
+  // slave_id: the ID assigned by master, on SlaveManager::Copy and
+  //           SlaveManager::Process. Helps master identify slave.
+  // state: the new state (includes file identifier).
+  void NotifyStateChange(string slave_id, FileState state);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//                           Master Control                                 //
+//////////////////////////////////////////////////////////////////////////////
+
+// Similar to FileState, but used only for MasterControl reporting
+Type FileStateControl {
+  // file id; -1 indicates a missing file.
+  bigint id_;
+  // path to original file, on master
+  string path_;
+  // the initial process command, given on MasterControl::AddFile
+  string process_cmd_;
+  // the initial process params, given on MasterControl::AddFile
+  map<string, string> process_params_;
+  // file state. Uses the same names as in FileState.
+  string state_;
+  // last error description
+  string error_;
+  // timestamp of the last state change
+  bigint ts_state_change_;
+  // after the file has been TRANSCODED this attribute contains path to
+  // ouput (processed) files. Otherwise this is empty.
+  // Every FileSlaveOutput contains the slave IP and internal path to 
+  // result files;
+  array<FileSlaveOutput> output_;
+  // the transcoding progress & status for the input file.
+  FileTranscodingStatus transcoding_status_;
+}
+
+//
+//  User control over the master manager.
+//
+Service MasterControl {
+  // Start processing a new file.
+  //input:
+  // path: path to file to be processed. The file is not moved or modified.
+  //       Instead it will be copied to slave and processed.
+  // process_cmd: what to do with this file. ProcessCmd codes:
+  //   - "transcode": will copy, transcode, post-process the file
+  //   - "post_process": will copy, post-process the file
+  //   - "copy": will just copy the file 
+  //returns: file id.
+  bigint AddFile(string path, string process_cmd,
+                 map<string, string> process_params);
+  
+  // Get file state.
+  FileStateControl GetFileState(bigint file_id);
+  
+  // Get all files state.
+  array<FileStateControl> ListFiles();
+  
+  // List all files, doesn't compute aggregates like ListFiles.
+  // For debug only.
+  array<FileStateControl> DebugDumpFiles();
+  
+  // Forget about the given file_id.
+  void Complete(bigint file_id);
+
+  // Completely remove file.
+  // erase_master_original: if true, removes original file on master.
+  //                        else, the original file remains on master.
+  // erase_slave_output: if true, removes transcoded output file(s) on slave.
+  //                     else, the output file remains on slave.
+  // Applicable to all file states.
+  void Delete(bigint file_id, bool erase_master_original,
+                              bool erase_slave_output);
+
+  // If the file is in error state, restart whole process from IDLE.
+  // If the file is completed, do nothing.
+  // Returns new file state. Uses the same 'state name' as in FileState.
+  string Retry(bigint file_id);
+}

@@ -1,0 +1,49 @@
+================================================== SET STATE:
+{"overlays": [{"id": "o-009"}, {"id": "o-008"}, {"id": "o-007"}, {"id": "o-006"}, {"id": "o-002"}, {"id": "o-000"}], "crawlers": [{"id": "c-009"}, {"id": "c-007"}, {"id": "c-004"}], "osds": [{"media": "000\/", "crawlers": [{"crawler_id": "c-009", "item_id": "000-000", "item": {"content": "item-c-009-000-000"}}, {"crawler_id": "c-007", "item_id": "000-001", "item": {"content": "item-c-007-000-001"}}, {"crawler_id": "c-004", "item_id": "000-002", "item": {"content": "item-c-004-000-002"}}], "overlays": [{"id": "o-008", "content": "overlay-o-008-000-000"}, {"id": "o-002", "content": "overlay-o-002-000-001"}], "eos_clear_overlays": true , "eos_clear_crawlers": true , "eos_clear_crawl_items": true , "eos_clear_pip": true }]}
+--------------------
+STATE: 0, MEDIA: 0
+000 >>> OsdTagData{ftype=0(CreateOverlay), fparams=CreateOverlayParams{id="o-002", content="overlay-o-002-000-001", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], x_location=[missing], y_location=[missing], width=[missing], margins=[missing], ttl=[missing], show=[missing]}}
+001 >>> OsdTagData{ftype=0(CreateOverlay), fparams=CreateOverlayParams{id="o-008", content="overlay-o-008-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], x_location=[missing], y_location=[missing], width=[missing], margins=[missing], ttl=[missing], show=[missing]}}
+002 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-004", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+003 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-004", item_id="000-002", item=CrawlerItem{content="item-c-004-000-002", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+004 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-007", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+005 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-007", item_id="000-001", item=CrawlerItem{content="item-c-007-000-001", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+006 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-009", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+007 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-009", item_id="000-000", item=CrawlerItem{content="item-c-009-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+================================================== SET STATE:
+{"overlays": [{"id": "o-008"}, {"id": "o-006"}, {"id": "o-001"}], "crawlers": [{"id": "c-009"}, {"id": "c-008"}, {"id": "c-007"}, {"id": "c-004"}], "osds": [{"media": "000\/", "crawlers": [{"crawler_id": "c-008", "item_id": "000-000", "item": {"content": "item-c-008-000-000"}}, {"crawler_id": "c-004", "item_id": "000-001", "item": {"content": "item-c-004-000-001"}}, {"crawler_id": "c-009", "item_id": "000-002", "item": {"content": "item-c-009-000-002"}}, {"crawler_id": "c-007", "item_id": "000-003", "item": {"content": "item-c-007-000-003"}}], "overlays": [{"id": "o-006", "content": "overlay-o-006-000-000"}], "eos_clear_overlays": true , "eos_clear_crawlers": true , "eos_clear_crawl_items": true , "eos_clear_pip": true }]}
+--------------------
+STATE: 1, MEDIA: 0
+000 >>> OsdTagData{ftype=1(DestroyOverlay), fparams=DestroyOverlayParams{id="o-002"}}
+001 >>> OsdTagData{ftype=1(DestroyOverlay), fparams=DestroyOverlayParams{id="o-008"}}
+002 >>> OsdTagData{ftype=7(RemoveCrawlerItem), fparams=RemoveCrawlerItemParams{crawler_id="c-004", item_id="000-002"}}
+003 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-004"}}
+004 >>> OsdTagData{ftype=7(RemoveCrawlerItem), fparams=RemoveCrawlerItemParams{crawler_id="c-007", item_id="000-001"}}
+005 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-007"}}
+006 >>> OsdTagData{ftype=7(RemoveCrawlerItem), fparams=RemoveCrawlerItemParams{crawler_id="c-009", item_id="000-000"}}
+007 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-009"}}
+008 >>> OsdTagData{ftype=0(CreateOverlay), fparams=CreateOverlayParams{id="o-006", content="overlay-o-006-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], x_location=[missing], y_location=[missing], width=[missing], margins=[missing], ttl=[missing], show=[missing]}}
+009 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-004", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+010 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-004", item_id="000-001", item=CrawlerItem{content="item-c-004-000-001", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+011 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-007", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+012 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-007", item_id="000-003", item=CrawlerItem{content="item-c-007-000-003", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+013 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-008", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+014 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-008", item_id="000-000", item=CrawlerItem{content="item-c-008-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+015 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-009", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+016 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-009", item_id="000-002", item=CrawlerItem{content="item-c-009-000-002", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+================================================== SET STATE:
+{"overlays": [{"id": "o-009"}, {"id": "o-008"}, {"id": "o-007"}, {"id": "o-006"}, {"id": "o-003"}, {"id": "o-002"}, {"id": "o-000"}], "crawlers": [{"id": "c-008"}, {"id": "c-005"}, {"id": "c-004"}, {"id": "c-001"}], "osds": [{"media": "000\/", "crawlers": [{"crawler_id": "c-004", "item_id": "000-000", "item": {"content": "item-c-004-000-000"}}, {"crawler_id": "c-001", "item_id": "000-001", "item": {"content": "item-c-001-000-001"}}], "overlays": [{"id": "o-007", "content": "overlay-o-007-000-000"}], "eos_clear_overlays": true , "eos_clear_crawlers": true , "eos_clear_crawl_items": true , "eos_clear_pip": true }]}
+--------------------
+STATE: 2, MEDIA: 0
+000 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-007"}}
+001 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-009"}}
+002 >>> OsdTagData{ftype=1(DestroyOverlay), fparams=DestroyOverlayParams{id="o-006"}}
+003 >>> OsdTagData{ftype=7(RemoveCrawlerItem), fparams=RemoveCrawlerItemParams{crawler_id="c-004", item_id="000-001"}}
+004 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-004"}}
+005 >>> OsdTagData{ftype=7(RemoveCrawlerItem), fparams=RemoveCrawlerItemParams{crawler_id="c-008", item_id="000-000"}}
+006 >>> OsdTagData{ftype=4(DestroyCrawler), fparams=DestroyCrawlerParams{id="c-008"}}
+007 >>> OsdTagData{ftype=0(CreateOverlay), fparams=CreateOverlayParams{id="o-007", content="overlay-o-007-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], x_location=[missing], y_location=[missing], width=[missing], margins=[missing], ttl=[missing], show=[missing]}}
+008 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-001", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+009 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-001", item_id="000-001", item=CrawlerItem{content="item-c-001-000-001", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}
+010 >>> OsdTagData{ftype=3(CreateCrawler), fparams=CreateCrawlerParams{id="c-004", speed=[missing], fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing], y_location=[missing], margins=[missing], items=[missing], ttl=[missing], show=[missing]}}
+011 >>> OsdTagData{ftype=6(AddCrawlerItem), fparams=AddCrawlerItemParams{crawler_id="c-004", item_id="000-000", item=CrawlerItem{content="item-c-004-000-000", fore_color=[missing], back_color=[missing], link_color=[missing], hover_color=[missing]}}}

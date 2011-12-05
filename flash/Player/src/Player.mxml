@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   xmlns:whispercast="org.whispercast.*"
+			   xmlns:whispercast_player="org.whispercast.player.*"
+			   xmlns:whispercast_osd="org.whispercast.osd.*"
+			   xmlns:local="*"
+			   width="100%"
+			   height="100%"
+			   backgroundColor="0x000000" 
+			   creationComplete="onContentCreationComplete_(event)">
+	<fx:Declarations>
+		<s:Parallel id="controlBarTransition" duration="250">
+			<s:Fade target="{controlBar}"/>
+			<s:Move target="{controlBar}"/>
+		</s:Parallel>
+	</fx:Declarations>
+	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		@namespace whispercast "org.whispercast.*";
+		@namespace whispercast_player "org.whispercast.player.*";
+		@namespace whispercast_osd "org.whispercast.osd.*";
+		@namespace local "*";
+		
+		whispercast|ToolTip {
+			skinClass:ClassReference("org.whispercast.skins.ToolTip");
+		}
+		whispercast_player|ControlBar {
+			skinClass:ClassReference("org.whispercast.skins.player.ControlBar");
+		}
+		whispercast_player|VideoPlayer {
+			skinClass:ClassReference("org.whispercast.skins.player.VideoPlayerSkin");
+		}
+	</fx:Style>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.binding.utils.ChangeWatcher;
+			import mx.core.UIComponent;
+			import mx.core.UIComponentGlobals;
+			import mx.effects.Effect;
+			import mx.events.EffectEvent;
+			import mx.events.FlexEvent;
+			import mx.events.MoveEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.SystemManager;
+			import mx.managers.ToolTipManager;
+			import mx.messaging.AbstractConsumer;
+			
+			import org.whispercast.*;
+			import org.whispercast.osd.OSD;
+			import org.whispercast.player.*;
+			import org.whispercast.skins.osd.*;
+			import org.whispercast.skins.player.*;
+			
+			import spark.components.supportClasses.Skin;
+			import spark.components.supportClasses.SkinnableComponent;
+			import spark.layouts.BasicLayout;
+			
+			[Bindable(event="Whispercast_Player_isFullscreen")]
+			public function get isFullscreen():Boolean
+			{
+				return (systemManager.stage.displayState == StageDisplayState.FULL_SCREEN);
+			}
+			public function setIsFullscreen_(isFullscreen:Boolean):void
+			{
+				systemManager.stage.displayState = isFullscreen ? StageDisplayState.FULL_SCREEN : StageDisplayState.NORMAL;
+				dispatchEvent(new FlexEvent("Whispercast_Player_isFullscreen"));
+			}
+			
+			private var hardwareAcceleratedFullscreen_:Boolean = false;
+			
+			private var secondaryX_:Number = 0.75;
+			private var secondaryY_:Number = 0.75;
+			private var secondaryWidth_:Number = 0.5;
+			private var secondaryHeight_:Number = 0.5;
+			
+			[Bindable(event="Whispercast_Player_secondaryExtent")]
+			public function get secondaryX():Number
+			{
+				return secondaryX_;
+			}
+			[Bindable(event="Whispercast_Player_secondaryExtent")]
+			public function get secondaryY():Number
+			{
+				return secondaryY_;
+			}
+			[Bindable(event="Whispercast_Player_secondaryExtent")]
+			public function get secondaryWidth():Number
+			{
+				return secondaryWidth_;
+			}
+			[Bindable(event="Whispercast_Player_secondaryExtent")]
+			public function get secondaryHeight():Number
+			{
+				return secondaryHeight_;
+			}
+			
+			private var isSwitched_:Boolean = false;
+			[Bindable(event="Whispercast_Player_isSwitched")]
+			public function get isSwitched():Boolean
+			{
+				return isSwitched_;
+			}
+			
+			[Bindable(event="Whispercast_Player_isSecondaryAvailable")]
+			public function get isSecondaryAvailable():Boolean
+			{
+				return player1.output && player1.output.url;
+			}
+			
+			private var isSecondaryVisible_:Boolean = true;
+			[Bindable(event="Whispercast_Player_isSecondaryVisible")]
+			public function get isSecondaryVisible():Boolean
+			{
+				return isSecondaryVisible_;
+			}
+			
+			protected function setSecondaryVisible(isSecondaryVisible:Boolean):void
+			{
+				isSecondaryVisible_ = isSecondaryVisible;
+				dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryVisible"));
+			}
+			
+			public function toggleSecondary():void
+			{
+				setSecondaryVisible(!isSecondaryVisible_);
+			}
+				
+			private var showControlBar_:Boolean = true;
+			[Bindable]
+			public function get showControlBar():Boolean
+			{
+				return showControlBar_;
+			}
+			public function set showControlBar(showControlBar:Boolean):void
+			{
+				showControlBar_ = showControlBar;
+				Logger.info(this, 'Show control bar set to {0}', showControlBar);
+				
+				invalidateSkinState();
+			}
+			
+			private var autoHideControlBar_:Number = 0;
+			[Bindable]
+			public function get autoHideControlBar():Number
+			{
+				return autoHideControlBar_;
+			}
+			public function set autoHideControlBar(autoHideControlBar:Number):void
+			{
+				autoHideControlBar_ = autoHideControlBar;
+				Logger.info(this, 'Auto hide control bar {0}', autoHideControlBar);
+				
+				autoHideControlBarUpdate_();
+			}
+			
+			private function autoHideControlBarActivate_(e:Event):void
+			{
+				if (controlBarHidden_)
+				{
+					controlBarHidden_ = false;
+					updateCurrentState_();
+				}
+				controlBarUpdateTimer_.reset();
+				controlBarUpdateTimer_.start();
+			}
+			private function autoHideControlBarTimeout_(e:Event):void
+			{
+				if (!controlBarMouseOver_)
+				{
+					if (!controlBarHidden_)
+					{
+						controlBarHidden_ = true;
+						updateCurrentState_();
+					}
+				}
+				else
+				{
+					controlBarUpdateTimer_.start();
+				}
+			}
+			private function autoHideControlBarUpdate_():void
+			{
+				if (autoHideControlBar_ > 0)
+				{
+					controlBarUpdateTimer_ = new Timer(1000*autoHideControlBar_);
+					controlBarUpdateTimer_.repeatCount = 1;
+					
+					addEventListener(MouseEvent.MOUSE_MOVE, autoHideControlBarActivate_); 
+					controlBarUpdateTimer_.addEventListener(TimerEvent.TIMER_COMPLETE, autoHideControlBarTimeout_);
+					
+					controlBarHidden_ = true;
+					updateCurrentState_();
+					
+					autoHideControlBarActivate_(null);
+					layout = new BasicLayout();
+				}
+				else
+				{
+					removeEventListener(MouseEvent.MOUSE_MOVE, autoHideControlBarActivate_);
+					if (controlBarUpdateTimer_ != null)
+					{
+						controlBarUpdateTimer_.removeEventListener(TimerEvent.TIMER, autoHideControlBarTimeout_);
+						
+						controlBarUpdateTimer_.reset();
+						controlBarUpdateTimer_ = null;
+					}
+					layout = new VerticalLayout();
+					(layout as VerticalLayout).gap = 0;
+				}
+			}
+			
+			protected var controlBarUpdateTimer_:Timer = null;
+			protected var controlBarHidden_:Boolean = false;			
+			protected var controlBarMouseOver_:Boolean = false;
+			
+			protected function initializeControlBar_():void
+			{
+				var o:Player = this;
+				controlBar.addEventListener(MouseEvent.MOUSE_OVER, function(event:Event):void {
+					o.controlBarMouseOver_ = true;
+				});
+				controlBar.addEventListener(MouseEvent.MOUSE_OUT, function(event:Event):void {
+					o.controlBarMouseOver_ = false;
+				});
+				autoHideControlBarUpdate_();
+				
+				var f:Function = function(event:Event):void {
+					var m:VideoPlayer = isSwitched_ ? player1 : player0;
+					var s:VideoPlayer = isSwitched_ ? player0 : player1;
+					
+					if (!m.output.isPlaying || m.output.isPausing)
+						s.output.stopOrPause();
+				}
+				
+				controlBar.addEventListener("Whispercast_ControlBar_playAndStop_Clicked", f);
+				controlBar.addEventListener("Whispercast_ControlBar_pauseAndResume_Clicked", f);
+			}
+			
+			private function updateCurrentState_():void
+			{
+				if (!showControlBar || controlBarHidden_)
+					setCurrentState("noControlBar", true);
+				else
+					setCurrentState("normal", true);
+			}
+			
+			private function setSecondaryExtent_(x:Number, y:Number, width:Number, height:Number):void
+			{
+				var changed:Boolean = false;
+				
+				if (!isNaN(x) && x != secondaryX_)
+				{
+					changed = true;
+					secondaryX_ = x;
+				}
+				if (!isNaN(y) && y != secondaryY_)
+				{
+					changed = true;
+					secondaryY_ = y;
+				}
+				if (!isNaN(width) && x != secondaryWidth_)
+				{
+					changed = true;
+					secondaryWidth_ = width;
+				}
+				if (!isNaN(height) && x != secondaryHeight_)
+				{
+					changed = true;
+					secondaryHeight_ = height;
+				}
+				
+				if (changed)
+				{
+					dispatchEvent(new FlexEvent("Whispercast_Player_secondaryExtent"));
+					// TODO: How the heck am I supposed to invalidate !?
+					player1.includeInLayout = !player1.includeInLayout;
+				}
+			}
+			
+			private function loadString(name:String, index:int, def:String):String {
+				var value:String;
+				name = (index >= 0) ? (name+index) : name;
+				try {
+					if (systemManager.loaderInfo.parameters[name] != undefined) {
+						value = String(systemManager.loaderInfo.parameters[name]);
+						if (value == '') {
+							value = def;
+						}
+					} else {
+						value = def;
+					}
+				} catch(e:Error) {
+					value = def;
+				}
+				return value;
+			}
+			private function loadNumber(name:String, index:int, min:Number, max:Number, def:Number):Number {
+				var value:Number;
+				name = (index >= 0) ? (name+index) : name;
+				try {
+					if (systemManager.loaderInfo.parameters[name] != undefined) {
+						value = Number(systemManager.loaderInfo.parameters[name]);
+						if (!isNaN(max)) {
+							value = Math.min(max, value);
+						}
+						if (!isNaN(min)) {
+							value = Math.max(min, value);
+						}
+					} else {
+						value = def;
+					}
+				} catch(e:Error) {
+					value = def;
+				}
+				return value;
+			}
+			private function loadBoolean(name:String, index:int, def:Boolean):Boolean {
+				var value:Boolean;
+				name = (index >= 0) ? (name+index) : name;
+				try {
+					if (systemManager.loaderInfo.parameters[name] != undefined) {
+						switch (typeof(systemManager.loaderInfo.parameters[name]))
+						{
+							case 'string':
+								if (systemManager.loaderInfo.parameters[name] == '1' || systemManager.loaderInfo.parameters[name] == 'true')
+									value = true;
+								else
+									if (systemManager.loaderInfo.parameters[name] == '0' || systemManager.loaderInfo.parameters[name] == 'false')
+										value = false;
+									else
+										value = def;
+								break;
+							case 'number':
+								value = systemManager.loaderInfo.parameters[name] != 0;
+								break;
+							case 'boolean':
+								value = systemManager.loaderInfo.parameters[name];
+								break;
+							default:
+								value = def;
+						}
+					} else {
+						value = def;
+					}
+				} catch(e:Error) {
+					value = def;
+				}
+				return value;
+			}
+			private function loadObject(name:String, index:int, def:Object = null):Object {
+				var value:Object;
+				name = (index >= 0) ? (name+index) : name;
+				try {
+					if (systemManager.loaderInfo.parameters[name] != undefined) {
+						var v:String = String(systemManager.loaderInfo.parameters[name]);
+						var json:Json = new Json();
+						value = json.parse(v);
+					} else {
+						value = def;
+					}
+				} catch(e:Error) {
+					value = def;
+				}
+				return value;
+			}
+			
+			private var player0_params_:Object = {};
+			private var player1_params_:Object = {};
+			
+			private function updatePlayers_():void
+			{
+				var m:VideoPlayer = isSwitched ? player1 : player0;
+				var s:VideoPlayer = isSwitched ? player0 : player1;
+				
+				var mp:Object = isSwitched ? player1_params_ : player0_params_;
+				var sp:Object = isSwitched ? player0_params_ : player1_params_;
+				
+				m.showOSD = mp.show_osd;
+				m.showBackground = false;
+				m.clickable = false;
+
+				sp.show_osd = s.showOSD;
+				
+				s.showOSD = false;
+				s.showBackground = true;
+				s.clickable = true;
+				
+				controlBar.output = m.output;
+				
+				if (isSwitched)
+				{
+					players.setElementIndex(m, 0);
+					players.setElementIndex(s, 1);
+				}
+				else
+				{
+					players.setElementIndex(s, 1);
+					players.setElementIndex(m, 0);
+				}
+			}
+			private function switchPlayers_():void
+			{
+				isSwitched_ = !isSwitched_;
+				dispatchEvent(new FlexEvent("Whispercast_Player_isSwitched"));
+				
+				updatePlayers_();
+			}
+			
+			private function setupPlayer_(player:VideoPlayer, p:Object):void
+			{
+				player.output.videoAlignX = p.video_align_x; 
+				player.output.videoAlignY = p.video_align_y; 
+				
+				player.output.bufferTime = p.buffer_time;
+				player.output.restartDelay = p.restart_delay;
+				
+				player.output.urlMapper = p.url_mapper;
+				
+				player.output.autoPlay = p.play_on_load;
+				
+				player.output.urlStandby = p.url_standby;
+				player.output.url = p.url;
+				
+				player.showOSD = p.show_osd;
+				
+				if (p.tracker) {
+					if (ExternalInterface.available) {
+						var parts:Array = p.tracker.split(",");
+						if (parts.length > 1) {
+							var callback:Function = function(e:FlexEvent):void {
+								var state:String = e.type.substr(24); // "Whispercast_VideoOutput_Xxxx"
+								ExternalInterface.call(call, player.id, state, player.output[state]);
+							};
+							
+							var call:String = parts.shift();
+							for (var i:int = 0; i < parts.length; ++i) {
+								switch (parts[i]) {
+									case "videoSize":
+										ChangeWatcher.watch(player.output, "videoWidth", function(e:Event):void {
+											ExternalInterface.call(call, player.id, "videoSize", player.output.videoWidth, player.output.videoHeight);
+										});
+										break;
+									case "outputPosition":
+										ChangeWatcher.watch(player.output, "outputX", function(e:Event):void {
+											ExternalInterface.call(call, player.id, "outputPosition", player.output.outputX, player.output.outputY, player.output.outputWidth, player.output.outputHeight);
+										});
+										break;
+									default:
+										ChangeWatcher.watch(player.output, parts[i], callback);
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			private function onContentCreationComplete_(e:FlexEvent):void
+			{
+				ToolTipManager.toolTipClass = org.whispercast.ToolTip;
+				ToolTipManager.showEffect = new Fade();
+				(ToolTipManager.showEffect as Fade).alphaFrom = 0;
+				(ToolTipManager.showEffect as Fade).alphaTo = 1;
+				(ToolTipManager.showEffect as Fade).duration = 250;
+				ToolTipManager.hideEffect = new Fade();
+				(ToolTipManager.hideEffect as Fade).alphaFrom = 1;
+				(ToolTipManager.hideEffect as Fade).alphaTo = 0;
+				(ToolTipManager.hideEffect as Fade).duration = 250;
+				
+				// register the ExternalInterface stuff, backwards compatibility...
+				if (ExternalInterface.available) {
+					ExternalInterface.addCallback('setURL_', function(index:int, url:String):void {
+						switch (index)
+						{
+							case 0:
+								player0.output.url = url;
+								break;
+							case 1:
+								player1.output.url = url;
+								break;
+						}
+					});
+					ExternalInterface.addCallback('setStandbyURL_', function(index:int, url:String):void {
+						switch (index)
+						{
+							case 0:
+								player0.output.urlStandby = url;
+								break;
+							case 1:
+								player1.output.urlStandby = url;
+								break;
+						}
+					});
+					ExternalInterface.addCallback('getVolume_', function():Number {
+						var m:VideoPlayer = isSwitched_ ? player1 : player0;
+						return m.output.volume;
+					});
+					ExternalInterface.addCallback('getMuted_', function():Boolean {
+						var m:VideoPlayer = isSwitched_ ? player1 : player0;
+						return m.output.muted;
+					});
+					ExternalInterface.addCallback('setVolume_', function(volume:Number):void {
+						var m:VideoPlayer = isSwitched_ ? player1 : player0;
+						m.output.volume = volume;
+					});
+					ExternalInterface.addCallback('setMuted_', function(muted:Boolean):void {
+						var m:VideoPlayer = isSwitched_ ? player1 : player0;
+						m.output.muted = muted;
+					});
+				}
+				
+				var logLevel:Number = loadNumber('log_level', -1, 0, 15, 0);
+				Logger.setLevels(logLevel);
+				
+				hardwareAcceleratedFullscreen_ = loadBoolean('hardware_accelerated_fullscreen', -1, hardwareAcceleratedFullscreen_);
+				
+				secondaryX_ = loadNumber('secondary_x', -1, 0, 1, secondaryX_);
+				secondaryY_ = loadNumber('secondary_y', -1, 0, 1, secondaryY_);
+				secondaryWidth_ = loadNumber('secondary_width', -1, 0, 1, secondaryWidth_);
+				secondaryHeight_ = loadNumber('secondary_height', -1, 0, 1, secondaryHeight_);
+				
+				/*
+				// The url
+				player0_params_.url = loadString('url', 0, null);
+				// The url to be played in standby
+				player0_params_.url_standby = loadString('url_standby', 0, null);
+				// If true the player starts playing as soon as the url is set
+				player0_params_.play_on_load = loadBoolean('play_on_load', 0, p.play_on_load);
+				// The name of a Javascript function which maps a partial url into a full url 
+				player0_params_.url_mapper = loadString('url_mapper', 0, p.url_mapper);
+				// The timeout, in seconds, after the play restarts in case of transient errors
+				player0_params_.restart_delay = loadNumber('restart_delay', 0, 0, NaN, p.restart_delay);
+				// The buffer time of the player
+				player0_params_.buffer_time = loadNumber('buffer_time', 0, 0, NaN, p.buffer_time);
+				// The alignment of the image relative to the container, in the range [0..1], where 0 is left and 1 is right
+				player0_params_.video_align_x = loadNumber('video_align_x', 0, 0, 1, p.video_align_x);
+				// The alignment of the image relative to the container, in the range [0..1], where 0 is top and 1 is bottom
+				player0_params_.video_align_y = loadNumber('video_align_y', 0, 0, 1, p.video_align_y);
+				// If true the OSD elements are shown
+				player0_params_.show_osd = loadBoolean('show_osd', 0, p.show_osd);
+				// If true the player is muted
+				player0_params_.muted = loadBoolean('muted', 0, p.muted);
+				// If volume of the player's audio output, in the range [0..1]
+				player0_params_.volume = loadNumber('volume', 0, 0, 1, p.volume);
+				// If true all the dimensions of the OSD elements are 100% for the initial size of the player
+				player0_params_.initialize_reference = loadBoolean('initialize_reference', 0, p.initialize_reference);
+				// The name of a Javascript function that receives notifications from the player (progress, etc) 
+				player0_params_.tracker = loadString('tracker', 0, p.tracker);
+				*/
+				
+				var p:Object = {};
+				// The name of a Javascript function which maps a partial url into a full url 
+				p.url_mapper = loadString('url_mapper', -1, undefined);
+				// If true the player starts playing as soon as the url is set
+				p.play_on_load = loadBoolean('play_on_load', -1, false);
+				// The timeout, in seconds, after the play restarts in case of transient errors
+				p.restart_delay = loadNumber('restart_delay', -1, 0, NaN, 0.5);
+				// The buffer time of the player
+				p.buffer_time = loadNumber('buffer_time', -1, 0, NaN, 0.1);
+				// The alignment of the image relative to the container, in the range [0..1], where 0 is left and 1 is right
+				p.video_align_x = loadNumber('video_align_x', -1, 0, 1, 0.5);
+				// The alignment of the image relative to the container, in the range [0..1], where 0 is top and 1 is bottom
+				p.video_align_y = loadNumber('video_align_y', -1, 0, 1, 0.5);
+				// If true the OSD elements are shown
+				p.show_osd = loadBoolean('show_osd', -1, true);
+				// If 0 all the dimensions of the OSD elements' size are 100% for the initial size of the player,
+				// else it is the dimension of the player for which the OSD elements' size are 100%
+				p.reference_width = loadNumber('reference_width', -1, 0, NaN, 0);
+				p.reference_height = loadNumber('reference_height', -1, 0, NaN, 0);
+				// The name of a Javascript function that receives notifications from the player (progress, etc) 
+				p.tracker = loadString('tracker', -1, '');
+				
+				// If true the sound is muted
+				p.muted = loadBoolean('muted', -1, false);
+				// The volume of the sound
+				p.volume = loadNumber('volume', -1, 0, 1, 0.75);
+				
+				// If true the UI (control bar and stuff) is visible
+				p.show_ui = loadBoolean('show_ui', -1, true);
+				// If greater than 0 the UI (control bar and stuff) will autohide after that many seconds
+				p.autohide_ui = loadNumber('autohide_ui', -1, 0, NaN, 0);
+				
+				// The url
+				player0_params_.url = loadString('url', 0, null);
+				// The url to be played in standby
+				player0_params_.url_standby = loadString('url_standby', 0, null);
+				
+				player0_params_.play_on_load = loadBoolean('play_on_load', 0, p.play_on_load);
+				player0_params_.url_mapper = loadString('url_mapper', 0, p.url_mapper);
+				player0_params_.restart_delay = loadNumber('restart_delay', 0, 0, NaN, p.restart_delay);
+				player0_params_.buffer_time = loadNumber('buffer_time', 0, 0, NaN, p.buffer_time);
+				player0_params_.video_align_x = loadNumber('video_align_x', 0, 0, 1, p.video_align_x);
+				player0_params_.video_align_y = loadNumber('video_align_y', 0, 0, 1, p.video_align_y);
+				player0_params_.show_osd = loadBoolean('show_osd', 0, p.show_osd);
+				player0_params_.reference_width = loadNumber('reference_width', 0, 0, NaN, p.reference_width);
+				player0_params_.reference_height = loadNumber('reference_height', 0, 0, NaN, p.reference_height);
+				player0_params_.tracker = loadString('tracker', 0, p.tracker);
+				
+				// The url
+				player1_params_.url = loadString('url', 1, null);
+				// The url to be played in standby
+				player1_params_.url_standby = loadString('url_standby', 1, null);
+				
+				player1_params_.play_on_load = loadBoolean('play_on_load', 1, p.play_on_load);
+				player1_params_.url_mapper = loadString('url_mapper', 1, p.url_mapper);
+				player1_params_.restart_delay = loadNumber('restart_delay', 1, 0, NaN, p.restart_delay);
+				player1_params_.buffer_time = loadNumber('buffer_time', 1, 0, NaN, p.buffer_time);
+				player1_params_.video_align_x = loadNumber('video_align_x', 1, 0, 1, p.video_align_x);
+				player1_params_.video_align_y = loadNumber('video_align_y', 1, 0, 1, p.video_align_y);
+				player1_params_.show_osd = loadBoolean('show_osd', 1, p.show_osd);
+				player1_params_.reference_width = loadNumber('reference_width', 1, 0, NaN, p.reference_width);
+				player1_params_.reference_height = loadNumber('reference_height', 1, 0, NaN, p.reference_height);
+				player1_params_.tracker = loadString('tracker', 1, p.tracker);
+				
+				player0.addEventListener(VideoPlayerEvent.CLICK, onPlayerClick_);
+				player1.addEventListener(VideoPlayerEvent.CLICK, onPlayerClick_);
+				
+				player0.addEventListener(VideoPlayerEvent.PICTURE_IN_PICTURE, onPlayerPictureInPicture_);
+				player1.addEventListener(VideoPlayerEvent.PICTURE_IN_PICTURE, onPlayerPictureInPicture_);
+				
+				setupPlayer_(player0, player0_params_);
+				setupPlayer_(player1, player1_params_);
+				
+				updatePlayers_();
+				
+				controlBar.muted = p.muted;
+				controlBar.volume = p.volume;
+					
+				var osd_skin:org.whispercast.skins.osd.Skin = new org.whispercast.skins.osd.Skin();
+				
+				if (player0.osd)
+					player0.osd.Skin = osd_skin;
+				if (player1.osd)
+					player1.osd.Skin = osd_skin;
+				
+				if (player0.osd)
+				{
+					if (player0_params_.reference_width == 0)
+						player0.osd.referenceWidth = player0.output.outputWidth;
+					else
+						player0.osd.referenceWidth = player0_params_.reference_width;
+					if (player0_params_.reference_height == 0)
+						player0.osd.referenceHeight = player0.output.outputHeight;
+					else
+						player0.osd.referenceHeight = player0_params_.reference_height;
+				}
+					
+				if (player1.osd)
+				{
+					if (player1_params_.reference_width == 0)
+						player1.osd.referenceWidth = player1.output.outputWidth;
+					else
+						player1.osd.referenceWidth = player1_params_.reference_width;
+					if (player1_params_.reference_height == 0)
+						player1.osd.referenceHeight = player1.output.outputHeight;
+					else
+						player1.osd.referenceHeight = player1_params_.reference_height;
+				}
+				
+				showControlBar = p.show_ui;
+				autoHideControlBar = p.autohide_ui;
+				
+				initializeControlBar_();
+				updateCurrentState_();
+				
+				dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryAvailable"));
+				dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryVisible"));
+			}
+			
+			private function onPlayerClick_(e:VideoPlayerEvent):void
+			{
+				var source:VideoPlayer = e.target as VideoPlayer; 
+				if ((source == player0 && isSwitched) || (source == player1 && !isSwitched))
+					switchPlayers_();
+				else
+					if (source.showOSD)
+					{
+						var clickUrl:String = source.clickUrl;
+						if (clickUrl != null)
+						{
+							if (ExternalInterface.available)
+								ExternalInterface.call('window.open', clickUrl, '_blank');
+						}
+					}
+			}
+			private function onPlayerPictureInPicture_(e:VideoPlayerEvent):void
+			{
+				if (e.target == player0)
+				{
+					setSecondaryExtent_(
+						(e.info.x_location != undefined) ? e.info.x_location : NaN, 
+						(e.info.y_location != undefined) ? e.info.y_location : NaN, 
+						(e.info.width != undefined) ? e.info.width : NaN, 
+						(e.info.height != undefined) ? e.info.height : NaN 
+					);
+					
+					var play:Boolean;
+					if (isSecondaryVisible_)
+						play = player1.output.isPlaying;
+					else
+						play = (e.info.play != undefined) ? e.info.play : play;
+					
+					if (e.info.url != undefined)
+					{
+						if (e.info.url != player1.output.url)
+						{
+							player1.output.stop();
+							player1.output.url = (e.info.url != "") ? e.info.url : null;
+							
+							isSecondaryVisible_ = true;
+						}
+					}
+					
+					if (player1.output.url)
+					{
+						if (play)
+							player1.output.playOrResume();
+						else
+							player1.output.stop();
+					}
+					else
+					{
+						player1.output.stop();
+						if (isSwitched_)
+							switchPlayers_();
+					}
+					
+					dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryAvailable"));
+					dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryVisible"));
+				}
+			}
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="noControlBar"/>
+	</s:states>
+	
+	<s:transitions>
+		<s:Transition effect="{controlBarTransition}"/>
+	</s:transitions>
+	
+	<s:layout>
+		<s:VerticalLayout gap="0"/>
+	</s:layout>
+
+	<s:Group id="players" width="100%" height="100%">
+		<s:layout>
+			<local:Layout/>
+		</s:layout>
+	
+		<whispercast_player:VideoPlayer 
+			id="player0"
+			volume="{controlBar.volume}"
+			muted="{controlBar.muted || isSwitched}"
+			visible="{!isSwitched || isSecondaryVisible}"/>
+		<whispercast_player:VideoPlayer
+			id="player1"
+			volume="{controlBar.volume}"
+			muted="{controlBar.muted || !isSwitched}"
+			visible="{isSwitched || isSecondaryAvailable &amp;&amp; isSecondaryVisible}"/>
+	</s:Group>
+	<whispercast_player:ControlBar
+		id="controlBar"
+		width="100%"
+		visible="true" visible.noControlBar="false"
+		bottom="0" bottom.noControlBar="{-controlBar.height}"/>
+</s:Application>

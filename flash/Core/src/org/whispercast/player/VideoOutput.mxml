@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:UIComponent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/mx"
+				xmlns:whispercast="org.whispercast.*"
+				xmlns:whispercast_osd="org.whispercast.osd.*"
+				xmlns:whispercast_player="org.whispercast.player.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import mx.core.IVisualElementContainer;
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			import mx.utils.URLUtil;
+			
+			import org.whispercast.*;
+			
+			private var host_:String = null;
+			private var stream_:String = null;
+			
+			private var netConnection_:NetConnection = null;
+			private var netStream_:NetStream = null;
+			
+			private var video_:Object = null;
+			
+			private var complete_:Boolean = false;
+			
+			private var seekPending_:Number = NaN;
+			private var seekPendingNext_:Number = NaN;
+			
+			private var seekWhenPaused_:Number = NaN;
+			
+			private var updateHandlerRegistered_:Boolean = false;
+			
+			protected var callHooks_:Object = new Object();
+
+			private var disableStandby_:Boolean = false;
+			[Bindable]
+			public function get disableStandby():Boolean
+			{
+				return disableStandby_;
+			}
+			public function set disableStandby(disableStandby:Boolean):void
+			{
+				disableStandby_ = disableStandby;
+				if (!isPlaying_)
+					cleanup_();
+			}
+			
+			private var videoAlignX_:Number = 0.5;
+			[Bindable]
+			public function get videoAlignX():Number
+			{
+				return videoAlignX_;
+			}
+			public function set videoAlignX(videoAlignX:Number):void
+			{
+				videoAlignX_ = videoAlignX;
+				layout_();
+			}
+			
+			private var videoAlignY_:Number = 0.5;
+			[Bindable]
+			public function get videoAlignY():Number
+			{
+				return videoAlignY_;
+			}
+			public function set videoAlignY(videoAlignY:Number):void
+			{
+				videoAlignY_ = videoAlignY;
+				layout_();
+			}
+			
+			[Bindable]
+			private var urlMapper_:String = null;
+			public function get urlMapper():String{
+				return urlMapper_;
+			}
+			public function set urlMapper(urlMapper:String):void
+			{
+				urlMapper_ = urlMapper;
+			}
+			
+			private var urlLast_:String = null;
+			private var urlPlaying_:String = null;
+			
+			private var url_:String = null;
+			[Bindable]
+			public function get url():String{
+				return url_;
+			}
+			public function set url(url:String):void
+			{
+				url_ = url;
+				if (url)
+				{
+					if (!isPlaying)
+						setDuration_(NaN);
+						
+					if (isPlaying || autoPlay)
+						play(); // force the reload of the play stream
+				}
+				else
+					stop();
+			}
+			
+			private var urlStandby_:String = null;
+			[Bindable]
+			public function get urlStandby():String{
+				return urlStandby_;
+			}
+			public function set urlStandby(urlStandby:String):void
+			{
+				urlStandby_ = urlStandby;
+				if (!isPlaying)
+					stop(); // force the reload of the standby stream
+			}
+			
+			private var autoPlay_:Boolean = false;
+			[Bindable]
+			public function get autoPlay():Boolean{
+				return autoPlay_;
+			}
+			public function set autoPlay(autoPlay:Boolean):void
+			{
+				autoPlay_ = autoPlay;
+				if (url)
+					if (autoPlay && !isPlaying) play();
+			}
+			
+			private var restartDelay_:Number = 0.5;
+			[Bindable]
+			public function get restartDelay():Number{
+				return restartDelay_;
+			}
+			public function set restartDelay(restartDelay:Number):void
+			{
+				restartDelay_ = restartDelay;
+			}
+			
+			private var bufferTime_:Number = 0;
+			[Bindable]
+			public function get bufferTime():Number{
+				return bufferTime_;
+			}
+			public function set bufferTime(bufferTime:Number):void
+			{
+				bufferTime_ = bufferTime;
+				if (netStream_)
+					netStream_.bufferTime = bufferTime;
+			}
+			
+			private var smoothing_:Boolean = true;
+			[Bindable]
+			public function get smoothing():Boolean{
+				return smoothing_;
+			}
+			public function set smoothing(smoothing:Boolean):void{
+				smoothing_ = smoothing;
+				if (video_ && video_ is Video)
+					video_.smoothing = smoothing_;
+			}
+			
+			private var deblocking_:int = 2;
+			[Bindable]
+			public function get deblocking():int
+			{
+				return deblocking_;
+			}
+			public function set deblocking(deblocking:int):void
+			{
+				deblocking_ = deblocking;
+				if (video_ && video_ is Video)
+					video_.deblocking = deblocking_;
+			}
+			
+			private var muted_:Boolean = false;
+			[Bindable]
+			public function get muted():Boolean
+			{
+				return muted_;
+			}
+			public function set muted(muted:Boolean):void
+			{
+				muted_ = muted;
+				if (netStream_)
+				{
+					var transform:SoundTransform = netStream_.soundTransform;
+					transform.volume = muted ? 0 : volume_;
+					netStream_.soundTransform = transform;
+				}
+			}
+			
+			private var volume_:Number = 0.75;
+			[Bindable]
+			public function get volume():Number
+			{
+				return volume_;
+			}
+			public function set volume(volume:Number):void
+			{
+				volume_ = volume;
+				if (netStream_ != null)
+				{
+					var transform:SoundTransform = netStream_.soundTransform;
+					transform.volume = muted ? 0 : (isPlaying_ ? volume_ : 0);
+					netStream_.soundTransform = transform;
+				}
+			}
+			
+			private var clickUrl_:String = null;
+			[Bindable]
+			public function get clickUrl():String{
+				return clickUrl_;
+			}
+			public function set clickUrl(clickUrl:String):void
+			{
+				clickUrl_ = clickUrl;
+			}
+			
+			private var isPlaying_:Boolean = false;
+			[Bindable(event="Whispercast_VideoOutput_isPlaying")]
+			public function get isPlaying():Boolean
+			{
+				return isPlaying_;
+			}
+			private function setIsPlaying_(isPlaying:Boolean):void
+			{
+				if (isPlaying != isPlaying_)
+				{
+					isPlaying_ = isPlaying;
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isPlaying"));
+				}
+			}
+			
+			private var isBuffering_:Boolean = false;
+			[Bindable(event="Whispercast_VideoOutput_isBuffering")]
+			public function get isBuffering():Boolean
+			{
+				return isPlaying_ ? isBuffering_ : false;
+			}
+			private function setIsBuffering_(isBuffering:Boolean):void
+			{
+				if (isBuffering != isBuffering_)
+				{
+					isBuffering_ = isBuffering;
+					
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isBuffering"));
+					Logger.info(this, 'Buffering {0}', isBuffering);
+				}
+			}
+			
+			private var isPausing_:Boolean = false;
+			[Bindable(event="Whispercast_VideoOutput_isPausing")]
+			public function get isPausing():Boolean
+			{
+				return isPausing_;
+			}
+			private function setIsPausing_(isPausing:Boolean):void
+			{
+				if (isPausing != isPausing_)
+				{
+					isPausing_ = isPausing;
+					
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isPausing"));
+					Logger.info(this, 'Pausing {0}', isPausing);
+					
+					if (netStream_)
+						if (isPausing_)
+						{
+							seekWhenPaused_ = NaN;
+							netStream_.pause();
+						}
+						else
+							netStream_.resume();
+				}
+			}
+			
+			private var isSeeking_:Boolean = false;
+			[Bindable(event="Whispercast_VideoOutput_isSeeking")]
+			public function get isSeeking():Boolean
+			{
+				return isSeeking_;
+			}
+			private function setIsSeeking_(isSeeking:Boolean):void
+			{
+				if (isSeeking != isSeeking_)
+				{
+					isSeeking_ = isSeeking;
+					if (!isSeeking_)
+					{
+						updateTime_(seekPending_);
+						seekPending_ = NaN;
+						
+						if (seekPendingNext_)
+						{
+							seek(seekPendingNext_);
+							seekPendingNext_ = NaN;
+							return;
+						}
+					}
+					else
+						setIsBuffering_(true);
+					
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isSeeking"));
+					Logger.info(this, 'Seeking {0}', isSeeking);
+				}
+			}
+			
+			private var metadata_:Object = null;
+			[Bindable(event="Whispercast_VideoOutput_metadata")]
+			public function get metadata():Object
+			{
+				return metadata_;
+			}
+			private function setMetadata_(metadata:Object):void
+			{
+				metadata_ = metadata;
+				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_metadata"));
+				
+				if (!updateHandlerRegistered_) {
+					addEventListener(Event.EXIT_FRAME, onUpdateHandler_);
+					updateHandlerRegistered_ = true;
+				}
+				
+				if (metadata_)
+				{
+					if (metadata_.width && metadata_.height)
+						setVideoSize_(metadata_.width, metadata_.height);
+					
+					setDuration_(metadata.duration ? metadata.duration : NaN);
+				}
+				else
+				{
+					setVideoSize_(NaN, NaN);
+					setDuration_(NaN);
+				}
+				
+				updateTime_(NaN);
+				
+				var _isPlaying:Boolean = isPlaying;
+				if (_isPlaying != isPlaying)
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isPlaying"));
+			}
+			
+			private var videoWidth_:Number = NaN;
+			[Bindable(event="Whispercast_VideoOutput_videoSize")]
+			public function get videoWidth():Number
+			{
+				return videoWidth_;
+			}
+			private var videoHeight_:Number = NaN;
+			[Bindable(event="Whispercast_VideoOutput_videoSize")]
+			public function get videoHeight():Number
+			{
+				return videoHeight_;
+			}
+			private function setVideoSize_(videoWidth:Number, videoHeight:Number):void
+			{
+				if (videoWidth != videoWidth_ || videoHeight != videoHeight_)
+				{
+					videoWidth_ = videoWidth;
+					videoHeight_ = videoHeight;
+					
+					layout_();
+					
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_videoSize"));
+					Logger.info(this, 'Natural video size is now {0}x{1}', videoWidth, videoHeight);
+				}
+			}
+			
+			private var outputX_:Number = 0;
+			[Bindable(event="Whispercast_VideoOutput_outputPosition")]
+			public function get outputX():Number
+			{
+				return outputX_;
+			}
+			private var outputY_:Number = 0;
+			[Bindable(event="Whispercast_VideoOutput_outputPosition")]
+			public function get outputY():Number
+			{
+				return outputY_;
+			}
+			private var outputWidth_:Number = 0;
+			[Bindable(event="Whispercast_VideoOutput_outputPosition")]
+			public function get outputWidth():Number
+			{
+				return outputWidth_;
+			}
+			private var outputHeight_:Number = 0;
+			[Bindable(event="Whispercast_VideoOutput_outputPosition")]
+			public function get outputHeight():Number
+			{
+				return outputHeight_;
+			}
+			
+			private function setOutputPosition_(x:Number, y:Number, width:Number, height:Number):void
+			{
+				if (x != outputX_ || y != outputY_ || width != outputWidth_ || height != outputHeight_)
+				{
+					outputX_ = x;
+					outputY_ = y;
+					outputWidth_ = width;
+					outputHeight_ = height;
+					
+					if (video_)
+					{
+						(video_ as Video).x = x;
+						(video_ as Video).y = y;
+						(video_ as Video).width = width;
+						(video_ as Video).height = height;
+					}
+					
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_outputPosition"));
+					Logger.info(this, 'Video output repositioned to {0}/{1}-{2}x{3}', outputX_, outputY_, outputWidth_, outputHeight_);
+				}
+			}
+				
+			private var duration_:Number = NaN;
+			[Bindable(event="Whispercast_VideoOutput_duration")]
+			public function get duration():Number
+			{
+				return duration_; 
+			}
+			private function setDuration_(duration:Number, current:Number = NaN):void
+			{
+				duration_ = duration;
+				updateTime_(NaN);
+				
+				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_duration"));
+				Logger.info(this, 'Duration set to {0}', duration);
+				
+				setSeekable_(!isNaN(duration_) && (metadata_ != null) && ((metadata_.unseekable == undefined) || !metadata_.unseekable));
+			}
+			
+			private var timeOrigin_:Number = 0;
+			
+			private var time_:Number = NaN;
+			[Bindable(event="Whispercast_VideoOutput_time")]
+			public function get time():Number
+			{
+				return time_; 
+			}
+			private function updateTime_(current:Number, force:Boolean = true):void
+			{
+				var time:Number;
+				if (!isNaN(current))
+					time = isNaN(duration_) ? NaN : current;
+				else
+					time = isNaN(duration_) ? NaN : (netStream_ ? netStream_.time : NaN);
+				
+				if (!isNaN(time))
+				{
+					time += timeOrigin_;
+					if (!isNaN(duration_))
+					{
+						time = Math.min(time, duration_);
+					}
+					
+					if (!force)
+					{
+						if (time < time_)
+							return;
+					}
+				}
+				
+				if (!(isNaN(time) && isNaN(time_)) && time != time_)
+				{
+					time_ = time;
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_time"));
+				}
+			}
+			
+			private var seekable_:Boolean = false;
+			[Bindable(event="Whispercast_VideoOutput_seekable")]
+			public function get seekable():Boolean
+			{
+				return seekable_; 
+			}
+			private function setSeekable_(seekable:Boolean):void
+			{
+				if (seekable != seekable_)
+				{
+					seekable_ = seekable;
+				
+					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_seekable"));
+					Logger.info(this, 'Seekable set to {0}', seekable);
+				
+					updateTime_(NaN);
+				}
+			}
+			
+			private function checkIfComplete_(isBuffering:Boolean):Boolean
+			{
+				if (complete_ && (isBuffering_ || isBuffering))
+				{
+					updateTime_(duration_);
+				
+					setIsPlaying_(false);
+					cleanup_();
+					
+					return true;
+				}
+				return false
+			}
+				
+			protected function layout_(): void
+			{
+				if (!isNaN(videoWidth_) && !isNaN(videoHeight_))
+				{
+					var w:Number = width/videoWidth_;
+					var h:Number = height/videoHeight_;
+					if (h < w)
+					{
+						w = h*videoWidth_;
+						h = h*videoHeight_;
+					}
+					else
+					{
+						h = w*videoHeight_;
+						w = w*videoWidth_;
+					}
+					
+					var x:Number = videoAlignX_*(width - w);
+					var y:Number = videoAlignY_*(height - h);
+					
+					setOutputPosition_(Math.ceil(x), Math.ceil(y), Math.floor(w), Math.floor(h));
+				}
+				else
+					setOutputPosition_(0, 0, Math.floor(width), Math.floor(height));
+			}
+			
+			public function addCallHooks(hooks:Object):void
+			{
+				// TODO: Refine - recursively append/replace hooks
+				if (hooks['flash'])
+				{
+					if (!callHooks_['flash'])
+						callHooks_['flash'] = {};
+					
+					for (var n:String in hooks['flash'])
+						callHooks_['flash'][n] = hooks['flash'][n];
+				}
+			}
+			
+			private function net_CuePointCall_(t:String, f:String):void {
+				if (callHooks_[t] != undefined) {
+					if (callHooks_[t][f] != undefined) {
+						var args:Array = new Array();
+						for (var i:int = 2; i < arguments.length; i++) {
+							args.push(arguments[i]);
+						}
+						callHooks_[t][f].f.apply(callHooks_[t][f].c, args);
+					}
+				}
+			}
+			
+			private function net_MetadataHandler(metadata:Object):void
+			{
+				Logger.debug(this, 'Metadata: {0}', metadata as Object);
+				setMetadata_(metadata);
+				video_.visible = true;
+			}
+			private function net_CuePointHandler(cuepoint:Object):void
+			{
+				Logger.debug(this, 'Cuepoint: {0}', cuepoint);
+				switch (cuepoint.type) {
+					case 'navigation':
+						updateTime_(cuepoint.time - timeOrigin_, false);
+						break;
+					case 'actionscript':
+						try {
+							var json:Json = new Json();
+							net_CuePointCall_.call(this, cuepoint['parameters']['target'], cuepoint['parameters']['function'], json.parse(cuepoint['parameters']['parameters']));
+						} catch(e:Error) {
+							Logger.error(this, 'Exception: {0}', e);
+						}
+						break;
+				}
+			}
+			private function net_BWDoneHandler():void
+			{
+			}
+			
+			private function net_StatusHandler(event:NetStatusEvent):void
+			{
+				Logger.debug(this, 'Event: {0}', event);
+				switch (event.info.code)
+				{
+					case "NetConnection.Connect.Success":
+						netStream_ = new NetStream(netConnection_);
+						netStream_.addEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+						
+						netStream_.client = {
+							onMetaData: net_MetadataHandler,
+							onCuePoint: net_CuePointHandler
+						};
+						
+						var transform:SoundTransform = netStream_.soundTransform;
+						transform.volume = muted ? 0 : volume_;
+						netStream_.soundTransform = transform;
+						
+						netStream_.bufferTime = bufferTime_;
+						
+						video_.attachNetStream(netStream_);
+						
+						if (urlLast_ != urlPlaying_)
+						{
+							urlLast_ = urlPlaying_;
+							dispatchEvent(new FlexEvent("Whispercast_VideoOutput_streamChanged"));
+						}
+						Logger.info(this, 'Playing {0}...', stream_);
+
+						if (netStream_)
+							netStream_.play(stream_, -2);
+						break;
+					case "NetConnection.Connect.Closed":
+					case "NetConnection.Connect.Failed":
+						Logger.info(this, 'Connection closed ({0})', event.info.code);
+						cleanup_();
+						
+						var this_:VideoOutput = this;
+						if (isPlaying_)
+						{
+							if (isPausing_)
+								setIsPlaying_(false);
+							else
+								setTimeout(function():void {
+									this_.play();
+								}, 1000*restartDelay_);
+						}
+						break;
+
+					case "NetStream.Play.Reset":
+						complete_ = false;
+						break;
+					case "NetStream.Play.Complete":
+					case "NetStream.Play.Stop":
+						complete_ = true;
+						if (checkIfComplete_(false))
+							setIsBuffering_(false);
+						break;
+					case "NetStream.Play.Start":
+						break;
+					case "NetStream.Play.StreamNotFound":
+						stop();
+						break;
+					case "NetStream.Buffer.Full":
+						setIsBuffering_(false);
+						break;
+					case "NetStream.Buffer.Empty":
+						if (!checkIfComplete_(true))
+							setIsBuffering_(true);
+						break;
+					case "NetStream.Seek.InvalidTime":
+						{
+						var seekPending:Number = seekPending_;
+						setIsSeeking_(false);
+						
+						if (isNaN(seekPending_))
+							play(seekPending);
+						}
+						break;
+					case "NetStream.Seek.Notify":
+						setIsSeeking_(false);
+						break;
+					case "NetStream.Pause.Notify":
+						break;
+					case "NetStream.Unpause.Notify":
+						if (!isNaN(seekWhenPaused_))
+							seek(seekWhenPaused_);
+						break;
+				}
+			}
+			private function net_SecurityErrorHandler(event:SecurityErrorEvent):void {
+				Logger.debug(this, 'Event: {0}', event.text);
+			}
+			
+			private var updateHandlerCount_:Number = 0; 
+			private function onUpdateHandler_(event:Event):void {
+				if (!isSeeking_ && !isPausing_)
+					if (updateHandlerCount_%5 == 0) {
+						updateTime_(NaN);
+					}
+				
+				updateHandlerCount_++;
+			}
+			
+			private function setupURL_(url:String, standby:Boolean, seekPos:Number):Boolean
+			{
+				// rtmp://host:port@user:password/root/stream1/stream2/...
+				// http://host:port@user:password/part1/part2/...
+				
+				var mapped:String = url;
+				if (urlMapper_)
+				{
+					if (!ExternalInterface.available)
+					{
+						Logger.error(this, 'Mapping of URL {0} requested, but ExternalInterface is not available', url);
+						return false;
+					}
+					
+					mapped = ExternalInterface.call(urlMapper_, url, standby);
+					if (mapped == '')
+					{
+						Logger.error(this, 'URL {0} rejected by the URL mapper', url);
+						return false;
+					}
+					Logger.debug(this, 'URL {0} mapped to {1}', url, mapped);
+				}
+				
+				var slashIndex:Number = 0;
+				
+				var protocol:String = URLUtil.getProtocol(mapped).toLowerCase();
+				switch (protocol)
+				{
+					case "rtmp":
+						slashIndex = mapped.indexOf("/", 0);
+						if (slashIndex >= 0)
+						{
+							slashIndex = mapped.indexOf("/", slashIndex+1);
+							if (slashIndex >= 0)
+							{
+								slashIndex = mapped.indexOf("/", slashIndex+1);
+								if (slashIndex >= 0)
+								{
+									slashIndex = mapped.indexOf("/", slashIndex+1);
+									if (slashIndex >= 0)
+									{
+										host_ = mapped.substring(0, slashIndex+1);
+										stream_ = mapped.substring( slashIndex+1);
+									}
+									else
+									{
+										host_ = mapped;
+										stream_ = null;
+									}
+								}
+							}
+						}
+						else
+						{
+							Logger.error(this, 'Parsing URL {0} failed', mapped);
+						}
+						break;
+					default:
+						host_ = null;
+						stream_ = mapped;
+						break;
+				}
+				
+				if (!isNaN(seekPos))
+					if (stream_.indexOf('?') >= 0)
+						stream_ += '&wsp=' + Math.floor(seekPos*1000);
+					else
+						stream_ += '?wsp=' + Math.floor(seekPos*1000);
+				
+				Logger.debug(this, 'Parsed URL {0} into {1}:{2}', url, host_, stream_);
+				return true;
+			}
+			
+			private function cleanup_():void
+			{
+				if (netConnection_ != null)
+				{
+					netConnection_.removeEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+					netConnection_.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, net_SecurityErrorHandler);
+					
+					netConnection_.close();
+				}
+				if (netStream_ != null)
+				{
+					netStream_.removeEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+				}
+				video_.attachNetStream(null);
+				
+				netStream_ = null;
+				netConnection_ = null;
+				
+				seekPending_ = NaN;
+				seekPendingNext_ = NaN;
+				
+				seekWhenPaused_ = NaN;
+				
+				if (updateHandlerRegistered_) {
+					removeEventListener(Event.EXIT_FRAME, onUpdateHandler_);
+					updateHandlerRegistered_ = false;
+				}
+				
+				if (!isPlaying_)
+					timeOrigin_ = 0;
+				
+				if (!isPlaying_ && urlStandby_ && !disableStandby_)
+					if (setupURL_(urlStandby_, true, NaN))
+					{
+						urlPlaying_ = urlStandby_;
+						
+						netConnection_ = new NetConnection();
+						netConnection_.objectEncoding = 0;
+						netConnection_.addEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+						netConnection_.addEventListener(SecurityErrorEvent.SECURITY_ERROR, net_SecurityErrorHandler);
+						netConnection_.client = {
+							onBWDone: this.net_BWDoneHandler
+						};
+						
+						setIsBuffering_(true);
+						
+						Logger.info(this, 'Connecting to {0}...', host_);
+						netConnection_.connect(host_);
+					}
+			}
+			
+			public function play(startAt:Number = NaN):Boolean
+			{
+				if (url_)
+					if (setupURL_(url_, false, startAt))
+					{
+						timeOrigin_ = isNaN(startAt) ? 0 : startAt;
+						urlPlaying_ = url_;
+						
+						var wasPlaying:Boolean = isPlaying_; 
+						
+						setIsPausing_(false);
+						setIsPlaying_(true);
+						
+						cleanup_();
+						
+						if (!wasPlaying)
+							setDuration_(NaN);
+						setIsBuffering_(true);
+						
+						netConnection_ = new NetConnection();
+						netConnection_.objectEncoding = 0;
+						netConnection_.addEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+						netConnection_.addEventListener(SecurityErrorEvent.SECURITY_ERROR, net_SecurityErrorHandler);
+						netConnection_.client = {
+							onBWDone: this.net_BWDoneHandler
+						};
+						
+						Logger.info(this, 'Connecting to {0}...', host_);
+						netConnection_.connect(host_);
+						
+						return true;
+					}
+					else
+						stop();
+				else
+					stop();
+				
+				return false;
+			}
+			public function stop():void
+			{
+				if (isPlaying_) {
+					setIsPausing_(false);
+					setIsPlaying_(false);
+				}
+				cleanup_();
+			}
+			
+			public function pause():void
+			{
+				setIsPausing_(true);
+			}
+			public function resume():void
+			{
+				setIsPausing_(false);
+			}
+			
+			public function playOrResume():void
+			{
+				if (!isPlaying)
+					play();
+				else
+					if (isPausing)
+						resume();
+			}
+			public function stopOrPause():void
+			{
+				if (isPlaying)
+					if (isPausing)
+						return;
+					else
+						if (urlStandby)
+							togglePlay();
+						else
+							if (seekable)
+								togglePause();
+							else
+								togglePlay();
+			}
+			
+			public function togglePlay():void
+			{
+				if (isPlaying)
+					stop();
+				else
+					play();
+			}
+			
+			public function togglePause():void
+			{
+				if (isPausing)
+					resume();
+				else
+					pause();
+			}
+			
+			public function togglePlayOrPause():void
+			{
+				if (isPlaying && !isPausing)
+					stopOrPause();
+				else
+					playOrResume();
+			}
+			
+			private function rtmpSeek_(time:Number):void
+			{
+				if (!isPausing)
+				{
+					seekWhenPaused_ = NaN;
+					seekPending_ = time;
+					
+					setIsSeeking_(true);
+					netStream_.seek(time);
+				}
+				else
+				{
+					seekWhenPaused_ = time;
+					resume();
+				}
+			}
+			private function httpSeek_(time:Number):void
+			{
+				if (!isPausing)
+				{
+					updateTime_(time);
+					if (time >= timeOrigin_)
+					{
+						seekWhenPaused_ = NaN;
+						seekPending_ = time;
+						
+						setIsSeeking_(true);
+						netStream_.seek(time);
+					}
+					else
+					{
+						play(time);
+					}
+				}
+				else
+				{
+					resume();
+					httpSeek_(time);
+				}
+			}
+			
+			public function seek(time:Number):void
+			{
+				if (netStream_)
+				{
+					if (!isNaN(seekPending_))
+					{
+						seekPendingNext_ = time;
+						return;
+					}
+					
+					if (host_ != null)
+						rtmpSeek_(time);
+					else
+						httpSeek_(time);
+				}
+			}
+			
+			override protected function createChildren():void
+			{
+				super.createChildren();
+				
+				video_ = new Video(0, 0);
+				video_.smoothing = smoothing_;
+				video_.deblocking = deblocking_;
+				addChild(video_ as Video);
+			}
+			
+			override protected function updateDisplayList(unscaledWidth:Number, unscaledHeight:Number):void
+			{
+				layout_();
+				super.updateDisplayList(unscaledWidth, unscaledHeight);
+			}
+		]]>
+	</fx:Script>
+</mx:UIComponent>

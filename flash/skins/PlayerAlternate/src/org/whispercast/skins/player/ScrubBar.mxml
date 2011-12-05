@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("spark.components.supportClasses.TrackBase")]
+	</fx:Metadata>
+	
+	<fx:Declarations>
+		<s:Parallel id="transitionExpandedEffect" duration="150">
+			<s:Resize target="{track}"/>
+			<s:Fade target="{thumb}"/>
+		</s:Parallel>
+		<s:Parallel id="transitionNormalEffect" duration="500">
+			<s:Resize target="{track}"/>
+			<s:Fade target="{thumb}"/>
+		</s:Parallel>
+	</fx:Declarations>
+	
+	<s:states>
+		<s:State name="normal" stateGroups="normalGroup"/>
+		<s:State name="disabled" stateGroups="disabledGroup,normalGroup"/>
+		<s:State name="normalExpanded" stateGroups="expandedGroup"/>
+		<s:State name="disabledExpanded" stateGroups="disabledGroup,expandedGroup"/>
+	</s:states>
+	
+	<s:transitions>
+		<s:Transition effect="{transitionExpandedEffect}" toState="normalExpanded"/>
+		<s:Transition effect="{transitionExpandedEffect}" toState="disabledExpanded"/>
+		<s:Transition effect="{transitionNormalEffect}" toState="normal"/>
+		<s:Transition effect="{transitionNormalEffect}" toState="disabled"/>
+	</s:transitions>
+
+	<s:VGroup width="100%" gap="0">
+		<s:Group width="100%">
+			<s:Button id="track" width="100%" height="4" height.expandedGroup="12" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarTrack"/>
+			<s:Button id="thumb" width="{3*track.height-12}" height="{3*track.height-12}" y="{-track.height+6}" alpha="0.1" alpha.expandedGroup="1" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" visible="true" visible.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarThumb" includeInLayout="false"/>
+		</s:Group>
+		<s:Line width="100%" top="1" height="0" alpha="0.5" depth="-1000">
+			<s:stroke>
+				<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+					<s:GradientEntry color="{getStyle('borderColorHigh')}"/>
+				</s:LinearGradientStroke>
+			</s:stroke>
+		</s:Line>
+	</s:VGroup>
+</s:Skin>

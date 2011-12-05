@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SparkButtonSkin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+             xmlns:s="library://ns.adobe.com/flex/spark" 
+             xmlns:fb="http://ns.adobe.com/flashbuilder/2009" creationComplete="onCreationComplete(event)">
+     
+    <fx:Metadata>
+        <![CDATA[ 
+        [HostComponent("spark.components.Button")]
+        ]]>
+    </fx:Metadata>
+    
+	<fx:Declarations>
+		<s:LinearGradient rotation="90" id="activeFill">
+			<s:GradientEntry color="{getStyle('foreColorLow')}"/>
+		</s:LinearGradient>
+		<s:LinearGradient rotation="90" id="backgroundFill">
+			<s:GradientEntry color="{getStyle('backColorLow')}"/>
+		</s:LinearGradient>
+	</fx:Declarations>
+	
+    <fx:Script fb:purpose="styling">
+        <![CDATA[         
+			import mx.events.FlexEvent;
+			
+			import spark.components.supportClasses.TrackBase;
+			
+			private var track_:TrackBase
+			[Bindable(event="Whispercast_VideoPlayerVolumeBarBackgroundSkin_Track")]
+			public function get track():TrackBase
+			{
+				return track_;
+			}
+			
+			protected function onCreationComplete(event:FlexEvent):void
+			{
+				track_ = (hostComponent.parent as org.whispercast.skins.player.VolumeBar).hostComponent; 
+				dispatchEvent(new FlexEvent("Whispercast_VideoPlayerVolumeBarBackgroundSkin_Track"));
+			}
+		]]>        
+    </fx:Script>
+        
+    <!-- states -->
+    <s:states>
+        <s:State name="up" />
+        <s:State name="over" />
+        <s:State name="down" />
+        <s:State name="disabled" />
+    </s:states>
+    
+	<s:Rect width="100%" height="100%">
+		<s:fill>
+			<s:SolidColor color="0x000000" alpha="0"/>
+		</s:fill>
+	</s:Rect>
+	<s:HGroup width="100%" gap="2">
+		<s:Rect height="100%" width="6" fill="{backgroundFill}"/>
+		<s:Rect height="100%" width="6" fill="{backgroundFill}"/>
+		<s:Rect height="100%" width="6" fill="{backgroundFill}"/>
+		<s:Rect height="100%" width="6" fill="{backgroundFill}"/>
+		<s:Rect height="100%" width="6" fill="{backgroundFill}"/>
+	</s:HGroup>
+	<s:HGroup height="100%" gap="2">
+		<s:Rect height="100%" width="6" fill="{activeFill}" alpha="{Math.max(0, Math.min(1, (track.value-0)*5))}"/>
+		<s:Rect height="100%" width="6" fill="{activeFill}" alpha="{Math.max(0, Math.min(1, (track.value-0.2)*5))}"/>
+		<s:Rect height="100%" width="6" fill="{activeFill}" alpha="{Math.max(0, Math.min(1, (track.value-0.4)*5))}"/>
+		<s:Rect height="100%" width="6" fill="{activeFill}" alpha="{Math.max(0, Math.min(1, (track.value-0.6)*5))}"/>
+		<s:Rect height="100%" width="6" fill="{activeFill}" alpha="{Math.max(0, Math.min(1, (track.value-0.8)*5))}"/>
+	</s:HGroup>
+</s:SparkButtonSkin>

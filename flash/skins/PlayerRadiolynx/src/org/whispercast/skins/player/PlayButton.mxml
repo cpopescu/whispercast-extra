@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SparkSkin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.player.skins.*">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("spark.components.ToggleButton")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.filters.BitmapFilterQuality;
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="up" stateGroups="normalStates"/>
+		<s:State name="over" stateGroups="normalStates,overStates"/>
+		<s:State name="down" stateGroups="normalStates,downStates"/>
+		<s:State name="disabled" stateGroups="normalStates,disabledStates"/>
+		<s:State name="upAndSelected" stateGroups="selectedStates"/>
+		<s:State name="overAndSelected" stateGroups="selectedStates,overStates"/>
+		<s:State name="downAndSelected" stateGroups="selectedStates,downStates"/>
+		<s:State name="disabledAndSelected" stateGroups="selectedStates,disabledStates"/>
+	</s:states>
+	
+	<!-- Background -->
+	<s:Ellipse id="backgroundFill"
+			   x="0"
+			   y="0"
+			   width="{width}"
+			   height="{height}">
+		<s:filters>
+			<s:DropShadowFilter inner="true" distance="0" strength="1" color="0x202020" quality="{BitmapFilterQuality.HIGH}"/>
+		</s:filters>
+		<s:fill>
+			<s:LinearGradient rotation="90">
+				<s:GradientEntry color="{getStyle('backColorLow')}"/>
+				<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+			</s:LinearGradient>
+		</s:fill>
+	</s:Ellipse>
+	<s:Ellipse id="foregroundFill"
+			   x="1"
+			   y="1"
+			   width="{width-2}"
+			   height="{height-2}">
+		<s:fill>
+			<s:LinearGradient rotation="90">
+				<s:GradientEntry color="{getStyle('backColorHigh')}" color.downStates="{getStyle('backColorLow')}"/>
+				<s:GradientEntry color="{getStyle('backColorLow')}" color.downStates="{getStyle('backColorHigh')}"/>
+			</s:LinearGradient>
+		</s:fill>
+	</s:Ellipse>
+	
+	<!--- Defines the play symbol. -->
+	<s:Group horizontalCenter="1" verticalCenter="0" id="playSymbol" includeIn="normalStates">
+		<!-- triangle -->
+		<s:Path winding="evenOdd" data="M 1 0 L 1 13 L 8 7 L 1 0 Z" scaleX="1.6" scaleY="1.4" >
+			<s:fill>
+				<!--- @private -->
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Path>
+	</s:Group>
+	<!--- Defines the pause symbol. -->
+	<s:Group horizontalCenter="0" verticalCenter="0" scaleX="1" scaleY="1" id="pauseSymbol" includeIn="selectedStates">
+		<!-- big line on left -->
+		<s:Rect left="0" top="0" height="17" width="5">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Rect>
+		<!-- big line on right -->
+		<s:Rect left="7" top="0" height="17" width="5">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Rect>
+	</s:Group>
+</s:SparkSkin>

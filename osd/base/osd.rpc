@@ -1,0 +1,436 @@
+// Defines types used for injecting osd tags in media stream.
+// Also contains a service capable of injecting the osd tags.
+//
+//////////////////////////////////////////////////////////////////////
+
+Verbatim cc {
+#include <whisperstreamlib/base/auto/request_types.h>
+}
+
+Type PlayerColor
+{
+  // the color, in HTML format (#rrggbb)
+  string color;
+  // transparency [0..1]
+  //  0 = fully transparent
+  //  1 = fully opaque
+  float alpha;
+}
+Type PlayerMargins
+{
+  // relative units (width*left, height*top, etc)
+  float left;
+  float top;
+  float right;
+  float bottom;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type CreateOverlayParams
+{
+  // unique identifier
+  string id;
+  // text to show
+  optional string content;
+
+  // foreground color
+  optional PlayerColor fore_color;
+  // background color
+  optional PlayerColor back_color;
+  // link color
+  optional PlayerColor link_color;
+  // hover color
+  optional PlayerColor hover_color;
+
+  // position, relative to the container
+  optional float x_location;
+  optional float y_location;
+
+  // width, relative to the container
+  optional float width;
+
+  // margins, relative to the container
+  optional PlayerMargins margins;
+
+  // time to live
+  optional float ttl;
+
+  // show the overlay
+  optional bool show;
+  
+  // the user should be able to close this overly
+  optional bool closable;
+  
+  // where to draw the overlay (over image, over play progress)
+  optional string target;
+}
+
+Type DestroyOverlayParams
+{
+  // unique identifier
+  string id;
+}
+
+Type ShowOverlaysParams
+{
+  // show the overlays
+  bool show;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type CrawlerItem
+{
+  // the text to add
+  string content;
+
+  // foreground color
+  optional PlayerColor fore_color;
+  // background color
+  optional PlayerColor back_color;
+  // link color
+  optional PlayerColor link_color;
+  // hover color
+  optional PlayerColor hover_color;
+}
+
+Type CreateCrawlerParams
+{
+  // unique identifier
+  string id;
+
+  // crawler rotation speed
+  optional float speed;
+
+  // foreground color
+  optional PlayerColor fore_color;
+  // background color
+  optional PlayerColor back_color;
+  // link color
+  optional PlayerColor link_color;
+  // hover color
+  optional PlayerColor hover_color;
+
+  // vertical location
+  optional float y_location;
+
+  // margins, relative to the container
+  optional PlayerMargins margins;
+
+  // items
+  optional map<string, CrawlerItem> items;
+
+  // time to live
+  optional float ttl;
+
+  // show the crawler
+  optional bool show;
+  
+  // where to draw the crawler (over image, over play progress)
+  optional string target;
+}
+
+Type DestroyCrawlerParams
+{
+  // identifies the crawler to be destroyed
+  string id;
+}
+
+Type ShowCrawlersParams
+{
+  // show the crawlers
+  bool show;
+}
+
+Type AddCrawlerItemParams
+{
+  // identifies the crawler to be updated
+  string crawler_id;
+  // identifies the crawler item to be added
+  string item_id;
+  // item to be added
+  CrawlerItem item;
+}
+
+Type RemoveCrawlerItemParams
+{
+  // identifier of the crawler to update
+  string crawler_id;
+  // identifier of the text to remove
+  string item_id;
+}
+
+Type SetPictureInPictureParams
+{
+  // PIP URL, if empty no PIP should be displayed
+  optional string url;
+  
+  // position, relative to container
+  optional float x_location;
+  optional float y_location;
+  
+  // size, relative to the container
+  optional float width;
+  optional float height;
+  
+  // play
+  optional bool play;
+}
+
+Type SetClickUrlParams
+{
+  // PIP URL, if empty no click handler should be registered
+  optional string url;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type CreateMovieParams
+{
+  //unique identifier
+  string id;
+  
+  // address of the swf movie to load
+  optional string url;
+  
+  // position, relative to container
+  optional float x_location;
+  optional float y_location;
+  
+  // size, relative to the container
+  optional float width;
+  optional float height;
+  
+  // audio volume for movie and main clip
+  optional float main_volume;
+  optional float movie_volume;
+  
+  // time to live
+  optional float ttl;
+  
+  // the user should be able to close this movie
+  optional bool closable;
+}
+
+Type DestroyMovieParams
+{
+  // id of the movie you want to destroy
+  string id;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Service OsdInjector
+{
+  //////////////////////////////////////////////////////////////////////
+  // Overlays
+
+  // Creates a new floating overlay
+  void CreateOverlay(CreateOverlayParams params);
+  // Destroy a floating overlay
+  void DestroyOverlay(DestroyOverlayParams params);
+
+  // Show the overlays
+  void ShowOverlays(ShowOverlaysParams params);
+
+  //////////////////////////////////////////////////////////////////////
+  // Crawlers
+  //
+
+  // Create a new crawler
+  void CreateCrawler(CreateCrawlerParams params);
+  // Destroy an existing crawler.
+  void DestroyCrawler(DestroyCrawlerParams params);
+
+  // Show the overlays
+  void ShowCrawlers(ShowCrawlersParams params);
+
+  // Add an item to a crawler
+  void AddCrawlerItem(AddCrawlerItemParams params);
+  // Remove an item from a crawler
+  void RemoveCrawlerItem(RemoveCrawlerItemParams params);
+
+  //////////////////////////////////////////////////////////////////////
+  // PIP
+  //
+
+  // Sets the PIP
+  void SetPictureInPicture(SetPictureInPictureParams params);
+  
+  //////////////////////////////////////////////////////////////////////
+  // ClickUrl
+  //
+
+  // Sets the PIP
+  void SetClickUrl(SetClickUrlParams params);
+  
+  /////////////////////////////////////////////////////////////////////
+  // Movie
+  //
+  
+  // Load a swf movie
+  void CreateMovie(CreateMovieParams params);
+  // Unload a swf movie
+  void DestroyMovie(DestroyMovieParams params);
+}
+
+Type OverlaysState {
+  map<string, CreateOverlayParams> overlays;
+  bool show;
+}
+Type CrawlersState {
+  map<string, CreateCrawlerParams> crawlers;
+  bool show;
+}
+Type PictureInPictureState {
+  SetPictureInPictureParams params;
+}
+Type ClickUrlState {
+  SetClickUrlParams params;
+}
+Type MoviesState {
+  map<string, CreateMovieParams> movies;
+}
+
+Service OsdInspector {
+  // returns all elements
+  OverlaysState GetOverlays();
+  CrawlersState GetCrawlers();
+  MoviesState GetMovies();
+
+  // returns the element with the specified id,
+  // or an empty element if id is invalid.
+  // (Test returned element.id == id to learn if call succeeded.)
+  CreateOverlayParams GetOverlay(string id);
+  CreateCrawlerParams GetCrawler(string id);
+  CreateMovieParams GetMovie(string id);
+
+  // returns the current PIP state
+  PictureInPictureState GetPictureInPicture();
+  // returns the current click URL state
+  ClickUrlState GetClickUrl();
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type OsdAssociatorCompleteOsd {
+  array<CreateOverlayParams> overlays;       // overlays
+  array<CreateCrawlerParams> crawlers;       // crawlers (complete, including items)
+  array<AddCrawlerItemParams> crawl_items;   // just new items for existing crawlers
+  optional SetPictureInPictureParams pip;
+  optional SetClickUrlParams click_url;
+  
+  // what to do w/ these at the end of stream
+  bool eos_clear_overlays;        // we remove our overlays
+  bool eos_clear_crawlers;        // we remove our crawlers
+  bool eos_clear_crawl_items;     // we remove our added items
+  bool eos_clear_pip;             // we remove pip
+  bool eos_clear_click_url;       // we remove click URL
+}
+Type OsdAssociatorRequestOsd {
+  optional OsdAssociatorCompleteOsd global;
+  //optional bigint global_ttl; // 'time to live' milliseconds
+  optional OsdAssociatorCompleteOsd specific;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type AddOverlayParams {
+  string id;                  // associate w/ this overlay id
+  string content;             // ... this content
+}
+
+Type AssociatedOsds {
+  string media;
+  optional array<AddCrawlerItemParams> crawlers;
+  optional array<AddOverlayParams> overlays;
+  optional SetPictureInPictureParams pip;
+  optional SetClickUrlParams click_url;
+  // what to do w/ these at the end of stream
+  optional bool eos_clear_overlays;        // we delete all overlays
+  optional bool eos_clear_crawlers;        // we delete all crawlers
+  optional bool eos_clear_crawl_items;     // we remove just our added items
+  optional bool eos_clear_pip;             // we remove pip
+  optional bool eos_clear_click_url;       // we remove click URL
+}
+
+Type FullOsdState {
+  optional array<CreateOverlayParams> overlays;
+  optional array<CreateCrawlerParams> crawlers;
+  optional array<AssociatedOsds> osds;
+}
+
+Service OsdAssociator {
+  //////////////////////////////////////////////////////////////////////
+  //
+  // Overlay types
+  //
+
+  // Creates a new floating overlay type
+  void CreateOverlayType(CreateOverlayParams params);
+  // Destroy a floating overlay
+  void DestroyOverlayType(DestroyOverlayParams params);
+  // Gets Overlay Type for an id
+  CreateOverlayParams GetOverlayType(string id);
+  // Gets all Overlay Types
+  array<string> GetAllOverlayTypeIds();
+
+  //////////////////////////////////////////////////////////////////////
+  //
+  // Crawler types
+  //
+
+  // Create a new crawler
+  void CreateCrawlerType(CreateCrawlerParams params);
+  // Destroy an existing crawler.
+  void DestroyCrawlerType(DestroyCrawlerParams params);
+  // Gets crawler type for an id
+  CreateCrawlerParams GetCrawlerType(string id);
+  // Gets all crawler types
+  array<string> GetAllCrawlerTypeIds();
+
+  AssociatedOsds GetAssociatedOsds(string media);
+  void SetAssociatedOsds(AssociatedOsds osds);
+  void DeleteAssociatedOsds(string media);
+
+  FullOsdState GetFullState();
+  void SetFullState(FullOsdState state);
+  
+  OsdAssociatorRequestOsd GetRequestOsd(MediaRequestInfoSpec request);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+Type OsdAssociatorResult {
+  bool success;
+  string error;
+}
+
+Type OsdAssociatorHostPort {
+  string ip;
+  int port;
+}
+Type OsdAssociatorServerSpec {
+  array<OsdAssociatorHostPort> addresses;
+  string http_path;
+  string http_auth_user;
+  string http_auth_pswd;
+  string rpc_service_name; // usually class name (e.g. "OsdAssociatorServer" or "OsdAssociator")
+}
+
+Service OsdAssociatorClient {
+  OsdAssociatorResult AddOsdServer(string media_path, OsdAssociatorServerSpec server);
+  OsdAssociatorResult DelOsdServerByPath(string media_path);
+  map<string, OsdAssociatorServerSpec> GetAllOsdServers();
+  
+  // query server
+  OsdAssociatorCompleteOsd GetMediaOsd(string media);
+  
+  OsdAssociatorCompleteOsd ShowMediaCache(string media); 
+  map<string, OsdAssociatorCompleteOsd> ShowAllCache();
+  void ClearMediaCache(string media);
+  void ClearAllCache();
+  
+  string DebugToString();
+}

@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SkinnableComponent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   xmlns:whispercast="org.whispercast.*"
+			   xmlns:whispercast_osd="org.whispercast.osd.*"
+			   xmlns:whispercast_player="org.whispercast.player.*"
+			   showEffect="{showEffect}"
+			   hideEffect="{hideEffect}"
+			   creationComplete="creationCompleteHandler_(event)">
+	<fx:Declarations>
+		<s:Fade id="showEffect" target="{skin}" alphaFrom="0" alphaTo="1" duration="300"/>
+		<s:Fade id="hideEffect" target="{skin}" alphaFrom="1" alphaTo="0" duration="300"/>
+	</fx:Declarations>
+	
+	<fx:Metadata>
+		[SkinState("normal")]
+		[SkinState("noOSD")]
+		[SkinState("noOSDOrBackground")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			use namespace mx_internal;
+			
+			import mx.binding.utils.ChangeWatcher;
+			import mx.core.*;
+			import mx.effects.IEffectInstance;
+			import mx.events.*;
+			
+			import org.whispercast.*;
+			import org.whispercast.osd.OSD;
+			
+			import spark.components.ToggleButton;
+			import spark.components.supportClasses.GroupBase;
+			import spark.components.supportClasses.SliderBase;
+			import spark.components.supportClasses.TrackBase;
+			import spark.events.TrackBaseEvent;
+			import spark.layouts.BasicLayout;
+			import spark.layouts.VerticalLayout;
+			
+			[SkinPart(required="true", type="org.whispercast.output.VideoOutput")]
+			public var output:VideoOutput = null;
+			
+			[Bindable(event="Whispercast_VideoPlayer_output")]
+			public function get videoOutput():VideoOutput
+			{
+				return output;
+			}
+			
+			[SkinPart(required="false", type="mx.core.UIComponent")]
+			public var outputBackground:UIComponent;
+			[SkinPart(required="false", type="org.whispercast.osd.OSD")]
+			public var osd:OSD = null;
+			
+			[SkinPart(required="false", type="mx.core.IFlexDisplayObject")]
+			public var buffering:mx.core.IFlexDisplayObject;
+			
+			private var properties_:Object =
+			{
+				urlMapper: null,
+				
+				url: null,
+				urlStandby: null,
+				
+				autoPlay: false,
+
+				muted: false,
+				volume: 0.75,
+				
+				clickUrl: null,
+				
+				videoAlignX: 0.5,
+				videoAlignY: 0.5,
+				
+				restartDelay: 0.5,
+				bufferTime: 0,
+				
+				smoothing: true,
+				deblocking: 2
+			};
+			
+			[Bindable]
+			public function get urlMapper():Function
+			{
+				return properties_.urlMapper;
+			}
+			public function set urlMapper(urlMapper:Function):void
+			{
+				properties_.urlMapper = urlMapper;
+				if (output)
+					output.urlMapper = properties_.urlMapper;
+			}
+			
+			[Bindable]
+			public function get url():String
+			{
+				return properties_.url;
+			}
+			public function set url(url:String):void
+			{
+				properties_.url = url;
+				if (output)
+					output.url = properties_.url;
+			}
+			
+			[Bindable]
+			public function get urlStandby():String
+			{
+				return properties_.urlStandby;
+			}
+			public function set urlStandby(urlStandby:String):void
+			{
+				properties_.urlStandby = urlStandby;
+				if (output)
+					output.urlStandby = properties_.urlStandby;
+			}
+			
+			[Bindable]
+			public function get autoPlay():Boolean
+			{
+				return properties_.autoPlay;
+			}
+			public function set autoPlay(autoPlay:Boolean):void
+			{
+				properties_.autoPlay = autoPlay;
+				if (output)
+					output.autoPlay = properties_.autoPlay;
+			}
+			
+			[Bindable]
+			public function get muted():Boolean
+			{
+				return properties_.muted;
+			}
+			public function set muted(muted:Boolean):void
+			{
+				properties_.muted = muted;
+				if (output)
+					output.muted = properties_.muted; 
+			}
+			
+			[Bindable]
+			public function get volume():Number
+			{
+				return properties_.volume;
+			}
+			public function set volume(volume:Number):void
+			{
+				properties_.volume = volume;
+				if (output)
+					output.volume = properties_.volume; 
+			}
+			
+			[Bindable]
+			public function get clickUrl():String
+			{
+				return properties_.clickUrl;
+			}
+			public function set clickUrl(clickUrl:String):void
+			{
+				properties_.clickUrl = clickUrl;
+				if (output)
+					output.clickUrl = properties_.clickUrl;
+			}
+			
+			protected function updatePlayer_():void
+			{
+				output.urlMapper = properties_.urlMapper;
+				
+				output.url = properties_.url;
+				output.urlStandby = properties_.urlStandby;
+				
+				output.autoPlay = properties_.autoPlay;
+				
+				output.muted = properties_.muted;
+				output.volume = properties_.volume;
+				
+				output.clickUrl = properties_.clickUrl;
+				
+				output.videoAlignX = properties_.videoAlignX;
+				output.videoAlignY = properties_.videoAlignY;
+				
+				output.restartDelay = properties_.restartDelay;
+				output.bufferTime = properties_.bufferTime;
+				
+				output.smoothing = properties_.smoothing;
+				output.deblocking = properties_.deblocking;
+			}
+			
+			private var showOSD_:Boolean = true;
+			[Bindable]
+			public function get showOSD():Boolean
+			{
+				return showOSD_;
+			}
+			public function set showOSD(showOSD:Boolean):void
+			{
+				showOSD_ = showOSD;
+				Logger.info(this, 'Show OSD set to {0}', showOSD);
+				
+				invalidateSkinState();
+			}
+			
+			private var showBackground_:Boolean = true;
+			[Bindable]
+			public function get showBackground():Boolean
+			{
+				return showBackground_;
+			}
+			public function set showBackground(showBackground:Boolean):void
+			{
+				showBackground_ = showBackground;
+				Logger.info(this, 'Show background set to {0}', showBackground);
+				
+				invalidateSkinState();
+			}
+			
+			private var hideAllUI_:Boolean = false;
+			[Bindable]
+			public function get hideAllUI():Boolean
+			{
+				return hideAllUI_;
+			}
+			public function set hideAllUI(hideAllUI:Boolean):void
+			{
+				hideAllUI_ = hideAllUI;
+				Logger.info(this, 'Hide all UI set to {0}', hideAllUI);
+				
+				invalidateSkinState();
+			}
+			
+			private var clickable_:Boolean = false;
+			[Bindable]
+			public function get clickable():Boolean
+			{
+				return clickable_;
+			}
+			public function set clickable(clickable:Boolean):void
+			{
+				clickable_ = clickable;
+				Logger.info(this, 'Clickable set to {0}', clickable);
+			}
+			
+			public function _osd_SetClickUrl(p:Object):void {
+				properties_.clickUrl = (p.url != "") ? p.url : null;
+				if (output)
+					output.clickUrl = properties_.clickUrl; 
+				
+				Logger.info(this, 'Click URL {0}', properties_.clickUrl);
+			}
+			public function _osd_SetPictureInPicture(p:Object):void {
+				dispatchEvent(new VideoPlayerEvent(VideoPlayerEvent.PICTURE_IN_PICTURE, p, true));
+				Logger.info(this, 'Picture In Picture {0}', p);
+			}
+			
+			private function addOSDHooks_(c:Object):void
+			{
+				var hooks:Object = new Object();
+				hooks['flash'] = new Object();
+				
+				// enumerate all the osd related interface methods and hook them up
+				var d:XMLList = describeType(c)..method;
+				for (var j:String in d) {
+					var n:String = d[j].@name;
+					if (n.search('_osd_') == 0) {
+						hooks['flash'][n.substr(5)] = {f:c[n], c:c};
+					}
+				}
+				output.addCallHooks(hooks);
+			}
+			
+			protected function initializeOsd_():void
+			{
+				if (output && osd)
+				{
+					addOSDHooks_(osd);
+					output.addEventListener("Whispercast_VideoOutput_streamChanged", function(e:Event):void {
+						_osd_SetClickUrl({url:""});
+						osd.reset();
+					});
+				}
+			}
+			
+			override protected function partAdded(partName:String, instance:Object):void
+			{
+				super.partAdded(partName, instance);
+				
+				switch (partName)
+				{
+					case "osd":
+						initializeOsd_();
+						break;
+					case "output":
+						addEventListener(MouseEvent.CLICK, function(e:Event):void {
+							if (e.target == outputBackground || e.target == output || e.target == osd)
+							{
+								if (clickable_ || (output.clickUrl != null))
+									dispatchEvent(new VideoPlayerEvent(VideoPlayerEvent.CLICK, null, true));
+							}
+						});
+						output.addEventListener("Whispercast_VideoOutput_duration", function(e:Event):void {
+							invalidateSkinState();
+						});
+						output.addEventListener("Whispercast_VideoOutput_isPlaying", function(e:Event):void {
+							invalidateSkinState();
+						});
+						
+						addOSDHooks_(this);
+						updatePlayer_();
+						
+						initializeOsd_();
+						
+						dispatchEvent(new FlexEvent("Whispercast_VideoPlayer_output"));
+						break;
+				}
+			}
+			
+			override protected function getCurrentSkinState():String
+			{
+				if (!showOSD)
+					if (!showBackground)
+						return "noOSDOrBackground";
+					else
+						return "noOSD";
+				else
+					if (!showBackground)
+						return "noBackground";
+				return "normal";
+			}
+			
+			protected function creationCompleteHandler_(event:FlexEvent):void
+			{
+				ChangeWatcher.watch(this, "visible", function(e:Event):void {
+					if (visible)
+					{
+						output.disableStandby = false;
+						if (!output.isPlaying || output.isPausing)
+							output.togglePlayOrPause();
+					}
+				});
+			}
+			
+			private function updateCompleteHandler_(e:Event):void
+			{
+				UIComponentGlobals.layoutManager.removeEventListener(
+					FlexEvent.UPDATE_COMPLETE, updateCompleteHandler_);
+				
+				if (!visible)
+				{
+					output.disableStandby = true;
+					if (output.isPlaying && !output.isPausing)
+						output.togglePlayOrPause();
+				}
+			}
+			
+			override public function effectFinished(effectInst:IEffectInstance):void
+			{
+				super.effectFinished(effectInst);
+				
+				UIComponentGlobals.layoutManager.addEventListener(
+					FlexEvent.UPDATE_COMPLETE, updateCompleteHandler_, false, 0, true);
+			}
+		]]>
+	</fx:Script>
+</s:SkinnableComponent>

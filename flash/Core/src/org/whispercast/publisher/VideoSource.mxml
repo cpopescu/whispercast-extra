@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VideoDisplay xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				 xmlns:s="library://ns.adobe.com/flex/spark" 
+				 xmlns:mx="library://ns.adobe.com/flex/mx"
+				 xmlns:local="com.whispersoft.video.*"
+				 autoPlay="false">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+			import mx.events.PropertyChangeEvent;
+			
+			private var _host:String = null;
+			private var _stream:String = null;
+			
+			private var _isPublishing:Boolean = false;
+			
+			private var _cameraWidth:int = 320;
+			private var _cameraHeight:int = 240;
+			
+			private var _fps:Number = 15;
+			
+			private var _keyFrameInterval:Number = 5;
+			
+			private var _videoBandwidth:int = 300000;
+			private var _videoQuality:Number = 80;
+			
+			private var _audioGain:Number = 50;
+			
+			private var _audioEchoSuppresion:Boolean = true;
+			
+			private var _audioSilenceLevel:Number = 0;
+			private var _audioSilenceTimeout:int = 0;
+			
+			private var _audioRate:int = 22;
+			
+			private var _audioLoopback:Boolean = true;
+			private var _videoLoopback:Boolean = true;
+			
+			[Bindable]
+			public function get host():String
+			{
+				return _host;
+			}
+			public function set host(host:String):void
+			{
+				_host = host;
+			}
+			[Bindable]
+			public function get stream():String
+			{
+				return _stream;
+			}
+			public function set stream(stream:String):void
+			{
+				_stream = stream;
+			}
+			
+			[Bindable]
+			public function get cameraWidth():int
+			{
+				return _cameraWidth;
+			}
+			public function set cameraWidth(cameraWidth:int):void
+			{
+				_cameraWidth = cameraWidth;
+			}
+			[Bindable]
+			public function get cameraHeight():int
+			{
+				return _cameraHeight;
+			}
+			public function set cameraHeight(cameraHeight:int):void
+			{
+				_cameraHeight = cameraHeight;
+			}
+			
+			[Bindable]
+			public function get fps():int
+			{
+				return _fps;
+			}
+			public function set fps(fps:int):void
+			{
+				_fps = fps;
+			}
+			
+			[Bindable]
+			public function get keyFrameInterval():Number
+			{
+				return _keyFrameInterval;
+			}
+			public function set keyFrameInterval(keyFrameInterval:Number):void
+			{
+				_keyFrameInterval = keyFrameInterval;
+			}
+			
+			[Bindable]
+			public function get videoBandwidth():int
+			{
+				return _videoBandwidth;
+			}
+			public function set videoBandwidth(videoBandwidth:int):void
+			{
+				_videoBandwidth = videoBandwidth;
+			}
+			
+			[Bindable]
+			public function get videoQuality():Number
+			{
+				return _videoQuality;
+			}
+			public function set videoQuality(videoQuality:Number):void
+			{
+				_videoQuality = videoQuality;
+			}
+			
+			[Bindable]
+			public function get audioGain():Number
+			{
+				return _audioGain;
+			}
+			public function set audioGain(gain:Number):void
+			{
+				_audioGain = gain;
+			}
+			
+			[Bindable]
+			public function get audioEchoSuppresion():Boolean
+			{
+				return _audioEchoSuppresion;
+			}
+			public function set audioEchoSuppresion(audioEchoSuppresion:Boolean):void
+			{
+				_audioEchoSuppresion = audioEchoSuppresion;
+			}
+			
+			[Bindable]
+			public function get audioSilenceLevel():Number
+			{
+				return _audioSilenceLevel;
+			}
+			public function set audioSilenceLevel(audioSilenceLevel:Number):void
+			{
+				_audioSilenceLevel = audioSilenceLevel;
+			}
+			[Bindable]
+			public function get audioSilenceTimeout():int
+			{
+				return _audioSilenceLevel;
+			}
+			public function set audioSilenceTimeout(audioSilenceTimeout:int):void
+			{
+				_audioSilenceTimeout = audioSilenceTimeout;
+			}
+			
+			[Bindable]
+			public function get audioRate():int
+			{
+				return _audioRate;
+			}
+			public function set audioRate(audioRate:int):void
+			{
+				_audioRate = audioRate;
+			}
+			
+			[Bindable]
+			public function get audioLoopback():Boolean
+			{
+				return _audioLoopback;
+			}
+			public function set audioLoopback(audioLoopback:Boolean):void
+			{
+				_audioLoopback = audioLoopback;
+				if (_microphone)
+					_microphone.setLoopBack(_audioLoopback);
+			}
+			
+			[Bindable]
+			public function get videoLoopback():Boolean
+			{
+				return _audioLoopback;
+			}
+			public function set videoLoopback(videoLoopback:Boolean):void
+			{
+				_videoLoopback = videoLoopback;
+				if (_camera)
+					_camera.setLoopback(_videoLoopback);
+			}
+			
+			[Bindable]
+			public function set isPublishing(isPublishing:Boolean):void
+			{
+			}
+			public function get isPublishing():Boolean
+			{
+				return _isPublishing;
+			}
+				
+			private var _camera:Camera = null;
+			private var _microphone:Microphone = null;
+			
+			private function _updateCameraMode():void
+			{
+				if (_camera != null)
+					_camera.setMode(_cameraWidth, _cameraHeight, _fps);
+			}
+			private function _updateCameraKeyFrameInterval():void
+			{
+				if (_camera != null && !isNaN(_keyFrameInterval))
+					_camera.setKeyFrameInterval(_fps*_keyFrameInterval);
+			}
+			private function _updateCameraQuality():void
+			{
+				if (_camera != null)
+					_camera.setQuality(_videoBandwidth, _videoQuality);
+			}
+			
+			public function updateCamera():void
+			{
+				if (_camera != null)
+				{
+					_updateCameraMode();
+					_updateCameraKeyFrameInterval();
+					_updateCameraQuality();
+				}
+			}
+			
+			public function updateMicrophone():void
+			{
+				if (_microphone != null)
+				{
+					_microphone.gain = _audioGain;
+					_microphone.rate = _audioRate;
+					_microphone.setUseEchoSuppression(_audioEchoSuppresion);
+					_microphone.setSilenceLevel(_audioSilenceLevel, _audioSilenceTimeout);
+				}
+			}
+			private var _netConnection:NetConnection = null;
+			private var _netStream:NetStream = null;
+			
+			private function net_StatusHandler(event:NetStatusEvent):void {
+				trace("VideoSource("+name+"): "+event.info.code);
+				switch (event.info.code)
+				{
+					case "NetConnection.Connect.Success":
+						_netStream = new NetStream(_netConnection);
+						_netStream.addEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+						_netStream.attachCamera(_camera);
+						_netStream.attachAudio(_microphone);
+						_netStream.publish(_stream, "live");
+						
+						attachCamera(_camera);
+						break;
+					case "NetConnection.Connect.Closed":
+					case "NetConnection.Connect.Failed":
+						_cleanup();
+						
+						if (_isPublishing) {
+							setTimeout(function():void {
+								publish();
+							}, 500);
+						}
+						break;
+					case "NetStream.Publish.Start":
+						_netStream.send("@setDataFrame", "onMetaData", {width: _camera.width, height: _camera.height, fps: _camera.fps});
+						break;
+				}
+			}
+			private function net_SecurityErrorHandler(event:SecurityErrorEvent):void {
+				trace("VideoSource("+name+"): "+event.text);
+			}
+			
+			public function net_BWDoneHandler():void {
+				trace("VideoSource("+name+"): OnBWDone()");
+			}
+			
+			private function _cleanup():void
+			{
+				if (_netConnection != null)
+				{
+					_netConnection.removeEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+					_netConnection.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, net_SecurityErrorHandler);
+					
+					_netConnection.close();
+				}
+				if (_netStream != null)
+				{
+					_netStream.removeEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+				}
+				
+				_netStream = null;
+				_netConnection = null;
+				
+				_camera = null;
+				_microphone = null;
+				
+				attachCamera(null);
+			}
+			
+			public function publish():void
+			{
+				if (_isPublishing)
+				{
+					_cleanup();
+				}
+				else
+				{
+					_isPublishing = true;
+					dispatchEvent(PropertyChangeEvent.createUpdateEvent(this, "isPublishing", false, true));
+				}
+					
+				_camera = Camera.getCamera();
+				_microphone = Microphone.getMicrophone();
+				
+				if (_camera != null && _microphone != null)
+				{
+					_microphone.setLoopBack(_audioLoopback);
+					_camera.setLoopback(_videoLoopback);
+					
+					updateCamera();
+					updateMicrophone();
+					
+					_netConnection = new NetConnection();
+					_netConnection.objectEncoding = 0;
+					_netConnection.addEventListener(NetStatusEvent.NET_STATUS, net_StatusHandler);
+					_netConnection.addEventListener(SecurityErrorEvent.SECURITY_ERROR, net_SecurityErrorHandler);
+					_netConnection.client =  {
+						onBWDone: this.net_BWDoneHandler
+					};
+					_netConnection.connect(_host);
+				}
+				else
+				{
+					_cleanup();
+				}
+			}
+			public override function stop():void
+			{
+				if (_isPublishing)
+				{
+					_isPublishing = false;
+					dispatchEvent(PropertyChangeEvent.createUpdateEvent(this, "isPublishing", true, false));
+					
+					_cleanup();
+				}
+			}
+			
+			public function togglePublishing():void
+			{
+				if (isPublishing)
+					stop();
+				else
+					publish();
+			}
+		]]>
+	</fx:Script>
+</mx:VideoDisplay>

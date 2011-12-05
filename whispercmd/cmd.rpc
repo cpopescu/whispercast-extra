@@ -1,0 +1,6 @@
+
+Service Cmd {
+  // Run a script through the shell. It can be a bash, python, php, ... .
+  // Returns script exit code.  
+  int RunScript(string script, array<string> args);
+}

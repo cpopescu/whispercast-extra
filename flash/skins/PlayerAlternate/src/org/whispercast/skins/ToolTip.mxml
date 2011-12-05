@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SparkSkin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.*" mouseEnabled="false">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("org.whispercast.ToolTip")]
+	</fx:Metadata>
+	
+	<fx:Declarations>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.filters.BitmapFilterQuality;
+			import mx.managers.ToolTipManager;
+		]]>
+	</fx:Script>
+	
+	<!-- Background -->
+	<s:Rect top="0" left="0" right="0" bottom="0" radiusX="3" radiusY="3">
+		<s:fill>
+			<s:SolidColor color="{getStyle('backColorLow')}"/>
+		</s:fill>
+		<s:filters>
+			<s:DropShadowFilter angle="90" color="{getStyle('textColorHigh')}" alpha="0.5" distance="0" blurX="3" blurY="3" quality="3"/>
+		</s:filters>
+	</s:Rect>
+	<s:Label id="label"
+			 horizontalCenter="0" verticalCenter="2"
+			 left="5" right="5" top="5" bottom="5"
+			 textAlign="center" verticalAlign="middle"
+			 color="{getStyle('textColorHigh')}">
+	</s:Label>
+</s:SparkSkin>

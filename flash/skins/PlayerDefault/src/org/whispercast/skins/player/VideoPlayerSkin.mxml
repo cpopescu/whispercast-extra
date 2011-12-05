@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.*"
+		xmlns:whispercast_player="org.whispercast.player.*"
+		xmlns:whispercast_osd="org.whispercast.osd.*"
+		xmlns:whispercast_skins="org.whispercast.skins.player.*">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("org.whispercast.player.VideoPlayer")]
+	</fx:Metadata>
+
+	<fx:Declarations>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.filters.BitmapFilterQuality;
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="buffering" stateGroups="bufferingGroup"/>
+		<s:State name="noOSD" stateGroups="noOSDGroup"/>
+		<s:State name="noOSDAndBuffering" stateGroups="noOSDGroup,bufferingGroup"/>
+		<s:State name="noBackground" stateGroups="noBackgroundGroup"/>
+		<s:State name="noBackgroundAndBuffering" stateGroups="noBackgroundGroup,bufferingGroup"/>
+		<s:State name="noOSDOrBackground" stateGroups="noOSDGroup,noBackgroundGroup"/>
+		<s:State name="noOSDOrBackgroundAndBuffering" stateGroups="noOSDGroup,noBackgroundGroup,bufferingGroup"/>
+	</s:states>
+	
+	<s:Group width="100%" height="100%">
+		<s:Group width="100%" height="100%">
+			<s:Group id="outputBackground" x="{output.outputX}" y="{output.outputY}" width="{output.outputWidth}" height="{output.outputHeight}" includeInLayout="false" visible.noBackgroundGroup="false">
+				<s:filters>
+					<s:DropShadowFilter blurX="10" blurY="10" distance="0" quality="{BitmapFilterQuality.HIGH}"/>
+				</s:filters>
+				<s:Rect width="100%" height="100%">
+					<s:fill>
+						<s:LinearGradient rotation="90">
+							<s:GradientEntry color="0x404040" alpha="0.5"/>
+							<s:GradientEntry color="0x202020" alpha="0.5"/>
+							<s:GradientEntry color="0x404040" alpha="0.5"/>
+						</s:LinearGradient>
+					</s:fill>
+				</s:Rect>
+			</s:Group>
+			<whispercast_player:VideoOutput id="output" left="0" top="0" right="0" bottom="0" buttonMode="{hostComponent.clickable || (output.clickUrl != null)}"/>
+			<s:Group id="outputBorder" x="{output.outputX}" y="{output.outputY}" width="{output.outputWidth}" height="{output.outputHeight}" includeInLayout="false" visible.noBackgroundGroup="false">
+				<s:Rect width="100%" height="100%">
+					<s:stroke>
+						<s:LinearGradientStroke rotation="90" weight="1">
+							<s:GradientEntry color="0x606060"/>
+							<s:GradientEntry color="0x202020"/>
+							<s:GradientEntry color="0x404040"/>
+						</s:LinearGradientStroke>
+					</s:stroke>
+				</s:Rect>
+			</s:Group>
+			<whispercast_skins:BufferingIcon id="bufferingIcon" verticalCenter="0" horizontalCenter="0" includeIn="bufferingGroup"/>
+		</s:Group>
+	</s:Group>	
+	<s:Group width="100%" height="100%" clipAndEnableScrolling="true">
+		<whispercast_osd:OSD id="osd" x="{output.outputX+1}" y="{output.outputY+1}" width="{output.outputWidth-1}" height="{output.outputHeight-1}" visible="{!hostComponent.hideAllUI}" visible.noOSDGroup="false" buttonMode="{hostComponent.clickable || (output.clickUrl != null)}"/>
+	</s:Group>
+</s:Skin>

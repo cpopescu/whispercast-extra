@@ -1,0 +1,26 @@
+// Copyright (c) 2009, Whispersoft s.r.l.
+// All rights reserved.
+//
+// Authors: Catalin Popescu
+
+
+Type AuxRemoteConfigServer {
+  optional string element_config_prefix_;
+  optional string media_detail_prefix_;
+
+  array<string> lookup_servers_;
+  string lookup_path_;
+
+  optional int lookup_num_retries_;
+  optional string lookup_force_host_header_;
+  optional string auth_user_;
+  optional string auth_pass_;
+  optional bool lookup_json_encoding_;
+}
+
+Type AuxElementConfig {
+  array<AuxRemoteConfigServer> servers_;
+
+  optional int lookup_max_concurrent_requests_;
+  optional int lookup_req_timeout_ms_;
+}

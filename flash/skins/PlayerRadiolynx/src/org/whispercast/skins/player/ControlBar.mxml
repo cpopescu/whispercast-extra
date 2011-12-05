@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.*"
+		xmlns:whispercast_player="org.whispercast.player.*"
+		xmlns:whispercast_osd="org.whispercast.osd.*"
+		xmlns:whispercast_skins="org.whispercast.skins.player.*"
+		creationComplete="onCreationComplete(event)"
+		currentState="noProgress">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("org.whispercast.player.ControlBar")]
+	</fx:Metadata>
+
+	<fx:Declarations>
+		<s:Parallel id="progressTransition" duration="250">
+			<s:Fade target="{progressBarGroup}"/>
+			<s:Fade target="{timeGroup}"/>
+		</s:Parallel>
+	</fx:Declarations>
+	
+	<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		@namespace whispercast "org.whispercast.*";
+		@namespace whispercast_player "org.whispercast.player.*";
+		@namespace whispercast_osd "org.whispercast.osd.*";
+		@namespace whispercast_skins "org.whispercast.skins.player.*";
+		
+		* {
+			foreColorLow: #a62b54;
+			foreColorHigh: #d1366a;
+			
+			backColorLow: #000000;
+			backColorHigh: #353535;
+			
+			disabledColorLow: #808080;
+			disabledColorHigh: #c0c0c0;
+			
+			selectedColorLow: #cc9000;
+			selectedColorHigh: #ffc000;
+			
+			textColorLow: #909090;
+			textColorHigh: #c0c0c0;
+		}
+	</fx:Style>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Menu;
+			import mx.core.FlexGlobals;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			
+			import org.whispercast.player.*;
+			
+			protected function formatTime(time:Number):String
+			{
+				var h:Number = Math.floor(time/3600);
+				time = time-3600*h;
+				var m:Number = Math.floor(time/60);
+				time = time-60*m;
+				var s:Number = Math.floor(time);
+				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s;
+			}
+			protected function formatTimeScrubBar(time:Number):String
+			{
+				var h:Number = Math.floor(time/3600);
+				time = time-3600*h;
+				var m:Number = Math.floor(time/60);
+				time = time-60*m;
+				var s:Number = Math.floor(time);
+				time = Math.floor(1000*(time-s));
+				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s+"."+(time<10 ? "00":(time<100 ? "0" : ""))+time ;
+			}
+			
+			protected function onCreationComplete(event:FlexEvent):void
+			{
+				hostComponent.setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
+				hostComponent.setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
+				hostComponent.setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
+				hostComponent.setStyle('backColorHigh', scrubBar.getStyle('backColorHigh'));
+				hostComponent.setStyle('selectedColorLow', scrubBar.getStyle('selectedColorLow'));
+				hostComponent.setStyle('selectedColorHigh', scrubBar.getStyle('selectedColorHigh'));
+				hostComponent.setStyle('textColorLow', scrubBar.getStyle('textColorLow'));
+				hostComponent.setStyle('textColorHigh', scrubBar.getStyle('textColorHigh'));
+				
+				scrubBar.dataTipFormatFunction = formatTimeScrubBar;
+			}
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="noProgress" stateGroups="noProgressGroup"/>
+		<s:State name="noTime" stateGroups="noTimeGroup"/>
+		<s:State name="noProgressOrTime" stateGroups="noProgressGroup,noTimeGroup"/>
+	</s:states>
+	
+	<s:transitions>
+		<s:Transition effect="{progressTransition}"/>
+	</s:transitions>
+	
+	<s:Group id="controlBar" width="100%">
+		<s:Rect left="0" top="0" right="0" bottom="0">
+			<s:fill>
+				<s:LinearGradient rotation="90">
+					<s:GradientEntry color="0x252525"/>
+					<s:GradientEntry color="0x000000"/>
+				</s:LinearGradient>
+			</s:fill>
+		</s:Rect>
+		<s:HGroup width="100%" verticalAlign="middle" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5" gap="10">
+			<!-- Play/Stop  button -->
+			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="46" height="46" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
+			<s:HGroup width="100%">
+				<s:Group id="progressBarGroup" width="100%" height="20" visible.noProgressGroup="false">
+					<!-- Progress bar -->
+					<s:Group width="100%" height="100%">
+						<s:Group left="1" top="1" bottom="1" right="1">
+							<!-- Progress bar progress -->
+							<s:Group id="progressBar" width="100%" height="100%">
+								<s:Rect left="0" top="0" right="0" bottom="8">
+									<s:fill>
+										<s:LinearGradient rotation="90">
+											<s:GradientEntry color="0xe93c76"/>
+											<s:GradientEntry color="0xa62b54"/>
+										</s:LinearGradient>
+									</s:fill>
+								</s:Rect>
+								<s:Rect left="0" top="8" right="0" bottom="0">
+									<s:fill>
+										<s:LinearGradient rotation="90">
+											<s:GradientEntry color="0x8e2548" alpha="1"/>
+											<s:GradientEntry color="0x7d213f" alpha="1"/>
+										</s:LinearGradient>
+									</s:fill>
+								</s:Rect>
+							</s:Group>
+						</s:Group>
+						<whispercast:HSliderBar id="scrubBar" width="100%" height="100%" minimum="0" maximum="{hostComponent.output.duration}" snapInterval="0" liveDragging="false" slideDuration="0" visible="{hostComponent.output.seekable}" enabled="{hostComponent.output.isPlaying &amp;&amp; hostComponent.output.seekable}" skinClass="org.whispercast.skins.player.ScrubBar"/>
+					</s:Group>
+					<!-- Progress bar border -->
+					<s:Rect width="100%" height="100%" alpha="0.5">
+						<s:stroke>
+							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+								<s:GradientEntry color="{getStyle('backColorLow')}"/>
+								<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+							</s:LinearGradientStroke>
+						</s:stroke>
+					</s:Rect>
+				</s:Group>
+				<!-- Controls -->
+				<s:HGroup>
+					<s:Group id="timeGroup" visible="true" visible.noTimeGroup="false">
+						<!-- Time -->
+						<s:HGroup height="20" verticalAlign="middle" gap="0">
+							<s:Label id="time" text="-:--:--" lineBreak="explicit" width="42" textAlign="right" fontSize="11" color="{getStyle('textColorHigh')}"/>
+							<s:Label text="/" lineBreak="explicit" width="7" textAlign="center" fontSize="11" color="{getStyle('textColorLow')}"/>
+							<s:Label id="duration" text="-:--:--" lineBreak="explicit" width="43" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
+						</s:HGroup>
+						<!-- Time border -->
+						<s:Rect width="100%" height="100%" alpha="0.5">
+							<s:stroke>
+								<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+									<s:GradientEntry color="{getStyle('backColorLow')}"/>
+									<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+								</s:LinearGradientStroke>
+							</s:stroke>
+						</s:Rect>
+					</s:Group>
+					<!-- Volume + mute button -->
+					<s:HGroup gap="-4" verticalAlign="middle">
+						<s:ToggleButton id="mute" toolTip="Mute" width="20" height="20" label="Mute" buttonMode="true" selected="{hostComponent.output.muted}" skinClass="org.whispercast.skins.player.MuteButton"/>
+						<whispercast:HSliderBar id="volumeBar" width="40" height="18" minimum="0" maximum="1" slideDuration="0" value="{hostComponent.output.volume}" snapInterval="0" showDataTip="false" skinClass="org.whispercast.skins.player.VolumeBar"/>
+					</s:HGroup>
+					<!-- Switch button -->
+					<s:ToggleButton id="toggleSecondary" toolTip="Toggle Picture-In-Picture" skinClass="org.whispercast.skins.player.ToggleButton" buttonMode="true" enabled="{parentApplication.isSecondaryAvailable}" selected="{!parentApplication.isSecondaryVisible}"/>
+					<!-- Fullscreen button -->
+					<s:ToggleButton id="fullScreen" toolTip="Toggle Fullscreen" skinClass="org.whispercast.skins.player.FullscreenButton" buttonMode="true" selected="{parentApplication.isFullscreen}"/>
+				</s:HGroup>
+			</s:HGroup>
+		</s:HGroup>
+		<s:Rect width="100%" height="100%">
+			<s:stroke>
+				<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+					<s:GradientEntry color="0x151515"/>
+					<s:GradientEntry color="0x252525"/>
+				</s:LinearGradientStroke>
+			</s:stroke>
+		</s:Rect>
+	</s:Group>
+</s:Skin>

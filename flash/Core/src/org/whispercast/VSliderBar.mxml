@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<whispercast:SliderBase xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		   xmlns:s="library://ns.adobe.com/flex/spark" 
+		   xmlns:mx="library://ns.adobe.com/flex/mx"
+		   xmlns:whispercast="org.whispercast.*"
+		   xmlns:whispercast_osd="org.whispercast.osd.*"
+		   xmlns:whispercast_player="org.whispercast.player.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			override protected function valueToPoint(value:Number):Point
+			{
+				return new Point(track.height * (value - minimum)/(maximum - minimum), 0);
+			}
+			override protected function pointToValue(x:Number, y:Number):Number
+			{
+				return (y / track.height) * (maximum - minimum);
+			}
+			
+			override protected function positionDataTip_(position:Point):Point
+			{
+				position.x -= width;
+				return position;
+			}
+			
+			override protected function updateSkinDisplayList():void
+			{
+				if (!thumb || !track)
+					return;
+				
+				var thumbRange:Number = track.getLayoutBoundsHeight() - thumb.getLayoutBoundsHeight();
+				var range:Number = maximum - minimum;
+				
+				// calculate new thumb position.
+				var thumbPosTrackY:Number = (range > 0) ? thumbRange - (((pendingValue - minimum) / range) * thumbRange) : 0;
+				
+				// convert to parent's coordinates.
+				var thumbPos:Point = track.localToGlobal(new Point(0, thumbPosTrackY));
+				var thumbPosParentY:Number = thumb.parent.globalToLocal(thumbPos).y;
+				
+				thumb.setLayoutBoundsPosition(thumb.getLayoutBoundsX(), Math.round(thumbPosParentY));
+			}
+		]]>
+	</fx:Script>
+</whispercast:SliderBase>

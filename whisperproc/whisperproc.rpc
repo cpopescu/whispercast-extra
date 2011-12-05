@@ -1,0 +1,30 @@
+// Copyright (c) 2009, Whispersoft s.r.l.
+// All rights reserved.
+//
+
+Type ThumbnailCommand {
+  string file_name_;
+
+  // Write thumbnails under this folder.
+  string output_dir_;
+
+  // Extract first thumbnail at this time in file.
+  int start_ms_;
+
+  // Repeat extracting thumbnails every so often.
+  int repeat_ms_;
+
+  // Stop extracting thumbnails at this time in file.
+  int end_ms_;
+
+  // jpeg quality (1-100), default 75
+  optional int quality_;
+
+  // Width of the destination (0 - use original if height not set,
+  // "or use corresponding width to keep aspect ratio - if set)
+  optional int width_;
+  
+  // Height of the destination (0 - use original, if width not set,
+  // or use corresponding height to keep aspect ratio - if set)
+  optional int height_;
+}

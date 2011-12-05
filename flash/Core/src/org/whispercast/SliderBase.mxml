@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TrackBase xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			 xmlns:s="library://ns.adobe.com/flex/spark" 
+			 xmlns:mx="library://ns.adobe.com/flex/mx"
+			 xmlns:whispercast="org.whispercast.*"
+			 xmlns:whispercast_osd="org.whispercast.osd.*"
+			 xmlns:whispercast_player="org.whispercast.player.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import mx.core.IDataRenderer;
+			import mx.core.IToolTip;
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.ToolTipManager;
+			
+			import org.whispercast.ToolTip;
+			
+			import spark.events.TrackBaseEvent;
+			
+			private var clickOffset_:Point = new Point(0, 0);
+			
+			private var showDataTip_:Boolean = true;
+			[Bindable]
+			public function get showDataTip():Boolean
+			{
+				return showDataTip_;
+			}
+			public function set showDataTip(value:Boolean):void
+			{
+				showDataTip_ = value;
+			}
+			
+			private var updateOnMouseDown_:Boolean = true;
+			[Bindable]
+			public function get updateOnMouseDown():Boolean
+			{
+				return updateOnMouseDown_;
+			}
+			public function set updateOnMouseDown(value:Boolean):void
+			{
+				updateOnMouseDown_ = value;
+			}
+			
+			private var liveDragging_:Boolean = true;
+			[Bindable]
+			public function get liveDragging():Boolean
+			{
+				return liveDragging_;
+			}
+			public function set liveDragging(value:Boolean):void
+			{
+				liveDragging_ = value;
+			}
+			
+			private var dataTipFormatFunction_:Function = null;
+			[Bindable]
+			public function get dataTipFormatFunction():Function
+			{
+				return dataTipFormatFunction_;
+			}
+			public function set dataTipFormatFunction(value:Function):void
+			{
+				dataTipFormatFunction_ = value;
+			}
+			
+			private var pendingValue_:Number = 0;
+			[Bindable]
+			protected function get pendingValue():Number
+			{
+				return pendingValue_;
+			}
+			protected function set pendingValue(value:Number):void
+			{
+				if (value == pendingValue_)
+					return;
+				
+				pendingValue_ = value;
+				invalidateDisplayList();
+			}
+			
+			override protected function setValue(value:Number):void
+			{
+				pendingValue_ = value;
+				super.setValue(value);
+			}
+			
+			protected function formatDataTipText_(value:Number):String
+			{
+				var formattedValue:Object;
+				
+				if (dataTipFormatFunction != null)
+					formattedValue = dataTipFormatFunction(value); 
+				else
+					formattedValue = value;
+				
+				return ''+formattedValue;
+			}
+			
+			protected function valueToPoint(value:Number):Point
+			{
+				return new Point(0, 0);
+			}
+			
+			protected function positionToValue_(position:Point):Number
+			{
+				var offsetX:Number = position.x;
+				var offsetY:Number = position.y;
+				var p:Point = track.globalToLocal(new Point(offsetX, offsetY));
+				
+				var value:Number = pointToValue(p.x, p.y);
+				return nearestValidValue(value, snapInterval);
+			}
+			protected function valueToPosition_(value:Number):Point
+			{
+				var position:Point = valueToPoint(value);
+				var offsetX:Number = position.x;
+				var offsetY:Number = position.y;
+				
+				return new Point(offsetX, offsetY);
+			}
+			
+			protected var dataTip_:IToolTip = null;
+			protected function createDataTip_():void
+			{
+				dataTip_ = new ToolTip();
+				
+				var asIStyleClient:IStyleClient = dataTip_ as IStyleClient;
+				if (asIStyleClient)
+				{
+					dataTip_.visible = false;
+					asIStyleClient.setStyle('showEffect', ToolTipManager.showEffect);
+					asIStyleClient.setStyle('hideEffect', ToolTipManager.hideEffect);
+				}
+				
+				var asUIComponent:UIComponent = dataTip_ as UIComponent;
+				if (asUIComponent)
+				{
+					asUIComponent.owner = this;
+					asUIComponent.isPopUp = true;
+				}
+				systemManager.toolTipChildren.addChild(DisplayObject(dataTip_));
+				
+				addEventListener(ResizeEvent.RESIZE, updateTooltipOnResize_); 
+				
+				if (asUIComponent)
+				{
+					asUIComponent.validateNow();
+					asUIComponent.setActualSize(asUIComponent.getExplicitOrMeasuredWidth(), asUIComponent.getExplicitOrMeasuredHeight());
+				}
+				
+				if (asIStyleClient)
+				{
+					dataTip_.visible = true;
+				}
+			}
+			protected function destroyDataTip_():void
+			{
+				removeEventListener(ResizeEvent.RESIZE, updateTooltipOnResize_);
+				
+				systemManager.toolTipChildren.removeChild(DisplayObject(dataTip_));
+				dataTip_ = null;
+			}
+			protected function updateDataTip_(position:Point):void
+			{
+				var value:Number = positionToValue_(position);
+				dataTip_.text = formatDataTipText_(value);
+				
+				position = positionDataTip_(track.localToGlobal(valueToPosition_(value)));
+				
+				if ((position.x + dataTip_.width) > stage.stageWidth)
+					position.x = stage.stageWidth - dataTip_.width - 1;
+				if (position.x < 0)
+					position.x = 0;
+				
+				if ((position.y + dataTip_.height) > stage.stageHeight)
+					position.y = stage.stageHeight - dataTip_.height - 1;
+				if (position.y < 0)
+					position.y = 0;
+				
+				(dataTip_ as DisplayObject).x = position.x;
+				(dataTip_ as DisplayObject).y = position.y;
+			}
+			protected function positionDataTip_(position:Point):Point
+			{
+				return position;
+			}
+			
+			private function updateTooltipOnResize_(e:Event):void {
+				if (dataTip_ != null)
+				{
+					updateDataTip_(new Point(stage.mouseX, stage.mouseY));
+				}
+			}
+			
+			private var mouseIsOver_:Boolean = false;
+			public function get mouseIsOver():Boolean
+			{
+				return mouseIsOver_;
+			}
+			
+			private var mouseIsTracking_:Boolean = false;
+			public function get mouseIsTracking():Boolean
+			{
+				return mouseIsTracking_;
+			}
+			
+			protected function updateTooltipState_():void
+			{
+				if (mouseIsOver_ || mouseIsTracking_)
+				{
+					if (dataTip_ == null)
+					{
+						createDataTip_();
+						updateDataTip_(new Point(stage.mouseX, stage.mouseY));
+					}
+				}
+				else
+				{
+					if (dataTip_ != null)
+					{
+						destroyDataTip_();
+					}
+				}
+			}
+			protected function updateState_():void
+			{
+				updateTooltipState_();
+			}
+				
+			protected function onMouseOver_(event:MouseEvent):void
+			{
+				mouseIsOver_ = true;
+				updateState_();
+			}
+			protected function onMouseOut_(event:MouseEvent):void
+			{
+				if (track && event.relatedObject == track)
+					return;
+				if (thumb && event.relatedObject == thumb)
+					return;
+				
+				mouseIsOver_ = false;
+				updateState_();
+			}
+			protected function onMouseMove_(event:MouseEvent):void
+			{
+				if (dataTip_ != null)
+					updateDataTip_(new Point(event.stageX, event.stageY));
+			}
+			protected function onMouseDown_(event:MouseEvent):void
+			{
+				if (event.target == thumb)
+					clickOffset_ = thumb.globalToLocal(new Point(event.stageX, event.stageY));
+				else
+					clickOffset_.x = clickOffset_.y = 0;
+					
+				if (updateOnMouseDown_)
+				{
+					var p:Point = track.globalToLocal(new Point(event.stageX, event.stageY));
+					var newValue:Number = pointToValue(p.x - clickOffset_.x, p.y - clickOffset_.y);
+					if (newValue != value)
+					{
+						if (liveDragging_)
+						{
+							value = newValue;
+							dispatchEvent(new Event(Event.CHANGE));
+						}
+						else
+							pendingValue = newValue;
+						
+						thumb_mouseDownHandler(event);
+					}
+				}
+			}
+			
+			override protected function partAdded(partName:String, instance:Object):void
+			{
+				super.partAdded(partName, instance);
+				
+				if (instance == track)
+				{
+					addEventListener(MouseEvent.MOUSE_OVER, onMouseOver_);
+					addEventListener(MouseEvent.MOUSE_OUT, onMouseOut_);
+					addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove_);
+					addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown_);
+				}
+			}
+			override protected function partRemoved(partName:String, instance:Object):void
+			{
+				super.partRemoved(partName, instance);
+				
+				if (instance == track)
+				{
+					removeEventListener(MouseEvent.MOUSE_OVER, onMouseOver_);
+					removeEventListener(MouseEvent.MOUSE_OUT, onMouseOut_);
+					removeEventListener(MouseEvent.MOUSE_MOVE, onMouseMove_);
+					removeEventListener(MouseEvent.MOUSE_DOWN, onMouseDown_);
+				}
+			}
+			
+			override protected function thumb_mouseDownHandler(event:MouseEvent):void
+			{
+				super.thumb_mouseDownHandler(event);
+				
+				mouseIsTracking_ = true;
+				updateState_();
+			}
+			
+			override protected function system_mouseMoveHandler(event:MouseEvent):void
+			{
+				if (!track)
+					return;
+				
+				var p:Point = track.globalToLocal(new Point(event.stageX, event.stageY));
+				var newValue:Number = pointToValue(p.x - clickOffset_.x, p.y - clickOffset_.y);
+				newValue = nearestValidValue(newValue, snapInterval);
+				
+				if (newValue != pendingValue)
+				{
+					if (liveDragging_)
+					{
+						value = newValue;
+						dispatchEvent(new Event(Event.CHANGE));
+					}
+					else
+						pendingValue = newValue;
+					
+					dispatchEvent(new TrackBaseEvent(TrackBaseEvent.THUMB_DRAG));
+					
+					if (dataTip_ != null)
+						updateDataTip_(new Point(event.stageX, event.stageY));
+				}
+				
+				event.updateAfterEvent();
+			}
+			override protected function system_mouseUpHandler(event:Event):void
+			{
+				if (pendingValue_ != value)
+				{
+					value = pendingValue_;
+					dispatchEvent(new Event(Event.CHANGE));
+				}
+				super.system_mouseUpHandler(event);
+				
+				mouseIsTracking_ = false;
+				updateState_();
+			}
+		]]>
+	</fx:Script>
+</s:TrackBase>

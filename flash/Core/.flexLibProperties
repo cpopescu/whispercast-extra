@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<flexLibProperties includeAllClasses="true" useMultiPlatformConfig="false" version="3">
+  <includeClasses>
+    <classEntry path="org.whispercast.player.VideoPlayer"/>
+    <classEntry path="org.whispercast.osd.CrawlerItem"/>
+    <classEntry path="org.whispercast.osd.CrawlerPane"/>
+    <classEntry path="org.whispercast.osd.OverlayParameters"/>
+    <classEntry path="org.whispercast.player.VideoOutput"/>
+    <classEntry path="org.whispercast.osd.TextPart"/>
+    <classEntry path="org.whispercast.osd.CrawlerPaneFactory"/>
+    <classEntry path="org.whispercast.player.skins.VideoPlayerPlayButtonSkin"/>
+    <classEntry path="org.whispercast.player.skins.VideoPlayerBuffering"/>
+    <classEntry path="org.whispercast.player.VideoPlayerEvent"/>
+    <classEntry path="org.whispercast.Logger"/>
+    <classEntry path="org.whispercast.player.skins.VideoPlayerVolumeBarThumbSkin"/>
+    <classEntry path="org.whispercast.osd.ElementParameters"/>
+  </includeClasses>
+  <includeResources/>
+  <namespaceManifests/>
+</flexLibProperties>

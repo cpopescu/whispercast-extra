@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SkinnableComponent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			 xmlns:s="library://ns.adobe.com/flex/spark" 
+			 xmlns:mx="library://ns.adobe.com/flex/mx"
+			 xmlns:whispercast="org.whispercast.*"
+			 xmlns:whispercast_osd="org.whispercast.osd.*"
+			 xmlns:whispercast_player="org.whispercast.player.*"
+			 implements="mx.core.IToolTip,mx.core.IFontContextComponent"
+			 creationComplete="onCreationCompleteHandler(event)">
+     
+    <fx:Metadata>
+    </fx:Metadata>
+    
+	<fx:Declarations>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.core.IFontContextComponent;
+			import mx.events.EffectEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.ToolTipManager;
+			
+			import spark.components.Label;
+
+			[SkinPart(required="true", type="spark.components.Label")]
+			public var label:spark.components.Label = null;
+			
+			protected function onCreationCompleteHandler(event:FlexEvent):void
+			{
+				mouseEnabled = false;
+				mouseChildren = false;
+			}
+			
+			override public function get screen():Rectangle
+			{
+				return skin.screen;
+			}
+			
+			public function get text():String
+			{
+				return label.text;
+			}
+			public function set text(value:String):void
+			{
+				label.text = value;
+			}
+			
+			public function get fontContext():IFlexModuleFactory
+			{
+				return (label as IFontContextComponent).fontContext;
+			}
+			public function set fontContext(value:IFlexModuleFactory):void
+			{
+				(label as IFontContextComponent).fontContext = value;
+			}
+		]]>
+	</fx:Script>
+</s:SkinnableComponent>

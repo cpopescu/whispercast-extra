@@ -1,0 +1,19 @@
+
+Verbatim cc {
+#include "../../auto/types.h"
+}
+
+Type StateMediaFile {
+  bigint id_;
+  string slave_id_;
+  string master_uri_;
+  string remote_url_;
+  string path_;
+  string process_cmd_;
+  map<string, string> process_params_;
+  string state_;
+  string error_;
+  bigint ts_state_change_;
+  FileSlaveOutput output_;
+  FileTranscodingStatus transcoding_status_;
+}
