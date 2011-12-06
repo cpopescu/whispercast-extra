@@ -263,12 +263,12 @@ SlaveController::CMediaFile* SlaveController::AddFile(MediaFile* file) {
       DelayProcessFile(file->state()), true, true);
   files_.insert(make_pair(file->id(), cfile));
 
-  LOG(-1) << "Added new MediaFile: " << *file;
+  LOG(INFO) << "Added new MediaFile: " << *file;
   Save();
   return cfile;
 }
 void SlaveController::RemFile(CMediaFile* file) {
-  LOG(-1) << "Removing MediaFile: " << *file->file_;
+  LOG(INFO) << "Removing MediaFile: " << *file->file_;
   int result = files_.erase(file->file_->id());
   CHECK_EQ(result, 1);
   file->alarm_.Clear();
@@ -306,7 +306,7 @@ void SlaveController::ChangeFileState(CMediaFile& cfile,
                                       const string& error) {
   cfile.file_->set_state(state, error);
   cfile.file_->set_ts_state_change(timer::Date::Now());
-  LOG(-1) << "New file state: " << *cfile.file_;
+  LOG(INFO) << "New file state: " << *cfile.file_;
   ScheduleProcessFile(cfile);
   Save();
 }

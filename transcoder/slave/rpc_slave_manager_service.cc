@@ -222,7 +222,7 @@ void RPCSlaveManagerService::CleanDisk(MediaFile& file, bool erase_output) {
   io::Rm(file_post_process_input_dir);
   io::Rm(file_post_process_output_dir);
   if ( file.path() != "") {
-    LOG(-1) << "Erase file: " << file.path();
+    LOG(INFO) << "Erase file: " << file.path();
     io::Rm(file.path());
     file.set_path("");
   }
@@ -233,7 +233,7 @@ void RPCSlaveManagerService::CleanDisk(MediaFile& file, bool erase_output) {
       const vector<string>& output_files = output_dir.files_;
       for ( uint32 i = 0; i < output_files.size(); i++ ) {
         const string& output_file = output_files[i];
-        LOG(-1) << "Erase output file: " << output_file;
+        LOG(INFO) << "Erase output file: " << output_file;
         io::Rm(output_file);
       }
     }
@@ -352,13 +352,13 @@ MediaFile* RPCSlaveManagerService::AddFile(
   //
   master->AddFile(file);
 
-  LOG(-1) << "Added new MediaFile: " << *file;
+  LOG(INFO) << "Added new MediaFile: " << *file;
 
   return file;
 }
 
 void RPCSlaveManagerService::EraseFile(MediaFile* file, bool erase_output) {
-  LOG(-1) << "Removing MediaFile: " << *file;
+  LOG(INFO) << "Removing MediaFile: " << *file;
 
   // clean disk
   //

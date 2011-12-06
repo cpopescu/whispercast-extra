@@ -35,10 +35,6 @@ DEFINE_int32(server_timeout,
 DEFINE_int32(client_timeout,
              5000,
              "Timout to impose between client and proxy");
-
-DEFINE_bool(v,
-            false,
-            "Write more stuff");
 DEFINE_bool(dump_all,
             false,
             "Write all stuff");

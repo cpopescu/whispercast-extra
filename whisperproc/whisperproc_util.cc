@@ -264,7 +264,7 @@ bool PrepareFilesForBuildup(thread::ThreadPool* pool,
       LOG_INFO << "Error time detected in: " << to_process[i]
                << " num: " << num << " - skipping file";
     } else  {
-      LOG(6) << " Candidates: " << crt_date << " -> " << to_process[i];
+      VLOG(LDEBUG) << " Candidates: " << crt_date << " -> " << to_process[i];
       file_map.insert(make_pair(crt_date, to_process[i]));
     }
   }
@@ -503,7 +503,7 @@ bool StartProcessing(thread::ThreadPool* pool,
             }
           }
         }
-        LOG(6) << " Buildup check on:  " << *directory
+        VLOG(LDEBUG) << " Buildup check on:  " << *directory
                << " buildup_period_sec: " << buildup_period_sec
                << " buildup_delay_sec: " << buildup_delay_sec
                << " done_content: [" << done_content << "]";
@@ -576,16 +576,16 @@ bool PostProcessor::FindFresh(vector<string>* dirs) {
 }
 
 void PostProcessor::ProcessProcessing() {
-  LOG(10) << "Looking for processing directories in: ["
+  VLOG(10) << "Looking for processing directories in: ["
           << FLAGS_base_media_dir << "].";
   vector<string> dirs;
   if ( !FindProcessing(&dirs) ) {
     LOG_ERROR << "Cannot list files under: "  << FLAGS_base_media_dir;
     return;
   }
-  LOG(10) << "Found #" << dirs.size() << " processing directories..";
+  VLOG(10) << "Found #" << dirs.size() << " processing directories..";
   for ( int i = 0; i < dirs.size(); ++i ) {
-    LOG(10) << "StartProcessing old directory " << i << "/" << dirs.size()
+    VLOG(10) << "StartProcessing old directory " << i << "/" << dirs.size()
             << " : [" << dirs[i] << "]";
     if ( !whisperproc::StartProcessing(&pool_, dirs[i]) ) {
       LOG_WARNING << " Delaying the processing of " << dirs[i]
@@ -600,16 +600,16 @@ void PostProcessor::ProcessProcessing() {
 }
 
 void PostProcessor::ProcessFresh(bool look_again) {
-  LOG(10) << "Looking for fresh directories in: ["
+  VLOG(10) << "Looking for fresh directories in: ["
           << FLAGS_base_media_dir << "]";
   vector<string> dirs;
   if ( !FindFresh(&dirs) ) {
     LOG_ERROR << "Cannot list files under: "  << FLAGS_base_media_dir;
     return;
   }
-  LOG(10) << "Found #" << dirs.size() << " fresh directories..";
+  VLOG(10) << "Found #" << dirs.size() << " fresh directories..";
   for ( int i = 0; i < dirs.size(); ++i ) {
-    LOG(10) << "StartProcessing fresh directory " << i << "/" << dirs.size()
+    VLOG(10) << "StartProcessing fresh directory " << i << "/" << dirs.size()
             << " : [" << dirs[i] << "]";
     if ( !whisperproc::StartProcessing(&pool_, dirs[i]) ) {
       LOG_WARNING << " Delaying the processing of " << dirs[i]

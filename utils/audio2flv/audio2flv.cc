@@ -280,5 +280,5 @@ int main(int argc, char* argv[]) {
   }
   writer.Close();
 
-  LOG(-1) << "STATISTICS:\n" << reader.splitter()->stats().ToString();
+  LOG(INFO) << "STATISTICS:\n" << reader.splitter()->stats().ToString();
 }
