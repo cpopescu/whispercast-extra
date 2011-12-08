@@ -1,0 +1,297 @@
+<tal:block phptal:tales="php">
+<div id="default-files-upload-container">
+  <div id="default-files-upload-results" style="margin:1em"/>
+</div>
+
+<tal:block metal:use-macro="../streams/library.phtml/Default_Streams_Table"/>
+
+<!-- Include the files/add stuff.. -->
+<tal:block tal:content="structure view.action('add','files','default', array('server'=>server.id))"/>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+</script>
+
+<script type="text/javascript">
+<!--
+sandbox.uploader = {};
+
+sandbox.uploader._records = [];
+
+sandbox.uploader._files = [];
+sandbox.uploader._fileIdToRecordId = {};
+
+sandbox.uploader.initialize = function() {
+  var table = YAHOO.util.Dom.getChildrenBy(document.getElementById('default-files-edit-form'), function(e) {return e.tagName == 'TABLE'})[0].tBodies[0];
+
+  var row;
+  var cell;
+
+  row = document.createElement('TR');
+  cell = document.createElement('TD');
+  YAHOO.util.Dom.setAttribute(cell, 'colspan', 2);
+  cell.innerHTML = '<hr/>';
+  row.appendChild(cell);
+
+  table.appendChild(row);
+
+  row = document.createElement('TR');
+  cell = document.createElement('TD');
+  YAHOO.util.Dom.setAttribute(cell, 'class', 'label');
+  YAHOO.util.Dom.setAttribute(cell, 'align', 'right');
+  YAHOO.util.Dom.setAttribute(cell, 'valign', 'top');
+  cell.innerHTML = _('File:');
+  row.appendChild(cell);
+  cell = document.createElement('TD');
+  YAHOO.util.Dom.setAttribute(cell, 'class', 'field');
+  YAHOO.util.Dom.setAttribute(cell, 'align', 'left');
+  cell.innerHTML = '<div id="default-files-uploader-container" style="padding:2px"><table border="0" cellpadding="0" cellspacing="0"><tr><td><input id="default-files-uploader" readonly="readonly"/></td><td><table border="0" cellpadding="0" cellspacing="0"><tr><td><div id="uploader-select"><div id="uploader-select-overlay" style="position:absolute;z-index:50"></div><button id="uploader-select-select">'+_('Choose file...')+'</button></div></td><td>&nbsp;<input type="checkbox" class="form-checkbox" value="1" id="processed" name="processed"/><span class="label">&nbsp; '+_('the file is already encoded')+'</span></td></tr></table></td></tr></table></div>';
+  row.appendChild(cell);
+
+  table.appendChild(row);
+
+  YAHOO.util.Event.onContentReady('uploader-select', function() {
+    sandbox.uploader._uploader = new Whispercast.Uploader.Base({
+      id: 'uploader',
+      callbacks: {
+        add: function(id, file) {
+          Whispercast.log('Uploader::add('+id+')', 'FILES');
+
+          if (sandbox.current) {
+            sandbox.uploader._uploader.remove(sandbox.current.id);
+            delete sandbox.current;
+          }
+          sandbox.current = {
+            id: id,
+            file: file
+          };
+          Whispercast.Errors.clearMessage('default-files-uploader-container');
+
+          document.getElementById('default-files-uploader').value = file.name;
+        },
+        start: function(id, file) {
+          Whispercast.log('Uploader::start('+id+')', 'FILES');
+
+          var record = sandbox.table.getRecordById(sandbox.uploader._fileIdToRecordId[id]);
+          record.progress = 0;
+
+          Whispercast.Notifier.notify('default.streams', 'update', record);
+        },
+        complete: function(id, file, data) {
+          Whispercast.log('Uploader::complete('+id+','+data+')', 'FILES');
+
+          if (data) {
+            data = Whispercast.eval('return ('+data+')');
+
+            var record = sandbox.table.getRecordById(sandbox.uploader._fileIdToRecordId[id]);
+            record.state = (data.model.result > 0) ? 'files.uploaded' : 'files.upload_failed';
+            record.progress = -1;
+
+            Whispercast.Notifier.notify('default.streams', 'update', record);
+            sandbox.uploader.run();
+            
+            sandbox.table.updateAll();
+          }
+        },
+        cancel: function(id, file) {
+          Whispercast.log('Uploader::cancel('+id+')', 'FILES');
+
+          var record = sandbox.table.getRecordById(sandbox.uploader._fileIdToRecordId[id]);
+          record.state = 'files.upload_cancelled';
+          record.progress = -1;
+
+          Whispercast.Notifier.notify('default.streams', 'update', record);
+          sandbox.uploader.run();
+        },
+        error: function(id, file, data) {
+          Whispercast.log('Uploader::error('+id+','+data+')', 'FILES');
+
+          var record = sandbox.table.getRecordById(sandbox.uploader._fileIdToRecordId[id]);
+          record.state = 'files.upload_failed';
+          record.progress = -1;
+
+          Whispercast.Notifier.notify('default.streams', 'update', record);
+          sandbox.uploader.run();
+        },
+        progress: function(id, file) {
+          Whispercast.log('Uploader::progress('+id+','+file.progress+')', 'FILES');
+          
+          var record = sandbox.table.getRecordById(sandbox.uploader._fileIdToRecordId[id]);
+          record.progress = file.progress;
+
+          Whispercast.Notifier.notify('default.streams', 'update', record);
+        }
+      }
+    });
+  }, sandbox, true);
+};
+
+sandbox.uploader.run = function() {
+  for (var i = 0; i < sandbox.uploader._files.length; i++) {
+    var file = sandbox.uploader._files[i];
+    if (file.state == 'new') {
+      file.state = 'processed';
+      Whispercast.log('Uploading to '+file.url+', method '+file.method, 'FILES');
+      sandbox.uploader._uploader.upload(file.id, file.url, file.method, sandbox.uploader._records[i], 'file');
+    }
+  }
+};
+
+Whispercast.overload(sandbox, 'run', Whispercast.closure(sandbox, function(previous) {
+  setTimeout(function() {window.focus()}, 50);
+
+  if (sandbox.table) {
+    previous.call(sandbox);
+    return;
+  }
+
+  Whispercast.Resolver.resolve(['Whispercast.table', 'Whispercast.uploader'], [], {done:function() {
+    Default_Streams_Table();
+
+    var dataSource = new YAHOO.util.LocalDataSource(sandbox.uploader._records);
+    dataSource.responseSchema = {
+      fields: [
+        {key: 'id'},
+        {key: 'file_id'},
+        {key: 'width'},
+        {key: 'height'},
+        {key: 'duration'},
+        {key: 'category_name'},
+        {key: 'name'},
+        {key: 'state'},
+        {key: 'type'}
+      ]
+    };
+    sandbox.table = new Whispercast.Lib.Default.Streams.Table({
+      hasPreview: false,
+
+      container: 'default-files-upload-results',
+      columns:
+      {
+        0: false,
+        5: false,
+        7: false,
+        8: false,
+        9: false
+      },
+      dataSource: dataSource,
+      config:
+      {
+        dynamicData: true,
+        paginator: false
+      },
+      serverId: sandbox.server.id,
+      filters: [],
+      links:
+      [
+        '<button id="default-files-upload-results-add">'+_('Add a new file...')+'</button>'
+      ],
+      query:
+      {
+        f: {
+          type: ['files']
+        }
+      }
+    });
+
+    Whispercast.overload(sandbox.table, 'updateRecord', function(previous, op, record) {
+      switch (op) {
+        case 'add':
+            if (record.type != 'files')
+              return false;
+              
+            sandbox.uploader._fileIdToRecordId[record.file_id] = record.id;
+            sandbox.uploader._records.push(record);
+            break;
+        case 'update':
+          for (var i = 0; i < sandbox.uploader._records.length; i++) {
+            if (sandbox.uploader._records[i].id == record.id) {
+              for (var j in record) {
+                sandbox.uploader._records[i][j] = record[j];
+              }
+              break;
+            }
+          }
+          break;
+        case 'delete':
+          for (var i = 0; i < sandbox.uploader._records.length; i++) {
+            if (sandbox.uploader._records[i].id == record) {
+              sandbox.uploader._records.splice(i, 1);
+              break;
+            }
+          }
+          break;
+      }
+      return previous.call(this, op, record);
+    });
+    
+    sandbox.table.run(Whispercast.closure(this, function() {
+      YAHOO.util.Event.on('default-files-upload-results-add', 'click', function() {
+        if (sandbox.form) {
+          if (!sandbox.form.isRunning()) {
+            sandbox.form.run();
+          }
+        }
+      });
+    }));
+
+    previous.call(sandbox);
+  }});
+}));
+Whispercast.overload(sandbox, 'initialized', function(previous) {
+  Whispercast.overload(sandbox.form, '_onSubmitComplete', function(previous, success, response) {
+    if (success) {
+      response.model.record.file_id = sandbox.current.id;
+      response.model.record.category_name = response.model.categories[response.model.record.category_id];
+    }
+
+    var result = previous.call(this, success, response);
+    if (result) {
+      sandbox.current.state = 'new';
+
+      sandbox.current.url = Whispercast.Uri.buildZend('default', 'files', 'upload', sandbox.server.id, {format:'json', processed:document.getElementById('processed').checked ? 1 : 0 });
+      sandbox.current.method = sandbox.form._method;
+
+      sandbox.uploader._files.push(sandbox.current);
+      delete sandbox.current;
+
+      sandbox.uploader.run();
+    }
+    return result;
+  });
+  Whispercast.overload(sandbox.form, '_validate', Whispercast.closure(sandbox.form, function(previous) {
+    var result = previous.call(this);
+    if (!sandbox.current) {
+      this._onError('default-files-uploader-container', _('You must select a file to upload.'));
+      result = false;
+    }
+    return result;
+  }));
+  Whispercast.overload(sandbox.form, '_clearData', Whispercast.closure(sandbox.form, function(previous) {
+    if (sandbox.current) {
+      sandbox.uploader._uploader.remove(sandbox.current.id);
+      delete sandbox.current;
+    }
+
+    document.getElementById('name').value = '';
+    document.getElementById('description').value = '';
+    document.getElementById('tags').value = '';
+    document.getElementById('category_id').selectedIndex = 0;
+
+    document.getElementById('processed').checked = false;
+
+    document.getElementById('default-files-uploader').value = '';
+
+    previous.call(this);
+  }));
+
+  sandbox.uploader.initialize();
+  previous.call(this);
+});
+Whispercast.overload(sandbox, 'destroy', function(previous) {
+  YAHOO.util.Event.purgeElement(document.getElementById('default-files-upload-container'), true);
+  return previous.call(this);
+});
+-->
+</script>
+</tal:block>

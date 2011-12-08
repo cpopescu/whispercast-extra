@@ -1,0 +1,559 @@
+<tal:block phptal:tales="php">
+<div id="default-programs-edit-container">
+  <div id="default-programs-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-programs-edit-form-dialog-title"></div>
+    <div class="bd" id="default-programs-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-programs-edit-form-additional">
+        <div>
+          <hr/>
+          <div class="label" i18n:translate="">Default media:</div>
+          <div class="field" id="default_stream-proxy">
+            <div id="default_stream-selector"></div>
+          </div>
+        </div>
+        <div>
+          <hr/>
+          <div class="label" i18n:translate="">Program:</div>
+          <div id="default-programs-edit-form-program"></div>
+          <button id="default-programs-edit-form-program-add" style="float:right" i18n:translate="">Add a new entry...</button>
+          <div style="clear:both"/>
+        </div>
+      </div>
+      <div id="default-programs-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+  <div id="default-programs-edit-program-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-programs-edit-program-form-dialog-title"></div>
+    <div class="bd" id="default-programs-edit-program-form-dialog-body">
+      <form id="default-programs-edit-program-form">
+        <table cellspacing="0" cellpadding="0" border="0" summary="form">
+          <tr>
+            <td width="1" valign="top" align="left" colspan="1" class="field">
+              <select name="type" id="type">
+                <option value="weekdays" i18n:translate="">Weekdays</option>
+                <option value="date" i18n:translate="">Date</option>
+              </select>
+              &nbsp;
+              <span id="default-programs-edit-form-date">
+                <input type="text" class="form-text form-date" size="40" value="" id="date" name="date"></input>
+              </span>
+              <span id="default-programs-edit-form-weekdays"><span id="weekdays"></span></span>
+              <span i18n:translate="">at</span>
+              <input type="text" class="form-text form-time" size="15" id="time" name="time"></input>
+            </td>
+          </tr>
+          <tr><td><span id="weekdays-proxy"/><span id="date-proxy"/><span id="time-proxy"/></td></tr>
+        </table>
+        <hr/>
+        <div id="stream"></div>
+      </form>
+      <div id="default-programs-edit-program-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+#default-programs-edit-form-program {
+  background-color: #ffffff;
+  border: 1px solid #c0c0c0;
+  height: 10.5em;
+}
+
+#default-programs-edit-form-program .name {
+  white-space: nowrap;
+  overflow: hidden;
+}
+#default-programs-edit-form-program .schedule {
+  float: left;
+  white-space: nowrap;
+  overflow: hidden;
+  color: #c0c0c0;
+  font-style: italic;
+  font-size: 0.9em;
+}
+#default-programs-edit-form-program .highlight .schedule {
+  color: #f0f0f0;
+}
+
+#default-programs-edit-form-program .actions {
+  float: right;
+  margin: 0 0.25em 0 0;
+}
+</style>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_List"/>
+<tal:block metal:use-macro="../../../default/views/scripts/streams/library.phtml/Default_Streams_Selector"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+if (sandbox.record.setup)
+  for (var i = 0; i < sandbox.record.setup.program.length; ++i) {
+    if (sandbox.record.setup.program[i].date) {
+      sandbox.record.setup.program[i].date.month = Number(sandbox.record.setup.program[i].date.month)-1;
+    }
+  }
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-programs-edit-container',
+    formId: 'default-programs-edit-form',
+    formTitle: {
+      add: _('Add a program...'),
+      update: _('Edit the program...')
+    },
+    formCfg: {
+      overloads: {
+        _onCreate: function(previous) {
+          var weekdays = '';
+          for (var  i = 0; i < Whispercast.Locale.dayNames.length; i++) {
+            weekdays += '<input type="checkbox" name="weekdays['+i+']" id="weekdays['+i+']">&nbsp;'+Whispercast.htmlEscape(Whispercast.Locale.dayNames[i])+',&nbsp;';
+          }
+          document.getElementById('weekdays').innerHTML = weekdays;
+
+          var additional = document.getElementById('default-programs-edit-form-additional');
+          document.getElementById('default-programs-edit-form').appendChild(additional.parentNode.removeChild(additional));
+
+          Default_Index_List();
+          Default_Streams_Selector();
+
+          this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+            id: 'default_stream-selector',
+            serverId: sandbox.server.id,
+            query: {
+              f: {
+                usable: true
+              }
+            },
+
+            width: '60em',
+            owner: this,
+
+            callbacks: {
+              update: {
+                callback: function(record) {
+                  if (record) {
+                    document.getElementById('default_stream').value = record.id;
+                  } else {
+                    document.getElementById('default_stream').value = '';
+                  }
+                  return true;
+                }
+              }
+            }
+          });
+          this._private.selector.create();
+
+          this._private.list = new Whispercast.Lib.Default.Index.List({
+            id: 'default-programs-edit-form-program',
+            format: Whispercast.closure(this, function(record, element) {
+              var name = document.createElement('div');
+              YAHOO.util.Dom.addClass(name, 'name');
+              name.innerHTML =
+              name.title = Whispercast.htmlEscape(record.stream ? record.stream.name : '');
+
+              var schedule = document.createElement('div');
+              YAHOO.util.Dom.addClass(schedule, 'schedule');
+              var content = '';
+              switch (record.type) {
+                case 'date':
+                  content = Whispercast.strformat(_('On <b>%1</b> at <b>%2</b>.'),
+                    Whispercast.htmlEscape(
+                      Whispercast.Locale.formatDate(new Date(record.date.year, record.date.month, record.date.day), true)
+                    ),
+                    Whispercast.htmlEscape(
+                      Whispercast.Locale.formatTime(new Date(2000, 0, 1, record.time.hour, record.time.minute, record.time.second), true)
+                    )
+                  );
+                  break;
+                case 'weekdays':
+                  var weekdays = [];
+                  for (var i = 0; i < Whispercast.Locale.dayNames.length; i++) {
+                    if (record.weekdays & (1 << i)) {
+                      weekdays.push('<b>'+Whispercast.htmlEscape(Whispercast.Locale.dayNames[i])+'</b>');
+                    }
+                  }
+                  content = Whispercast.strformat(_('Every <b>%1</b> at <b>%2</b>.'),
+                    weekdays.join(',&nbsp;'),
+                    Whispercast.htmlEscape(Whispercast.Locale.formatTime(new Date(2000, 0, 1, record.time.hour, record.time.minute, record.time.second), true))
+                  );
+                  break;
+              }
+              schedule.innerHTML =  content;
+
+              var actions = document.createElement('div');
+              YAHOO.util.Dom.addClass(actions, 'actions');
+
+              var separator = document.createTextNode('\u00a0\u00b7\u00a0');
+
+              var a;
+              a = document.createElement('a');
+              a.innerHTML = _('Edit');
+              a.title = _('Edit');
+              YAHOO.util.Event.on(a, 'click', function(e) {
+                YAHOO.util.Event.preventDefault(e);
+                sandbox.form.edit(record);
+              });
+              actions.appendChild(a);
+              actions.appendChild(separator.cloneNode(true));
+
+              a = document.createElement('a');
+              a.innerHTML = 'X';
+              a.title = _('Remove');
+              YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+                YAHOO.util.Event.preventDefault(e);
+                sandbox.form.remove(record);
+              }));
+              actions.appendChild(a);
+
+              element.appendChild(name);
+              element.appendChild(schedule);
+              element.appendChild(actions);
+
+              var prefix = 'setup[program]['+record.__id+']';
+
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.value = Whispercast.htmlEscape(record.stream ? record.stream.id : '');
+              input.name = prefix+'[stream]'; // input
+              element.appendChild(input);
+              if (record['type'] == 'weekdays') {
+                for (var i = 0; i < Whispercast.Locale.dayNames.length; i++) {
+                  if (record.weekdays & (1 << i)) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.value = Whispercast.htmlEscape(i);
+                    input.name = prefix+'[weekdays][]'; // weekdays
+                    element.appendChild(input);
+                  }
+                }
+              } else {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.value = Whispercast.htmlEscape(record.date.year);
+                input.name = prefix+'[date][year]'; // date.year
+                element.appendChild(input);
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.value = Whispercast.htmlEscape(Number(record.date.month)+1);
+                input.name = prefix+'[date][month]'; // date.month
+                element.appendChild(input);
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.value = Whispercast.htmlEscape(record.date.day);
+                input.name = prefix+'[date][day]'; // date.day
+                element.appendChild(input);
+              }
+
+              input = document.createElement('input');
+              input.type = 'hidden';
+              input.value = Whispercast.htmlEscape(record.time.hour);
+              input.name = prefix+'[time][hour]'; // time.hour
+              element.appendChild(input);
+              input = document.createElement('input');
+              input.type = 'hidden';
+              input.value = Whispercast.htmlEscape(record.time.minute);
+              input.name = prefix+'[time][minute]'; // time.minute
+              element.appendChild(input);
+              input = document.createElement('input');
+              input.type = 'hidden';
+              input.value = Whispercast.htmlEscape(record.time.second);
+              input.name = prefix+'[time][second]'; // time.second
+              element.appendChild(input);
+
+              var clear = document.createElement('div');
+              clear.style.clear = 'both';
+              element.appendChild(clear);
+            })
+          });
+          this._private.list.create();
+
+          this._private.form = new Whispercast.Form.Base({
+            id: 'default-programs-edit-program-form',
+            dialog: {
+              title: sandbox.record.id ? _('Edit entry..') : _('Add a new entry...'),
+              owner: this
+            },
+            overloads: {
+              _setDataElement: function(previous, id, value) {
+                switch (id) {
+                  case 'time':
+                    document.getElementById(id).value = Whispercast.Locale.formatTime(new Date(2000, 1, 1, value.hour, value.minute, value.second, 0), true);
+                    return;
+                  case 'date':
+                    document.getElementById(id).value = Whispercast.Locale.formatDate(new Date(value.year, value.month, value.day, 0, 0, 0, 0), true);
+                    return;
+                  case 'weekdays':
+                    for (var i = 0 ; i < Whispercast.Locale.dayNames.length; i++) {
+                      document.getElementById('weekdays['+i+']').checked = ((value & (1 << i)) != 0);
+                    }
+                    return;
+                  case 'stream':
+                    this._private.selector.setRecord(value);
+                    return;
+                }
+                return previous.call(this);
+              },
+
+              _clearData: function(previous) {
+                document.getElementById('time').value = '';
+                document.getElementById('date').value = '';
+
+                for (var i = 0 ; i < Whispercast.Locale.dayNames.length; i++) {
+                  document.getElementById('weekdays['+i+']').checked = false;
+                }
+                return previous.call(this);
+              },
+
+              _onCreate: function(previous) {
+                this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+                  id: 'stream',
+                  serverId: sandbox.server.id,
+                  width: '65em',
+                  owner: this,
+                  label: _('Stream:')
+                });
+                this._private.selector.create();
+
+                var dateField = document.getElementById('date');
+                YAHOO.util.Dom.setAttribute(dateField, 'readonly', true);
+
+                this._private.calendarField = document.createElement('div');
+                YAHOO.util.Dom.setStyle(this._private.calendarField, 'position', 'absolute');
+                YAHOO.util.Dom.setStyle(this._private.calendarField, 'display', 'none');
+                YAHOO.util.Dom.setStyle(this._private.calendarField, 'margin-top', '-8em');
+                YAHOO.util.Dom.setStyle(this._private.calendarField, 'z-index', 9999);
+                dateField.parentNode.appendChild(this._private.calendarField);
+                this._private.calendar = new YAHOO.widget.Calendar('calendar', this._private.calendarField, {title: 'Introdu data', close: true, iframe: true});
+                this._private.calendar.render();
+
+                this._private.calendar.selectEvent.subscribe(Whispercast.closure(this, function(type, args, obj) {
+                  var d = new Date(args[0][0][0], args[0][0][1]-1, args[0][0][2]);
+                  document.getElementById('date').value = Whispercast.Locale.formatDate(d, true);
+                  this._private.calendar.hide();
+                }));
+
+                YAHOO.util.Event.on('date', 'focus', Whispercast.closure(this, function(e) {
+                  YAHOO.util.Event.preventDefault(e);
+                  this._private.calendar.show();
+                }));
+
+                this._private.setType = function(type) {
+                  switch (type) {
+                    case 'weekdays':
+                      YAHOO.util.Dom.setStyle('default-programs-edit-form-weekdays', 'display', '');
+                      YAHOO.util.Dom.setStyle('default-programs-edit-form-date', 'display', 'none');
+                      break;
+                    case 'date':
+                      YAHOO.util.Dom.setStyle('default-programs-edit-form-weekdays', 'display', 'none');
+                      YAHOO.util.Dom.setStyle('default-programs-edit-form-date', 'display', '');
+                      break;
+                  }
+
+                  var element = document.getElementById('type');
+                  for (var i = 0; i <  element.options.length; i++) {
+                    if (element.options[i].value == type) {
+                      element.selectedIndex = i;
+                      break;
+                    }
+                  }
+                };
+
+                YAHOO.util.Event.on('type', 'change', Whispercast.closure(this, function(e) {
+                  YAHOO.util.Event.preventDefault(e);
+                  this._clearError('weekdays');
+                  this._clearError('date');
+                  this._clearError('time');
+
+                  var type = document.getElementById('type');
+                  this._private.setType(type.options[type.selectedIndex].value);
+                }));
+
+                return previous.call(this);
+              },
+              _onDestroy: function(previous) {
+                delete this._private.record;
+    
+                if (this._private.selector) {
+                  this._private.selector.destroy();
+                  delete this._private.selector;
+                }
+
+                if (this._private.calendar) {
+                  this._private.calendar.destroy();
+                  delete this._private.calendar;
+
+                  this._private.calendarField.parentNode.removeChild(this._private.calendarField);
+                  delete this._private.calendarField;
+                }
+                YAHOO.util.Event.purgeElement(document.getElementById('date').parentNode, true);
+
+                return previous.call(this);
+              },
+
+              _onRun: function(previous, record) {
+                if (record) {
+                  this._private.setType(record.type);
+                } else {
+                  this._private.setType('weekdays');
+                }
+                this._private.record = record;
+
+                return previous.call(this, record);
+              },
+
+              _onSubmit: function(previous) {
+                var response = {
+                  model: {
+                    errors: {
+                    },
+                    result: 1
+                  }
+                };
+
+                var type = document.getElementById('type');
+                response.model.type = type.options[type.selectedIndex].value;
+
+                response.model.time = Whispercast.Locale.parseTime(document.getElementById('time').value);
+                if (response.model.time == null) {
+                  response.model.result = 0;
+                  response.model.errors['time'] = _('The time you entered is invalid.');
+                }
+
+                switch (response.model.type) {
+                  case 'weekdays':
+                    response.model.weekdays = 0;
+                    for (var i = 0; i < Whispercast.Locale.dayNames.length; i++ ) {
+                      if (document.getElementById('weekdays['+i+']').checked) {
+                        response.model.weekdays |= (1 << i);
+                      }
+                    }
+                    if (response.model.weekdays == 0) {
+                      response.model.result = 0;
+                      response.model.errors['weekdays'] = _('You must specify at least a weekday.');
+                    }
+                    break;
+                  case 'date':
+                    response.model.date = Whispercast.Locale.parseDate(document.getElementById('date').value);
+                    if (response.model.date == null) {
+                      response.model.result = 0;
+                      response.model.errors['date'] = _('The date you entered is invalid.');
+                    }
+                }
+
+                response.model.stream = this._private.selector.getRecord();
+                if (response.model.stream == null) {
+                  response.model.result = 0;
+                  response.model.errors['stream'] = _('You must select a stream.');
+                }
+
+                if (response.model.result > 0) {
+                  if (this._private.record) {
+                    this._cfg.dialog.owner._private.list.updateRecord(this._private.record, response.model);
+                  } else {
+                    this._cfg.dialog.owner._private.list.addRecord(response.model);
+                  }
+                }
+                this._onSubmitSuccess(null, response);
+              }
+            }
+          });
+
+          YAHOO.util.Event.on('default-programs-edit-form-program-add', 'click', Whispercast.closure(this, function(e) {
+            YAHOO.util.Event.preventDefault(e);
+            this.add();
+          }));
+
+          return previous.call(this);
+        },
+        _onDestroy: function(previous) {
+          if (this._private.form) {
+            this._private.form.destroy();
+            delete this._private.form;
+          }
+          if (this._private.selector) {
+            this._private.selector.destroy();
+            delete this._private.selector;
+          }
+          return previous.call(this);
+        },
+
+        _onRun: function(previous, record) {
+          if (record) {
+            if (record.setup) {
+              if (record.setup.program) {
+                for (var i = 0; i < record.setup.program.length; i++) {
+                  var element = record.setup.program[i];
+
+                  var entry = {
+                    stream: element['stream'],
+                    time: element['time']
+                  };
+                  if (element['weekdays']) {
+                    entry.weekdays = 0;
+                    for (var j = 0; j < element['weekdays'].length; j++) {
+                      entry.weekdays |= 1 << (element['weekdays'][j]);
+                    }
+                    entry.type = 'weekdays';
+                  } else
+                  if (element['date']) {
+                    entry.date = element['date'];
+                    entry.type = 'date';
+                  }
+                  this._private.list.addRecord(entry);
+                }
+              }
+              if (record.setup.default_stream) {
+                this._private.selector.setRecord(record.setup.default_stream);
+              }
+            }
+          }
+          sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+          return previous.call(this);
+        },
+
+        add: function(previous) {
+          this._private.form.run();
+        },
+        edit: function(previous, record) {
+          this._private.form.run(record);
+        },
+        remove: function(previous, record) {
+          this._private.list.removeRecord(record);
+        }
+      }
+    },
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    },
+    required: [
+      'calendar',
+      'autocomplete',
+      'Whispercast.dialog',
+      'Whispercast.form',
+      'Whispercast.table'
+    ]
+  });
+};
+
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-programs-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

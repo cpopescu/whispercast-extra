@@ -1,0 +1,261 @@
+<tal:block phptal:tales="php">
+<div id="default-users-edit-container">
+  <div id="default-users-edit-form-dialog" style="position: absolute; visibility: hidden">
+    <div class="hd" id="default-users-edit-form-dialog-title"></div>
+    <div class="bd" id="default-users-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('user').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('update_password').setLabel(_('Update password'))"/>
+      <tal:block tal:condition="model.form.getElement('password').setLabel(_('Password'))"/>
+      <tal:block tal:condition="model.form.getElement('password_confirmation').setLabel(_('Confirmation'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-users-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+.slanted {
+  width: 3em;
+  height: 4em;
+  vertical-align: bottom;
+  padding: 0 0 1em 0;
+}
+.slanted div {
+  position: absolute;
+  color: #808080;
+  font-weight: bold;
+  -moz-transform-origin: 0 0;
+  -moz-transform: rotate(-60deg);
+  -webkit-transform-origin: 0 0;
+  -webkit-transform: rotate(-60deg);
+  -o-transform-origin: 0 0;
+  -o-transform: rotate(-60deg);
+  filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.50000000, M12=0.86602540, M21=-0.86602540, M22=0.50000000, SizingMethod='auto expand');
+  -ms-filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.50000000, M12=0.86602540, M21=-0.86602540, M22=0.50000000, SizingMethod='auto expand');
+}
+</style>
+<!--[if IE]>
+<style type="text/css">
+.slanted div {
+  width: 6em;
+  height: 1.2em;
+  margin-top: -5em;
+}
+</style>
+<![endif]-->
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+sandbox.acls = ${structure json_encode(model.acls)};
+sandbox.resources = ${structure json_encode(model.resources)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+
+<style type="text/css">
+.default-users-edit-row-total {
+  padding: 0 0.5em 0 0.5em;
+  border-left: 1px solid #c0c0c0;
+}
+.default-users-edit-col-total {
+  padding: 0.5em 0 0 0;
+  border-top: 1px solid #c0c0c0;
+}
+</style>
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  var resourceLabels = {
+    'users': _('Users'),
+    'sources': _('Sources'),
+    'files': _('Files'),
+    'switches': _('Switches'),
+    'aliases': _('Aliases'),
+    'programs': _('Programs'),
+    'playlists': _('Playlists'),
+    'ranges': _('Ranges'),
+    'remotes': _('Remote streams'),
+    'aggregators': _('Aggregators')
+  };
+  var actionLabels = {
+    'add': _('Add'),
+    'get': _('View'),
+    'set': _('Modify'),
+    'delete': _('Delete'),
+    'osd': _('OSD'),
+    'operate': _('Operate')
+  };
+  var actions = ['add', 'set', 'get', 'delete', 'osd', 'operate'];
+
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-users-edit-container',
+    formId: 'default-users-edit-form',
+    formTitle: {
+      add: _('Add user...'),
+      update: _('Edit user...')
+    },
+    resource: {
+      module: 'default',
+      resource: 'users'
+    }
+  }, function() {
+
+    var ftr = document.createElement('tr');
+    var ftd = document.createElement('td');
+    YAHOO.util.Dom.setAttribute(ftd, 'colspan', 2);
+    ftd.appendChild(document.createElement('hr'));
+    ftr.appendChild(ftd);
+    document.getElementById('default-users-edit-form-table').appendChild(ftr);
+
+    ftr = document.createElement('tr');
+    ftd = document.createElement('td');
+    YAHOO.util.Dom.setAttribute(ftd, 'colspan', 2);
+    ftr.appendChild(ftd);
+    var t = document.createElement('table');
+    ftd.appendChild(t);
+
+    var trh = document.createElement('tr');
+    trh.appendChild(document.createElement('th'));
+    for (var i = 0; i < actions.length; i++) {
+      var tdh = document.createElement('th');
+      YAHOO.util.Dom.setAttribute(tdh, 'class', 'slanted');
+      var h = document.createElement('div');
+      h.innerHTML = actionLabels[actions[i]];
+      tdh.appendChild(h);
+      trh.appendChild(tdh);
+      t.appendChild(trh);
+    }
+
+    var setRow = function(res, flag) {
+      for (var i = 0; i < actions.length; i++) {
+        var c = document.getElementById('default-users-edit-resources['+res+']['+actions[i]+']');
+        if (c) {
+          c.checked = flag;
+        }
+      }
+    };
+    var setCol = function(col, flag) {
+      for (var r in sandbox.resources) {
+        var c = document.getElementById('default-users-edit-resources['+r+']['+col+']');
+        if (c) {
+          c.checked = flag;
+        }
+      }
+    };
+
+    var updateRowsCols = function() {
+      var cols = {};
+      for (var i = 0; i < actions.length; i++) {
+        cols[actions[i]] = true;
+      }
+      for (var r in sandbox.resources) {
+        var count = 0;
+        for (var i = 0; i < actions.length; i++) {
+          var c = document.getElementById('default-users-edit-resources['+r+']['+actions[i]+']');
+          if (c) {
+            count += c.checked ? 1:0;
+            cols[actions[i]] &= c.checked;
+          } else {
+            count++;
+          }
+        }
+        document.getElementById('default-users-edit-mrow-'+r).checked = (count == actions.length);
+      }
+      for (var c in cols) {
+        document.getElementById('default-users-edit-mcol-'+c).checked = cols[c];
+      }
+    };
+
+    for (var r in sandbox.resources) {
+      var tr = document.createElement('tr');
+
+      var tdl = document.createElement('td');
+      YAHOO.util.Dom.setAttribute(tdl, 'class', 'label');
+      YAHOO.util.Dom.setAttribute(tdl, 'align', 'right');
+      YAHOO.util.Dom.setAttribute(tdl, 'valign', 'center');
+      tdl.innerHTML = Whispercast.htmlEscape(resourceLabels[r])+':';
+      tr.appendChild(tdl);
+
+      var c = sandbox.resources[r];
+      for (var i = 0; i < actions.length; i++) {
+        var tdf = document.createElement('td');
+
+        var a;
+        for (a = 0; a < c.length; a++) {
+          if (c[a] == actions[i]) {
+            break;
+          }
+        }
+        if (a < c.length) {
+          YAHOO.util.Dom.setAttribute(tdf, 'class', 'field');
+          YAHOO.util.Dom.setAttribute(tdf, 'align', 'center');
+          YAHOO.util.Dom.setAttribute(tdf, 'valign', 'center');
+
+          var checked = sandbox.acls ? (sandbox.acls[r] ? sandbox.acls[r][c[a]] : false) : false;
+
+          var n = 'resources['+r+']['+c[a]+']';
+          tdf.innerHTML = '<input type="checkbox" name="'+n+'" id="default-users-edit-'+n+'"'+(checked ? ' checked="checked"' : '')+'/>';
+        }
+        tr.appendChild(tdf);
+      }
+
+      var tdf;
+      var tdfb;
+
+      tdf = document.createElement('td');
+      YAHOO.util.Dom.addClass(tdf, 'default-users-edit-row-total');
+      tdfb = document.createElement('input');
+      YAHOO.util.Dom.setAttribute(tdfb, 'id', 'default-users-edit-mrow-'+r);
+      YAHOO.util.Dom.setAttribute(tdfb, 'type', 'checkbox');
+      YAHOO.util.Event.on(tdfb, 'click', function() {var rr = r;var t=tdfb;return function() {setRow(rr, t.checked)}}());
+      tdf.appendChild(tdfb);
+      tr.appendChild(tdf);
+      t.appendChild(tr);
+    }
+
+    var trch = document.createElement('tr');
+    trch.appendChild(document.createElement('td'));
+    for (var i = 0; i < actions.length; i++) {
+      var tdch = document.createElement('td');
+      YAHOO.util.Dom.addClass(tdch, 'default-users-edit-col-total');
+      YAHOO.util.Dom.setAttribute(tdch, 'align', 'center');
+      YAHOO.util.Dom.setAttribute(tdch, 'valign', 'center');
+      var c = document.createElement('input');
+      YAHOO.util.Dom.setAttribute(c, 'id', 'default-users-edit-mcol-'+actions[i]);
+      YAHOO.util.Dom.setAttribute(c, 'type', 'checkbox');
+      YAHOO.util.Event.on(c, 'click', function() {var ii = i;var t=c;return function() {setCol(actions[ii], t.checked)}}());
+      tdch.appendChild(c);
+      trch.appendChild(tdch);
+      t.appendChild(trch);
+    }
+    document.getElementById('default-users-edit-form-table').appendChild(ftr);
+
+    YAHOO.util.Event.delegate(t, 'click', updateRowsCols, 'input');
+
+    var updatePasswords = function() {
+      var u = document.getElementById('update_password');
+      var p = document.getElementById('password');
+      var c = document.getElementById('password_confirmation');
+      
+      if (!u.checked) {
+        p.value = c.value = '';
+        p.disabled = c.disabled = true;
+      } else {
+        p.disabled = c.disabled = false;
+      }
+    }
+    YAHOO.util.Event.on('update_password', 'click', updatePasswords);
+
+    updateRowsCols();
+    updatePasswords();
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-users-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

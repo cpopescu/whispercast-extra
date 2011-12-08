@@ -1,0 +1,114 @@
+<tal:block phptal:tales="php">
+<div id="default-aliases-edit-container">
+  <div id="default-aliases-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-aliases-edit-form-dialog-title"></div>
+    <div class="bd" id="default-aliases-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.getElement('export_as').setLabel(_('Exported as'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-aliases-edit-form-additional">
+        <div>
+          <hr/>
+          <div class="label" i18n:translate="">Source stream:</div>
+          <div class="field" id="stream-proxy">
+            <div id="stream-selector"></div>
+          </div>
+        </div>
+      </div>
+      <div id="default-aliases-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+<tal:block metal:use-macro="../../../default/views/scripts/streams/library.phtml/Default_Streams_Selector"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-aliases-edit-container',
+    formId: 'default-aliases-edit-form',
+    formTitle: {
+      add: _('Add alias...'),
+      update: _('Edit alias...')
+    },
+    formCfg: {
+      overloads: {
+        _onCreate: function(previous) {
+          var additional = document.getElementById('default-aliases-edit-form-additional');
+          document.getElementById('default-aliases-edit-form').appendChild(additional.parentNode.removeChild(additional));
+
+          Default_Streams_Selector();
+
+          this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+            id: 'stream-selector',
+            serverId: sandbox.server.id,
+
+            width: '65em',
+            owner: this,
+
+            callbacks: {
+              update: {
+                callback: function(record) {
+                  if (record) {
+                    document.getElementById('stream').value = record.id;
+                  } else {
+                    document.getElementById('stream').value = '';
+                  }
+                  return true;
+                }
+              }
+            }
+          });
+          this._private.selector.create();
+        },
+        _onDestroy: function(previous) {
+          if (this._private.selector) {
+            this._private.selector.destroy();
+            delete this._private.selector;
+          }
+          return previous.call(this);
+        },
+        _onRun: function(previous, record) {
+          if (record) {
+            if (record.setup) {
+              if (record.setup.stream) {
+                this._private.selector.setRecord(record.setup.stream);
+              }
+            }
+          }
+          sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+          return previous.call(this);
+        }
+      }
+    },
+
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    },
+    required: [
+      'autocomplete'
+    ]
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-aliases-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

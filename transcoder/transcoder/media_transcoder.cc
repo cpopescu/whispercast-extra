@@ -160,7 +160,7 @@ class App : public app::App {
     }
   }
   bool OutputStatus() {
-    LOG(10) << "STATUS -----------------------------------------";
+    LOG_INFO << "STATUS -----------------------------------------";
 
     // Create RPC FileTranscodingStatus structure
     //
@@ -171,7 +171,7 @@ class App : public app::App {
     for (std::map<std::string, Status>::iterator it = status_.begin();
          it != status_.end(); ++it, ++i) {
 
-      LOG(10) << "STATUS [" << it->first << "]: (" <<
+      LOG_INFO << "STATUS [" << it->first << "]: (" <<
       it->second.width_ << "x" << it->second.height_ << ", " <<
       it->second.framerate_n_ << "/" << it->second.framerate_d_ << ", " <<
       it->second.filename_out_ << ") - " << it->second.progress_;

@@ -1,0 +1,167 @@
+<tal:block phptal:tales="php">
+<div id="default-servers-console-container" style="margin:0.5em">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" id="default-servers-console-switchers">
+    <tr><td></td><td></td></tr>
+  </table>
+  <hr/>
+  <div id="default-servers-console-selector"></div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+</script>
+
+<tal:block metal:use-macro="../switches/library.phtml/Default_Switches_Switcher"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Resolver.resolve(['autocomplete', 'Whispercast.player', 'Whispercast.table'], [], {done: function() {
+    Default_Switches_Switcher();
+
+    if (!sandbox.switchers) {
+      sandbox.switchers = {};
+
+      sandbox.selector = new Whispercast.Lib.Default.Streams.Selector({ 
+        id: 'default-servers-console-selector', 
+        serverId: sandbox.server.id, 
+        query: {
+          f: {
+            usable: true,
+            type: ['switches']
+          }
+        },
+
+        callbacks: { 
+          select: { 
+            text: _('Add the switch...'), 
+            callback: Whispercast.closure(this, function(record) { 
+              if (record) { 
+                sandbox.add.call(null, record);
+                sandbox.selector.setRecord(null, true)
+                return true;
+              } 
+              return false;
+            })
+          }
+        } 
+      }); 
+      sandbox.selector.create(); 
+
+      sandbox.initialized ? sandbox.initialized.call(sandbox) :  false;
+    }
+  }});
+}
+
+sandbox.add = function(record) {
+  if (sandbox.switchers[record.id] == undefined) {
+    var tbody = document.getElementById('default-servers-console-switchers').getElementsByTagName('tbody')[0];
+    if (tbody.childNodes.length > 2) {
+      var tr0 = document.createElement('tr');
+      YAHOO.util.Dom.setAttribute(tr0, 'id', 's'+record.id+'_separator');
+
+      var tdh = document.createElement('td');
+      YAHOO.util.Dom.setAttribute(tdh, 'colspan', '2');
+      tdh.innerHTML = '<hr/>';
+      tr0.appendChild(tdh);
+      tbody.appendChild(tr0);
+    }
+
+    var tr1 = document.createElement('tr');
+    YAHOO.util.Dom.setAttribute(tr1, 'id', 's'+record.id+'_title_row');
+
+    var tdt = document.createElement('td');
+    YAHOO.util.Dom.addClass(tdt, 'default-switches-switcher-title');
+    YAHOO.util.Dom.setAttribute(tdt, 'colspan', '2');
+    YAHOO.util.Dom.setAttribute(tdt, 'align', 'center');
+    var divt = document.createElement('div');
+    YAHOO.util.Dom.setAttribute(divt, 'id', 's'+record.id+'_title');
+    divt.innerHTML = '<h3>'+Whispercast.htmlEscape(record.name)+'&nbsp;<span style="color:#a0a0a0">[<a href="#" style="color:#c0c0c0" onclick="sandbox.remove('+record.id+')">x</a>]</span></h3>';
+    tdt.appendChild(divt);
+
+    tr1.appendChild(tdt);
+    tbody.appendChild(tr1);
+    
+    var tr2 = document.createElement('tr');
+    YAHOO.util.Dom.setAttribute(tr2, 'id', 's'+record.id);
+
+    var tdp = document.createElement('td');
+    YAHOO.util.Dom.addClass(tdp, 'default-switches-switcher-player');
+    YAHOO.util.Dom.setAttribute(tdp, 'width', '1%');
+    var divp = document.createElement('div');
+    YAHOO.util.Dom.addClass(divp, 'player');
+    YAHOO.util.Dom.setAttribute(divp, 'id', 's'+record.id+'_player');
+    tdp.appendChild(divp);
+    
+    var tdl = document.createElement('td');
+    YAHOO.util.Dom.addClass(tdl, 'default-switches-switcher-list');
+    var divl1 = document.createElement('div');
+    YAHOO.util.Dom.addClass(divl1, 'list');
+    YAHOO.util.Dom.setAttribute(divl1, 'id', 's'+record.id+'_list');
+    tdl.appendChild(divl1);
+    var divl2 = document.createElement('div');
+    YAHOO.util.Dom.setAttribute(divl2, 'id', 's'+record.id+'_selector');
+    tdl.appendChild(divl2);
+
+    tr2.appendChild(tdp);
+    tr2.appendChild(tdl);
+
+    tbody.appendChild(tr2);
+
+    var tr3 = document.createElement('tr');
+    YAHOO.util.Dom.setAttribute(tr3, 'id', 's'+record.id+'_media_row');
+
+    var tdm = document.createElement('td');
+    YAHOO.util.Dom.addClass(tdm, 'default-switches-switcher-media');
+    YAHOO.util.Dom.setAttribute(tdm, 'colspan', '2');
+    YAHOO.util.Dom.setAttribute(tdm, 'align', 'left');
+    var divm = document.createElement('div');
+    YAHOO.util.Dom.setAttribute(divm, 'id', 's'+record.id+'_media');
+    divm.innerHTML = '&nbsp;';
+    tdm.appendChild(divm);
+
+    tr3.appendChild(tdm);
+    tbody.appendChild(tr3);
+
+    sandbox.switchers[record.id] = new Whispercast.Lib.Default.Switches.Switcher({
+      id: 's'+record.id,
+      record: record,
+      server: sandbox.server
+    });
+    sandbox.switchers[record.id].create();
+  }
+};
+sandbox.remove = function(id) {
+  if (sandbox.switchers[id]) {
+    sandbox.switchers[id].destroy();
+    delete sandbox.switchers[id];
+
+    var tbody = document.getElementById('default-servers-console-switchers').getElementsByTagName('tbody')[0];
+    tbody.removeChild(document.getElementById('s'+id+'_title_row'));
+    tbody.removeChild(document.getElementById('s'+id));
+    tbody.removeChild(document.getElementById('s'+id+'_media_row'));
+    var separator = document.getElementById('s'+id+'_separator');
+    if (separator) {
+      tbody.removeChild(separator);
+    }
+  }
+};
+
+sandbox.destroy = function() {
+  if (sandbox.selector) {
+    sandbox.selector.destroy();
+    delete sandbox.selector;
+  }
+  if (sandbox.switchers) {
+    for (var i in sandbox.switchers) {
+      sandbox.switchers[i].destroy();
+    }
+    delete sandbox.switchers;
+  }
+  
+  YAHOO.util.Event.purgeElement(document.getElementById('default-servers-console-container'), true);
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+}
+-->
+</script>
+</tal:block>

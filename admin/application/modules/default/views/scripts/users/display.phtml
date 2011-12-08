@@ -1,0 +1,208 @@
+<tal:block phptal:tales="php">
+<div id="default-users-index-container">
+  <div id="default-users-index-results" style="margin: 1em"></div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+</script>
+
+<tal:block metal:use-macro="../index/library.phtml/Default_Index"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Resolver.resolve(['Whispercast.table'], [], {done: function() {
+    YAHOO.util.Event.onContentReady('default-users-index-container', function(e) {
+      var dataSource = new YAHOO.util.DataSource(Whispercast.Uri.buildZend('default','users','index',sandbox.server.id,{format:'json'})+'&');
+      dataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+      dataSource.responseSchema = {
+        resultsList: 'model.records',
+        fields: [
+          'id',
+          'user'
+        ],
+        metaFields: {
+          page: 'model.pagesCurrent',
+          rowsPerPage: 'model.itemsPerPage',
+          totalRecords: 'model.itemsTotal',
+          server: 'server',
+          acl: 'model.acl'
+        }
+      };
+
+      if (Whispercast.Lib.Default.Users == undefined) {
+        Whispercast.Lib.Default.Users = {
+          getFields: function() {
+            return [
+              'id',
+              'user'
+            ];
+          }
+        };
+
+        Whispercast.Lib.Default.Users.Table = function(cfg) {
+          cfg.hasPreview = (cfg.hasPreview != undefined) ? cfg.hasPreview : true;
+          Whispercast.Lib.Default.Users.Table.superclass.constructor.call(this, cfg);
+        };
+        YAHOO.lang.extend(Whispercast.Lib.Default.Users.Table, Whispercast.Table.Base, {
+          _initialize: function(cfg) {
+            this._serverId = cfg.serverId;
+            this._query = cfg.query;
+            if (this._query == undefined) {
+              this._query = {};
+            }
+
+            var columns = [
+              {key: 'user', label: _('Name'), sortable: true, fill: true},
+              {key: 'edit', label: '',
+                action: Whispercast.closure(this, function(table, record) {
+                  var id = record.getData('id');
+                  if (id) {
+                    var response = table.getDataSourceResponse();
+                    if (response && response.meta && response.meta.acl && response.meta.acl[id] && response.meta.acl[id]['set']) {
+                      Whispercast.App.retrieveContent('', Whispercast.Uri.buildZend('default', 'users', 'set', this._serverId, {'id':id}));
+                    }
+                  }
+                }),
+                formatter: Whispercast.closure(this, function(el, record, column, data) {
+                  var id = record.getData('id');
+                  if (id) {
+                    var response = this.getDataSourceResponse();
+                    if (response && response.meta && response.meta.acl && response.meta.acl[id] && response.meta.acl[id]['set']) {
+                      el.innerHTML = '<a><span>'+_('Edit')+'</span></a>';
+                    } else {
+                      el.innerHTML = '<span class="disabled">'+_('Edit')+'</span>';
+                    }
+                  }
+                })
+              },
+              {key: 'delete', label: '',
+                action: Whispercast.closure(this, function(table, record) {
+                  var id = record.getData('id');
+                  if (id) {
+                    var response = table.getDataSourceResponse();
+                    if (response && response.meta && response.meta.acl && response.meta.acl[id] && response.meta.acl[id]['delete']) {
+                        Whispercast.App.retrieveContent('', Whispercast.Uri.buildZend('default', 'users', 'delete', this._serverId, {'id':id}));
+                      }
+                  }
+                }),
+                formatter: Whispercast.closure(this, function(el, record, column, data) {
+                  var id = record.getData('id');
+                  if (id) {
+                    var response = this.getDataSourceResponse();
+                    if (response && response.meta && response.meta.acl && response.meta.acl[id] && response.meta.acl[id]['delete']) {
+                      el.innerHTML = '<a><span>'+_('Delete')+'</span></a>';
+                    } else {
+                      el.innerHTML = '<span class="disabled">'+_('Delete')+'</span>';
+                    }
+                  }
+                })
+              }
+            ];
+
+            if (cfg.columns) {
+              for(var i in cfg.columns) {
+                if (i > 1000) {
+                  columns.splice(i-1000, 0, cfg.columns[i]);
+                } else {
+                  if (cfg.columns[i] === false) {
+                    columns.splice(i, 1);
+                  } else {
+                    if (columns[i]) {
+                      for (j in cfg.columns[i]) {
+                        columns[i][j] = cfg.columns[i][j];
+                      }
+                    } else {
+                      columns.push(cfg.columns[i]);
+                    }
+                  }
+                }
+              }
+            }
+            cfg.columns = columns;
+
+            var config = {
+              filters: '&nbsp;'
+            };
+            if (cfg.config) {
+              for( var i in cfg.config) {
+                config[i] = cfg.config[i];
+              }
+            }
+            cfg.config = config;
+
+            if (cfg.dataSource == undefined) {
+              this._query.format = 'json';
+
+              cfg.dataSource = new YAHOO.util.DataSource(Whispercast.Uri.buildZend('default','users','index',this._serverId,this._query)+'&');
+              cfg.dataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+              cfg.dataSource.responseSchema = {
+                resultsList: 'model.records',
+                fields: Whispercast.Lib.Default.Users.getFields(),
+                metaFields: {
+                  page: 'model.pagesCurrent',
+                  rowsPerPage: 'model.itemsPerPage',
+                  totalRecords: 'model.itemsTotal',
+                  server: 'server',
+                  acl: 'model.acl'
+                }
+              };
+            }
+
+            if (cfg.record == undefined) {
+              cfg.record = {
+                module: 'default',
+                resource: 'users'
+              };
+            }
+
+            return Whispercast.Lib.Default.Users.Table.superclass._initialize.call(this, cfg);
+          }
+        });
+      }
+
+      sandbox.table = new Whispercast.Lib.Default.Users.Table({
+        container: 'default-users-index-results',
+        config:
+        {
+          dynamicData: true,
+          initialLoad:{
+            request: 'pageCurrent=1&pagePerPage=10&sortBy=user&sortOrder=1'
+          },
+          sortedBy:{
+            key: 'user',
+            dir: YAHOO.widget.DataTable.CLASS_ASC
+          }
+        },
+        serverId: sandbox.server.id,
+        links:
+        [
+          '<button id="default-users-index-results-add">'+_('Add a new user...')+'</button>',
+          '<button id="default-users-index-results-reload">'+_('Reload')+'</button>'
+        ],
+      });
+      sandbox.table.run(Whispercast.closure(this, function() {
+       YAHOO.util.Event.on('default-users-index-results-add', 'click', function() {
+          Whispercast.App.retrieveContent('',Whispercast.Uri.buildZend('default', 'users', 'add', sandbox.server.id));
+        });
+        YAHOO.util.Event.on('default-users-index-results-reload', 'click', function() {
+          sandbox.table.reload();
+        });
+
+        sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+      }));
+    });
+  }});
+};
+sandbox.destroy = function() {
+  if (sandbox.table) {
+    sandbox.table.destroy();
+  }
+
+  YAHOO.util.Event.purgeElement(document.getElementById('default-users-index-container'), true);
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+};
+//-->
+</script>
+</tal:block>

@@ -1,0 +1,57 @@
+<tal:block phptal:tales="php">
+<div id="default-remotes-edit-container">
+  <div id="default-remotes-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-remotes-edit-form-dialog-title"></div>
+    <div class="bd" id="default-remotes-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.getElement('host_ip').setLabel(_('Host'))"/>
+      <tal:block tal:condition="model.form.getElement('port').setLabel(_('Port'))"/>
+      <tal:block tal:condition="model.form.getElement('path_escaped').setLabel(_('Path'))"/>
+      <tal:block tal:condition="model.form.getElement('should_reopen').setLabel(_('Reopen on failure'))"/>
+      <tal:block tal:condition="model.form.getElement('fetch_only_on_request').setLabel(_('Open only when used'))"/>
+      <tal:block tal:condition="model.form.getElement('media_type').setLabel(_('Media type'))"/>
+      <tal:block tal:condition="model.form.getElement('remote_user').setLabel(_('User'))"/>
+      <tal:block tal:condition="model.form.getElement('remote_password').setLabel(_('Password'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-remotes-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-remotes-edit-container',
+    formId: 'default-remotes-edit-form',
+    formTitle: {
+      add: _('Add remote...'),
+      update: _('Edit remote...')
+    },
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    }
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-remotes-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

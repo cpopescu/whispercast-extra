@@ -312,8 +312,15 @@ bool TimeRangeRequest::StartRequest(
   callback_ = callback;
 
   req_->set_controller(this);
-
   crt_file_ = -1;
+
+  // start with seek
+  if ( req->info().seek_pos_ms_ > 0 ) {
+    SeekInternal(req->info().seek_pos_ms_);
+    return crt_file_ >= 0;
+  }
+
+  // start with first file
   play_next_alarm_.Set(NewPermanentCallback(this, &TimeRangeRequest::PlayNext),
       true, 0, false, true);
   return true;

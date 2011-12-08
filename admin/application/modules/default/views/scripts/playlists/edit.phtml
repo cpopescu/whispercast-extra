@@ -1,0 +1,251 @@
+<tal:block phptal:tales="php">
+<div id="default-playlists-edit-container">
+  <div id="default-playlists-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-playlists-edit-form-dialog-title"></div>
+    <div class="bd" id="default-playlists-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.getElement('loop').setLabel(_('Loop'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-playlists-edit-form-additional">
+        <div>
+          <hr/>
+          <div class="label">Playlist:</div>
+          <div id="default-playlists-edit-form-playlist"></div>
+        </div>
+        <div>
+          <hr/>
+          <div id="default-playlists-edit-form-playlist-selector"></div>
+        </div>
+      </div>
+      <div id="default-playlists-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+#default-playlists-edit-form-playlist {
+  background-color: #ffffff;
+  border: 1px solid #c0c0c0;
+  height: 10.5em;
+}
+#default-playlists-edit-form-playlist .name {
+  float: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+#default-playlists-edit-form-playlist .actions {
+  float: right;
+  margin: 0 0.25em 0 0;
+}
+</style>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_List"/>
+<tal:block metal:use-macro="../../../default/views/scripts/streams/library.phtml/Default_Streams_Selector"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-playlists-edit-container',
+    formId: 'default-playlists-edit-form',
+    formTitle: {
+      add: _('Add playlist...'),
+      update: _('Edit the playlist...')
+    },
+    formCfg: {
+      overloads: {
+        _onCreate: function(previous) {
+          var additional = document.getElementById('default-playlists-edit-form-additional');
+          document.getElementById('default-playlists-edit-form').appendChild(additional.parentNode.removeChild(additional));
+
+          Default_Index_List();
+          Default_Streams_Selector();
+
+          this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+            id: 'default-playlists-edit-form-playlist-selector',
+            serverId: sandbox.server.id,
+            query: {
+              f: {
+                usable: true
+              }
+            },
+
+            width: '65em',
+            owner: this,
+
+            callbacks: {
+              select: {
+                text: _('Add'),
+                callback: Whispercast.closure(this, function(record) {
+                  if (record) {
+                    this._private.list.addRecord(record);
+                    this._private.selector.setRecord(null, true) 
+                    return true;
+                  }
+                  return false;
+                })
+              }
+            }
+          });
+          this._private.selector.create();
+
+          this._private.list = new Whispercast.Lib.Default.Index.List({
+            id: 'default-playlists-edit-form-playlist',
+            format: Whispercast.closure(this, function(record, element) {
+              var name = document.createElement('div');
+              YAHOO.util.Dom.addClass(name, 'name');
+              name.innerHTML = Whispercast.htmlEscape(record.name);
+
+              var actions = document.createElement('div');
+              YAHOO.util.Dom.addClass(actions, 'actions');
+
+              var separator = document.createTextNode('\u00a0\u00b7\u00a0');
+
+              var a;
+              a = document.createElement('a');
+              a.innerHTML = '&dArr;';
+              a.title = _('Move down');
+              YAHOO.util.Event.on(a, 'click', function(e) {
+                YAHOO.util.Event.preventDefault(e);
+
+                var current = this.parentNode.parentNode;
+
+                var next = current.nextSibling;
+                if (next) {
+                  YAHOO.util.Dom.removeClass(current, 'highlight'); 
+
+                  var pnode = current.parentNode;
+                  pnode.removeChild(current);
+
+                  if (next.nextSibling) {
+                    pnode.insertBefore(current, next.nextSibling);
+                  } else {
+                    pnode.appendChild(current);
+                  }
+
+                  if (YAHOO.util.Dom.hasClass(current, 'odd')) {
+                    YAHOO.util.Dom.removeClass(current, 'odd'); 
+                    YAHOO.util.Dom.addClass(current, 'even'); 
+                    YAHOO.util.Dom.removeClass(next, 'even'); 
+                    YAHOO.util.Dom.addClass(next, 'odd'); 
+                  } else {
+                    YAHOO.util.Dom.removeClass(current, 'even'); 
+                    YAHOO.util.Dom.addClass(current, 'odd'); 
+                    YAHOO.util.Dom.removeClass(next, 'odd'); 
+                    YAHOO.util.Dom.addClass(next, 'even'); 
+                  }
+                }
+              });
+              actions.appendChild(a);
+              actions.appendChild(separator.cloneNode(true));
+              a = document.createElement('a');
+              a.innerHTML = '&uArr;';
+              a.title = _('Move up');
+              YAHOO.util.Event.on(a, 'click', function(e) {
+                YAHOO.util.Event.preventDefault(e);
+
+                var current = this.parentNode.parentNode;
+
+                var previous = current.previousSibling;
+                if (previous) {
+                  YAHOO.util.Dom.removeClass(current, 'highlight'); 
+
+                  current.parentNode.insertBefore(current.parentNode.removeChild(current), previous);
+
+                  if (YAHOO.util.Dom.hasClass(current, 'odd')) {
+                    YAHOO.util.Dom.removeClass(current, 'odd'); 
+                    YAHOO.util.Dom.addClass(current, 'even'); 
+                    YAHOO.util.Dom.removeClass(previous, 'even'); 
+                    YAHOO.util.Dom.addClass(previous, 'odd'); 
+                  } else {
+                    YAHOO.util.Dom.removeClass(current, 'even'); 
+                    YAHOO.util.Dom.addClass(current, 'odd'); 
+                    YAHOO.util.Dom.removeClass(previous, 'odd'); 
+                    YAHOO.util.Dom.addClass(previous, 'even'); 
+                  }
+                }
+              });
+              actions.appendChild(a);
+              actions.appendChild(separator);
+              a = document.createElement('a');
+              a.innerHTML = 'X';
+              a.title = _('Remove');
+              YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+                YAHOO.util.Event.preventDefault(e);
+                this._private.list.removeRecord(record);
+              }));
+              actions.appendChild(a);
+
+              var id = document.createElement('input');
+              id.type = 'hidden';
+              id.value = Whispercast.htmlEscape(record.id);
+              id.name = 'setup[playlist][]'; // id
+
+              var clear = document.createElement('div');
+              clear.style.clear = 'both';
+
+              element.appendChild(name);
+              element.appendChild(actions);
+              element.appendChild(id);
+              element.appendChild(clear);
+            })
+          });
+          this._private.list.create();
+
+          if (sandbox.record) {
+            if (sandbox.record.setup) {
+                if (sandbox.record.setup.playlist) {
+                  for (var i = 0; i < sandbox.record.setup.playlist.length; i++) {
+                    this._private.list.addRecord(sandbox.record.setup.playlist[i]);
+                  }
+                }
+            }
+          }
+
+          return previous.call(this);
+        },
+        _onDestroy: function(previous) {
+          if (this._private.list) {
+            this._private.list.destroy();
+            delete this._private.list;
+          }
+          if (this._private.selector) {
+            this._private.selector.destroy();
+            delete this._private.selector;
+          }
+          return previous.call(this);
+        }
+      }
+    },
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    },
+    required: [
+      'autocomplete',
+      'Whispercast.dialog',
+      'Whispercast.form',
+      'Whispercast.table'
+    ]
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-playlists-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

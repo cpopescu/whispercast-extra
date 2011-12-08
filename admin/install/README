@@ -1,0 +1,42 @@
+READ THIS:
+
+ To create the database:
+-------------------------
+
+ # mysqladmin password=<pass> create whispercast-admin
+ # mysql --password=<pass> whispercast-admin
+ mysql> grant all on `whispercast-admin`.* to 'user'@'localhost';
+ mysql> grant all on `whispercast-admin`.* to 'whispercast'@'localhost' identified by 'zacclg-=77';
+ Query OK, 0 rows affected (0.00 sec)
+
+ Create the database using db.ini
+
+ At the end of this process (db.sql), you need to create the admin user:
+
+ > mysql whispercast-admin
+ mysql> insert into users values (NULL, 'admin', md5('pass'));
+ mysql> insert into acl select 0, id, 'servers', 0, 'add' from
+        users where user='admin';
+
+ IMPORTANT:
+   For re-creation look for DROP TRIGGER statements down the db.sql script
+   and re-enable them ..
+
+ For PHP:
+----------
+ > sudo apt-get install php5 php5-curl php5-mysql
+ > sudo a2enmod rewrite
+
+ > cd $P4HOME/whispersoft-0.2.4/private/admin/application
+ > mkdir -p tmp/cache/ tmp/compiled/ tmp/uploaded
+ > sudo chown www-data:www-data -R tmp
+
+ > sudo /etc/init.d/apache2 force-reload
+
+ * edit
+    $P4HOME/whispersoft-0.2.4/private/admin/public/.htaccess
+
+    and change:
+
+    RewriteBase /miancule/admin/public
+    to wherever in the apache path is the admin interface set.

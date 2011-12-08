@@ -26,6 +26,7 @@
 	</s:states>
 	
 	<!-- Background -->
+	<!--
 	<s:Ellipse id="backgroundFill"
 			   x="0"
 			   y="0"
@@ -53,27 +54,56 @@
 			</s:LinearGradient>
 		</s:fill>
 	</s:Ellipse>
+	-->
+	<s:Rect id="backgroundFill"
+			   x="0"
+			   y="0"
+			   width="{width}"
+			   height="{height}">
+		<s:fill>
+			<s:SolidColor color="0" alpha="0"/>
+		</s:fill>
+	</s:Rect>
 	
 	<!--- Defines the play symbol. -->
+	<!--
 	<s:Group horizontalCenter="1" verticalCenter="0" id="playSymbol" includeIn="normalStates">
-		<!-- triangle -->
-		<s:Path winding="evenOdd" data="M 1 0 L 1 13 L 8 7 L 1 0 Z" scaleX="1.6" scaleY="1.4" >
+		<s:Path winding="evenOdd" data="M 1 0 L 1 13 L 8 7 L 1 0 Z" scaleX="{1.6*width/46}" scaleY="{1.4*width/46}" >
 			<s:fill>
-				<!--- @private -->
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Path>
+	</s:Group>
+	-->
+	<s:Group horizontalCenter="1" verticalCenter="0" id="playSymbol" includeIn="normalStates">
+		<s:Path winding="evenOdd" data="M 1 0 L 1 13 L 8 7 L 1 0 Z" scaleX="1.6" scaleY="1.6" >
+			<s:fill>
 				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
 			</s:fill>
 		</s:Path>
 	</s:Group>
 	<!--- Defines the pause symbol. -->
-	<s:Group horizontalCenter="0" verticalCenter="0" scaleX="1" scaleY="1" id="pauseSymbol" includeIn="selectedStates">
-		<!-- big line on left -->
+	<!--
+	<s:Group horizontalCenter="0" verticalCenter="0" scaleX="{width/46}" scaleY="{width/46}" id="pauseSymbol" includeIn="selectedStates">
 		<s:Rect left="0" top="0" height="17" width="5">
 			<s:fill>
 				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
 			</s:fill>
 		</s:Rect>
-		<!-- big line on right -->
 		<s:Rect left="7" top="0" height="17" width="5">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Rect>
+	</s:Group>
+	-->
+	<s:Group horizontalCenter="0" verticalCenter="0" scaleX="1" scaleY="1" id="pauseSymbol" includeIn="selectedStates">
+		<s:Rect left="0" top="0" height="20" width="5">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
+			</s:fill>
+		</s:Rect>
+		<s:Rect left="7" top="0" height="20" width="5">
 			<s:fill>
 				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.disabledStates="{getStyle('disabledColorLow')}"/>
 			</s:fill>

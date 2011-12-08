@@ -318,6 +318,8 @@
 			}
 			private function setMetadata_(metadata:Object):void
 			{
+				timeOrigin_ = netStream_ ? netStream_.time : 0;
+				
 				metadata_ = metadata;
 				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_metadata"));
 				
@@ -437,6 +439,7 @@
 			}
 			
 			private var timeOrigin_:Number = 0;
+			private var timeStartAt_:Number = 0;
 			
 			private var time_:Number = NaN;
 			[Bindable(event="Whispercast_VideoOutput_time")]
@@ -454,7 +457,7 @@
 				
 				if (!isNaN(time))
 				{
-					time += timeOrigin_;
+					time -= timeOrigin_;
 					if (!isNaN(duration_))
 					{
 						time = Math.min(time, duration_);
@@ -569,7 +572,7 @@
 				Logger.debug(this, 'Cuepoint: {0}', cuepoint);
 				switch (cuepoint.type) {
 					case 'navigation':
-						updateTime_(cuepoint.time - timeOrigin_, false);
+						updateTime_(cuepoint.time, false);
 						break;
 					case 'actionscript':
 						try {
@@ -637,7 +640,13 @@
 					case "NetStream.Play.Reset":
 						complete_ = false;
 						break;
+					
+					case "NetStream.Play.Switch":
+						break;
+						
 					case "NetStream.Play.Complete":
+						setDuration_(NaN);
+						break;
 					case "NetStream.Play.Stop":
 						complete_ = true;
 						if (checkIfComplete_(false))
@@ -790,8 +799,9 @@
 					updateHandlerRegistered_ = false;
 				}
 				
+				timeOrigin_ = 0;
 				if (!isPlaying_)
-					timeOrigin_ = 0;
+					timeStartAt_ = 0;
 				
 				if (!isPlaying_ && urlStandby_ && !disableStandby_)
 					if (setupURL_(urlStandby_, true, NaN))
@@ -818,7 +828,7 @@
 				if (url_)
 					if (setupURL_(url_, false, startAt))
 					{
-						timeOrigin_ = isNaN(startAt) ? 0 : startAt;
+						timeStartAt_ = isNaN(startAt) ? 0 : startAt;
 						urlPlaying_ = url_;
 						
 						var wasPlaying:Boolean = isPlaying_; 
@@ -938,7 +948,7 @@
 				if (!isPausing)
 				{
 					updateTime_(time);
-					if (time >= timeOrigin_)
+					if (time >= timeStartAt_)
 					{
 						seekWhenPaused_ = NaN;
 						seekPending_ = time;

@@ -155,10 +155,10 @@ void BitmapExtractor::ProcessFlvTag(const streaming::FlvTag* flv_tag,
     bytes_decoded += cb;
     bytes_remaining -= cb;
     if ( frame_finished ) {
-      DLOG(10) << " Frame extracted : " << codec_ctx_->width
-               << "x" << codec_ctx_->height
-               << " from: "
-               <<  FlvFlagVideoCodecName(flv_tag->video_body().video_codec());
+      DLOG_INFO << " Frame extracted : " << codec_ctx_->width
+                << "x" << codec_ctx_->height
+                << " from: "
+                <<  FlvFlagVideoCodecName(flv_tag->video_body().video_codec());
       if ( crt_picture_.width_ != codec_ctx_->width ||
            crt_picture_.height_ != codec_ctx_->height ) {
         if ( sws_ctx_rescale_ != NULL ) {
@@ -228,8 +228,8 @@ void BitmapExtractor::ProcessFlvTag(const streaming::FlvTag* flv_tag,
 
       crt_picture_.timestamp_ = timestamp_base_ms + flv_tag->timestamp_ms();
       crt_picture_.is_transposed_ = is_transposed_;
-      DLOG(10) << " Picture found: " << codec_ctx_->width << "x"
-               << codec_ctx_->height;
+      DLOG_INFO << "Picture found: " << codec_ctx_->width << "x"
+                << codec_ctx_->height;
       out->push_back(new PictureStruct(crt_picture_));
     }
   }

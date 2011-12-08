@@ -1,0 +1,245 @@
+<tal:block phptal:tales="php">
+<div id="default-osd-edit-container">
+  <div id="default-osd-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-osd-edit-form-dialog-title"></div>
+    <div class="bd" id="default-osd-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('click_url').setLabel(_('Click URL'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-osd-edit-form-additional">
+        <div id="default-osd-edit-overlays-container" class="form">
+          <div class="label">Overlays:</div>
+          <div id="default-osd-edit-overlays-list"/>
+          <button id="default-osd-edit-overlays-add">Add</button>
+        </div>
+        <div id="default-osd-edit-crawlers-container" class="form">
+          <div class="label">Crawlers:</div>
+          <div id="default-osd-edit-crawlers-list"/>
+          <button id="default-osd-edit-crawlers-add">Add</button>
+        </div>
+        <div id="default-osd-edit-editor"/>
+      </div>
+      <div id="default-osd-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+#default-osd-edit-overlays-list,
+#default-osd-edit-crawlers-list {
+  background-color: #ffffff;
+  border: 1px solid #c0c0c0;
+  height: 10.5em;
+}
+#default-osd-edit-overlays-list .name,
+#default-osd-edit-crawlers-list .name {
+  float: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+#default-osd-edit-overlays-list .actions,
+#default-osd-edit-crawlers-list .actions {
+  float: right;
+  margin: 0 0.25em 0 0;
+}
+</style>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+sandbox.templates = ${structure json_encode(model.templates)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_List"/>
+<tal:block metal:use-macro="../../../default/views/scripts/osd/library.phtml/Default_Osd_Edit"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-osd-edit-container',
+    formId: 'default-osd-edit-form',
+    formTitle: {
+      add: _('Add OSD data...'),
+      update: _('Edit the OSD data...')
+    },
+    formCfg: {
+      overloads: {
+        _onCreate: function(previous) {
+          var additional = document.getElementById('default-osd-edit-form-additional');
+          document.getElementById('default-osd-edit-form').appendChild(additional.parentNode.removeChild(additional));
+
+          Default_Index_List();
+          Default_Osd_Edit();
+
+          var computeIds = function(templates, list) {
+            var records = list.getRecords();
+
+            var computed = {};
+            for (var i = 0; i < templates.length; i++) {
+              computed[templates[i]] = templates[i];
+            }
+            for (var i = 0; i < records.length; i++) {
+              delete computed[records[i].id];
+            }
+
+            var ids = [];
+            for (var i in computed) {
+              ids.push(i);
+            }
+            return ids;
+          }
+
+          YAHOO.util.Event.on('default-osd-edit-overlays-add', 'click', Whispercast.closure(this, function(e) {
+            YAHOO.util.Event.preventDefault(e);
+
+            var ids = computeIds(sandbox.templates.overlays, this._private.overlays);
+            if (ids.length > 0) {
+              this._private.editor.run({
+                title: _('Add overlay data...'),
+                record: {
+                  callback: Whispercast.closure(this, function (id, html) {
+                    this._private.overlays.addRecord({id: id, value: html});
+                  })
+                },
+                recordIds: ids
+              });
+            }
+          }));
+          YAHOO.util.Event.on('default-osd-edit-crawlers-add', 'click', Whispercast.closure(this, function(e) {
+            YAHOO.util.Event.preventDefault(e);
+
+            var ids = computeIds(sandbox.templates.crawlers, this._private.crawlers);
+            if (ids.length > 0) {
+              this._private.editor.run({
+                title: _('Add crawler data...'),
+                record: {
+                  callback: Whispercast.closure(this, function (id, html) {
+                    this._private.crawlers.addRecord({id: id, value: html});
+                  })
+                },
+                recordIds: ids
+              });
+            }
+          }));
+
+          var listElementFormat = function(type, privates) {
+            return Whispercast.closure(sandbox, function(record, element) {
+              eval('var list = privates.'+type+';');
+
+              var name = document.createElement('div');
+              YAHOO.util.Dom.addClass(name, 'name');
+              name.innerHTML = Whispercast.htmlEscape(record.id);
+
+              var actions = document.createElement('div');
+              YAHOO.util.Dom.addClass(actions, 'actions');
+
+              var separator = document.createTextNode('\u00a0\u00b7\u00a0');
+
+              var a;
+              a = document.createElement('a');
+              a.innerHTML = 'Edit';
+              a.title = _('Edit');
+              YAHOO.util.Event.on(a, 'click', Whispercast.closure(list, function(privates, e) {
+                YAHOO.util.Event.preventDefault(e);
+                privates.editor.run({
+                  title: (type == 'overlays') ?  _('Edit overlay data...') : _('Edit crawler data...'),
+                  record: {
+                    id: record.id,
+                    value: record.value,
+                    callback: Whispercast.closure(list, function (id, html) {
+                      this.updateRecord(record, {id: id, value: html});
+                    })
+                  }
+                });
+              }, privates));
+              actions.appendChild(a);
+              actions.appendChild(separator);
+
+              a = document.createElement('a');
+              a.innerHTML = 'X';
+              a.title = _('Remove');
+              YAHOO.util.Event.on(a, 'click', Whispercast.closure(list, function(e) {
+                YAHOO.util.Event.preventDefault(e);
+                this.removeRecord(record);
+              }));
+              actions.appendChild(a);
+
+              var id = document.createElement('input');
+              id.type = 'hidden';
+              id.value = Whispercast.htmlEscape(record.value);
+              id.name = type+'['+Whispercast.htmlEscape(record.id)+']';
+
+              var clear = document.createElement('div');
+              clear.style.clear = 'both';
+
+              element.appendChild(name);
+              element.appendChild(actions);
+              element.appendChild(id);
+              element.appendChild(clear);
+            })
+          }
+
+          this._private.overlays = new Whispercast.Lib.Default.Index.List({
+            id: 'default-osd-edit-overlays-list',
+            format: listElementFormat('overlays', this._private)
+          });
+          this._private.overlays.create();
+
+          this._private.crawlers = new Whispercast.Lib.Default.Index.List({
+            id: 'default-osd-edit-crawlers-list',
+            format: listElementFormat('crawlers', this._private)
+          });
+          this._private.crawlers.create();
+
+          this._private.editor = new Whispercast.Lib.Default.Osd.Edit({
+            id: 'default-osd-edit-editor'
+          });
+
+          for (var i in sandbox.record.osd.overlays) {
+            this._private.overlays.addRecord({id:i, value:sandbox.record.osd.overlays[i]});
+          }
+          for (var i in sandbox.record.osd.crawlers) {
+            this._private.crawlers.addRecord({id:i, value:'<ul><li>'+sandbox.record.osd.crawlers[i].join('</li><li>')+'</li></ul>'});
+          }
+
+          return previous.call(this);
+        },
+        _onDestroy: function(previous) {
+          if (this._private.editor) {
+            this._private.editor.destroy();
+            delete this._private.editor;
+          }
+          if (this._private.crawlers) {
+            this._private.crawlers.destroy();
+            delete this._private.crawlers;
+          }
+          if (this._private.overlays) {
+            this._private.overlays.destroy();
+            delete this._private.overlays;
+          }
+
+          return previous.call(this);
+        }
+      }
+    },
+    resource: {
+      module: 'default',
+      resource: 'osd'
+    },
+    required: [
+      'editor',
+      'Whispercast.dialog',
+      'Whispercast.form'
+    ]
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-osd-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

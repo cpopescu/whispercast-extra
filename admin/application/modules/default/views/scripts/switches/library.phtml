@@ -1,0 +1,270 @@
+<tal:block phptal:tales="php">
+<tal:block metal:define-macro="Default_Switches">
+<script type="text/javascript">
+<!--
+if (Whispercast.Lib == undefined) {
+  Whispercast.Lib = {};
+}
+if (Whispercast.Lib.Default == undefined) {
+  Whispercast.Lib.Default = {};
+}
+if (Whispercast.Lib.Default.Switches == undefined) {
+  Whispercast.Lib.Default.Switches = {};
+}
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Switches_Switcher">
+<tal:block metal:use-macro="Default_Switches"/>
+<tal:block metal:use-macro="../index/library.phtml/Default_Index_List"/>
+<tal:block metal:use-macro="../streams/library.phtml/Default_Streams"/>
+<tal:block metal:use-macro="../streams/library.phtml/Default_Streams_Selector"/>
+<style type="text/css">
+.default-switches-switcher-player {
+  padding: 0.5em;
+  background-color: #f0e0e0;
+  border-left: 1px outset #808080;
+}
+.default-switches-switcher-list {
+  padding: 0.5em;
+  background-color: #e0f0e0;
+  border-right: 1px outset #808080;
+}
+.default-switches-switcher-list .list {
+  border: 1px solid #c0c0c0;
+  height: 202px;
+}
+.default-switches-switcher-list .name {
+  float: left;
+}
+.default-switches-switcher-list .actions {
+  float: right;
+  margin: 0 0.25em 0 0;
+}
+.default-switches-switcher-media {
+  padding: 0.5em;
+  background-color: #e0e0f0;
+  border: 1px outset #808080;
+}
+.default-switches-switcher-media div {
+  font-size: 120%;
+}
+.default-switches-switcher-media div span {
+  font-weight: bold;
+}
+.default-switches-switcher-title {
+  background-color: #f0f0f0;
+  border: 1px outset #808080;
+  padding: 2px 1em 2px 1em;
+}
+</style>
+<script type="text/javascript">
+<!--
+Default_Switches_Switcher = function() { 
+  if (Whispercast.Lib.Default.Switches.Switcher == undefined) {
+    Default_Streams_Selector();
+    Default_Index_List();
+
+    Whispercast.Lib.Default.Switches.Switcher = function(cfg) {
+      Whispercast.Lib.Default.Switches.Switcher.superclass.constructor.call(this, cfg);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Switches.Switcher, Whispercast.Base, {
+      _update: function(stop) {
+        if (this._private.update) {
+          YAHOO.util.Connect.abort(this._private.update);
+          delete this._private.update;
+        }
+        if (this._private.updateTimer) {
+          clearTimeout(this._private.updateTimer);
+          delete this._private.updateTimer;
+        }
+
+        if (!stop) {
+          this._private.update = 
+          YAHOO.util.Connect.asyncRequest(
+            'post',
+            Whispercast.Uri.buildZend('default','switches','current', this._cfg.server.id, {format:'json', id:this._cfg.record.id}),
+            {
+              success: Whispercast.closure(this, function(o) {
+                var response = Whispercast.eval('return ('+o.responseText+')');
+                var text = '';
+                if (response.model.result > 0) {
+                  if (response.model.media.current) {
+                    text += _('Playing ')+'<span>'+Whispercast.htmlEscape(response.model.media.current.name)+'</span>';
+                    if (response.model.media.next) {
+                      text += _(', next ')+'<span>'+Whispercast.htmlEscape(response.model.media.next.name)+'</span>';
+                    }
+                  } else {
+                    text += _('No stream is currently being played.');
+                  }
+                } else {
+                  text = _('Failed reading the switch state.');
+                }
+                document.getElementById(this._cfg.id+'_media').innerHTML = text;
+                this._private.updateTimer = setTimeout(Whispercast.closure(this, function() { this._update() }), 5000);
+              }),
+              failure: Whispercast.closure(this, function(o) {
+                document.getElementById(this._cfg.id+'_media').innerHTML = _('Failed reading the switch state.');
+                this._private.updateTimer = setTimeout(Whispercast.closure(this, function() { this._update() }), 1000);
+              })
+            }
+          );
+        }
+      },
+
+      create: function(callback) {
+        var playerCfg = this._cfg.player ? this._cfg.player : {};
+        playerCfg.id = this._cfg.id+'_player';
+        playerCfg.vars = {
+          play_on_load: 1,
+          url0:  Whispercast.Lib.Default.Streams.getStreamUrl(this._cfg.server, '/preview'+this._cfg.record['export'], 'rtmp', {wuname:this._cfg.server.preview_user,wword:Whispercast.htmlEscape(this._cfg.server.preview_password)})
+        };
+
+        this._private.player = new Whispercast.Player.Base(playerCfg);
+        this._private.player.create();
+
+        var switcher = this;
+        var perform = function(record, set_as_default, switch_now) {
+          YAHOO.util.Connect.asyncRequest(
+            'post',
+            Whispercast.Uri.buildZend('default','switches','switch', this._cfg.server.id, {format:'json'}),
+            {
+              success: Whispercast.closure(this, function(o) {
+                this._private.updateTimer = setTimeout(Whispercast.closure(this, function() { this._update() }), 100);
+              }),
+              failure: Whispercast.closure(this, function(o) {
+                this._private.updateTimer = setTimeout(Whispercast.closure(this, function() { this._update() }), 100);
+              })
+            },
+            'id='+escape(this._cfg.record.id)+'&stream='+escape(record.id)+'&set_as_default='+escape(set_as_default ? 1 : 0)+'&switch_now='+escape(switch_now ? 1 : 0)
+          );
+        };
+
+        this._private.list = new Whispercast.Lib.Default.Index.List({
+          id: this._cfg.id+'_list',
+          format: Whispercast.closure(this, function(record, element) {
+            var name = document.createElement('div');
+            YAHOO.util.Dom.addClass(name, 'name');
+            name.innerHTML =
+            name.title = Whispercast.htmlEscape(record.name);
+
+            var actions = document.createElement('div');
+            YAHOO.util.Dom.addClass(actions, 'actions');
+
+            var separator = document.createTextNode('\u00a0\u00b7\u00a0');
+
+            var a;
+            a = document.createElement('a');
+            a.innerHTML = _('Preview');
+            a.title = _('Preview this stream.');
+            YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+              var url = Whispercast.Lib.Default.Streams.getStreamUrl(switcher._cfg.server, '/preview'+record['export'], 'rtmp', {wuname:switcher._cfg.server.preview_user,wword:Whispercast.htmlEscape(switcher._cfg.server.preview_password)});
+
+              Whispercast.App.popup('whispercast_'+record.server_id+'_default_streams_'+record.id+'_preview', Whispercast.Uri.build('player/player.html'),{play:url,play_on_load:1}, 'status=0,toolbar=0,location=0,menubar=0,width=330,height=276,resizable=yes');
+            }));
+            actions.appendChild(a);
+            actions.appendChild(separator.cloneNode(true));
+
+            a = document.createElement('a');
+            a.innerHTML = _('Switch');
+            a.title = _('Switch to this stream.');
+            YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+              perform.call(this, record, false, true);
+            }));
+            actions.appendChild(a);
+            actions.appendChild(separator.cloneNode(true));
+
+            a = document.createElement('a');
+            a.innerHTML = _('Next');
+            a.title = _('Switch to this stream when the current stream is finished.');
+            YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+              perform.call(this, record, false, false);
+            }));
+            actions.appendChild(a);
+            actions.appendChild(separator.cloneNode(true));
+
+            a = document.createElement('a');
+            a.innerHTML = _('Default');
+            a.title = _('Switch to this stream and make it the default stream for this switch.');
+            YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+              perform.call(this, record, true, true);
+            }));
+            actions.appendChild(a);
+            actions.appendChild(separator);
+
+            a = document.createElement('a');
+            a.innerHTML = 'X';
+            a.title = _('Remove this stream');
+            YAHOO.util.Event.on(a, 'click', Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+              this._private.list.removeRecord(record);
+            }));
+            actions.appendChild(a);
+
+            element.appendChild(name);
+            element.appendChild(actions);
+            
+            var t = document.createElement('div');
+            YAHOO.util.Dom.setStyle(t, 'clear', 'both');
+            element.appendChild(t);
+          })
+        });
+        this._private.list.create();
+
+        this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+          id: this._cfg.id+'_selector',
+          serverId: sandbox.server.id,
+          query: {
+            f: {
+              usable: true
+            }
+          },
+
+          width: this._cfg.selectorWidth,
+
+          callbacks: {
+            select: {
+              text: _('Add'),
+              callback: Whispercast.closure(this, function(record) {
+                if (record) {
+                  this._private.list.addRecord(record);
+                  this._private.selector.setRecord(null, true)
+                  return true;
+                }
+                return false;
+              })
+            }
+          }
+        });
+        this._private.selector.create();
+
+        this._private.updateTimer = setTimeout(Whispercast.closure(this, function() { this._update() }), 100);
+
+        if (callback) {
+          callback.call(null);
+        }
+      },
+      destroy: function() {
+        this._update(true);
+
+        if (this._private.list) {
+          this._private.list.destroy();
+          delete this._private.list;
+        }
+        if (this._private.player) {
+          this._private.player.destroy();
+          delete this._private.player;
+        }
+      }
+    });
+  }
+}
+//-->
+</script>
+</tal:block>
+</tal:block>

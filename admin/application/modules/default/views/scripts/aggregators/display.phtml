@@ -1,0 +1,73 @@
+<tal:block phptal:tales="php">
+<div id="default-aggregators-index-container">
+  <div id="default-aggregators-index-results" style="margin: 1em"></div>
+</div>
+
+<tal:block metal:use-macro="../../../default/views/scripts/streams/library.phtml/Default_Streams_Table"/>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+</script>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Resolver.resolve(['Whispercast.table'], [], {done: function() {
+    Default_Streams_Table();
+
+    YAHOO.util.Event.onContentReady('default-aggregators-index-container', function(e) {
+      sandbox.table = new Whispercast.Lib.Default.Streams.Table({
+        container: 'default-aggregators-index-results',
+        columns:
+        {
+          0: false
+        },
+        config:
+        {
+          dynamicData: true,
+          initialLoad:{
+            request: 'pageCurrent=1&pagePerPage=10&sortBy=category_name&sortOrder=1'
+          },
+          sortedBy:{
+            key: 'category',
+            dir: YAHOO.widget.DataTable.CLASS_ASC
+          }
+        },
+        serverId: sandbox.server.id,
+        links:
+        [
+          '<button id="default-aggregators-index-results-add">'+_('Add a new aggregator...')+'</button>',
+          '<button id="default-aggregators-index-results-reload">'+_('Reload')+'</button>'
+        ],
+        query:
+        {
+          f: {
+            type: ['aggregators']
+          }
+        }
+      });
+
+      sandbox.table.run(Whispercast.closure(this, function() {
+        YAHOO.util.Event.on('default-aggregators-index-results-add', 'click', function() {
+          Whispercast.App.retrieveContent('',Whispercast.Uri.buildZend('default', 'aggregators', 'add', sandbox.server.id));
+        });
+        YAHOO.util.Event.on('default-aggregators-index-results-reload', 'click', function() {
+          sandbox.table.reload();
+        });
+
+        sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+      }));
+    });
+  }});
+};
+sandbox.destroy = function() {
+  if (sandbox.table) {
+    sandbox.table.destroy();
+  }
+
+  YAHOO.util.Event.purgeElement(document.getElementById('default-aggregators-index-container'), true);
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+};
+//-->
+</script>
+</tal:block>

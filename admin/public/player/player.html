@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>whisperCast Player</title>
+  <!-- YUI stuff BEGIN -->
+  <!-- Combo-handled YUI CSS files: -->
+  <link rel="stylesheet" type="text/css" href="../yui/reset/reset-min.css"/>
+  <!-- Combo-handled YUI JS files: -->
+  <script type="text/javascript" src="../yui/yahoo-dom-event/yahoo-dom-event.js"></script>
+  <script type="text/javascript" src="../yui/cookie/cookie.js"></script>
+  <script type="text/javascript" src="../yui/element/element.js"></script>
+  <!-- Until the allowFullScreen attribute will be allowed, we serve this locally
+  <script type="text/javascript" src="../yui/swf/swf.js"></script>
+  -->
+  <script type="text/javascript" src="../yui/swf/swf.js"></script>
+  <!-- YUI stuff END -->
+  <link href=""  media="screen" rel="stylesheet" type="text/css" href="../css/common.css"/>
+  <!-- Whispercast -->
+  <script type="text/javascript" src="../js/base.js"></script>
+  <script type="text/javascript" src="../js/uri.js"></script>
+  <script type="text/javascript" src="../js/css.js"></script>
+  <script type="text/javascript" src="../js/uuid.js"></script>
+  <script type="text/javascript">
+    Whispercast.log = function() {}
+  </script>
+
+  <!-- Local -->
+  <script type="text/javascript">
+    <!--
+    Whispercast.log = function() {}
+    -->
+  </script>
+  <script type="text/javascript" src="player.js"></script>
+  <script type="text/javascript">
+  <!--
+  Whispercast.Player.onLoad = function() {
+    var L = Whispercast.Player;
+
+    var uri = Whispercast.Uri.parse(window.location);
+    Whispercast.Uri.base = uri.relative.substr(0, uri.relative.search('/player/player.html'));
+
+    L.params = {};
+
+    L.params.url = {
+    };
+
+    L.params.url.play = (uri.query['play'] != undefined) ? uri.query['play'] :  L.implicit.url.play;
+    L.params.url.standby = (uri.query['standby'] != undefined) ? uri.query['standby'] : L.implicit.url.standby;
+
+    var width = (uri.query['width'] != undefined) ? parseInt(uri.query['width']) : YAHOO.util.Dom.getViewportWidth();
+    var height = (uri.query['height'] != undefined) ? parseInt(uri.query['height']) : YAHOO.util.Dom.getViewportHeight();
+
+    var menu_height = YAHOO.util.Dom.getRegion('menu');
+    menu_height = menu_height.bottom-menu_height.top;
+
+    L.params.show_ui = (uri.query['show_ui'] != undefined) ? !!parseInt(uri.query['show_ui']) : L.implicit.show_ui;
+    L.params.simple_ui = (uri.query['simple_ui'] != undefined) ? !!parseInt(uri.query['simple_ui']) : L.implicit.simple_ui;
+
+    L.params.text_color = (uri.query['text_color'] != undefined) ? uri.query['text_color'] : L.implicit.text_color;
+    L.params.background_color = (uri.query['background_color'] != undefined) ? uri.query['background_color'] : L.implicit.background_color;
+    L.params.link_color = (uri.query['link_color'] != undefined) ? uri.query['link_color'] : L.implicit.link_color;
+    L.params.hover_color = (uri.query['hover_color'] != undefined) ? uri.query['hover_color'] : L.implicit.hover_color;
+    L.params.link_underline = (uri.query['link_underline'] != undefined) ? (uri.query['link_underline'] != 0) : L.implicit.link_underline;
+    L.params.hover_underline = (uri.query['hover_underline'] != undefined) ? (uri.query['hover_underline'] != 0) : L.implicit.hover_underline;
+
+    L.params.heading = (uri.query['heading'] != undefined) ? uri.query['heading'] : L.implicit.heading;
+
+    L.params.popup_width = (uri.query['popup_width'] != undefined) ? parseInt(uri.query['popup_width']) : L.implicit.popup_width;
+    L.params.popup_height = (uri.query['popup_height'] != undefined) ? parseInt(uri.query['popup_height']) : L.implicit.popup_height;
+
+    var heading_height;
+    if (L.params.heading) {
+      document.getElementById('heading_contents').innerHTML = L.params.heading;
+
+      heading_height = YAHOO.util.Dom.getRegion('heading');
+      heading_height = heading_height.bottom-heading_height.top;
+    } else {
+      document.getElementById('heading').style.display = 'none';
+      heading_height = 0;
+    }
+
+    var q = [];
+
+    if (uri.query['aid']) {
+      L.params.affiliate_id = uri.query['aid'];
+    }
+    if (L.params.affiliate_id != undefined) {
+      q.push('aid='+Whispercast.Uri.urlencode(L.params.affiliate_id));
+    }
+    var client_id = YAHOO.util.Cookie.getSub(L.implicit.p_cookie_id, 'cid');
+    if (!client_id) {
+      client_id = Whispercast.Uuid.generate();
+      YAHOO.util.Cookie.setSub(L.implicit.p_cookie_id, 'cid', client_id,  { expires: new Date('January 1, 2030'),path: '/',domain: L.implicit.domain});
+    }
+    q.push('cid='+Whispercast.Uri.urlencode(client_id));
+
+    var session_id = YAHOO.util.Cookie.getSub(L.implicit.s_cookie_id, 'sid');
+    if (!session_id) {
+      session_id = Whispercast.Uuid.generate();
+      YAHOO.util.Cookie.setSub(L.implicit.s_cookie_id, 'sid', session_id);
+    }
+    q.push('sid='+Whispercast.Uri.urlencode(session_id));
+
+    L.params.url.query = q.join('&');
+
+    L.params.width = width;
+    L.params.height = height-menu_height-heading_height;
+
+    L.params.video_align_x = (uri.query['video_align_x'] != undefined) ? uri.query['video_align_x'] : 0.5;
+    L.params.video_align_y = (uri.query['video_align_y'] != undefined) ? uri.query['video_align_y'] : 0.5;
+
+    L.params.font_size = (uri.query['font_size'] != undefined) ? uri.query['font_size'] : 10;
+
+    L.params.play_on_load = (uri.query['play_on_load'] != undefined) ? (uri.query['play_on_load'] != 0) : false;
+    L.params.muted = (uri.query['muted'] != undefined) ? !!parseInt(uri.query['muted']) : false;
+    L.params.volume = (uri.query['volume'] != undefined) ? Number(uri.query['volume']): 50;
+    if (isNaN(L.params.volume)) {
+      L.params.volume = 50;
+    } else {
+      L.params.volume = Math.max(0, Math.min(L.params.volume, 100));
+    }
+
+    L.popup_state = false;
+
+    L.setupPage();
+
+    var popup_id = YAHOO.util.Cookie.getSub(L.implicit.s_cookie_id, 'pid');
+    if (popup_id) {
+      L.popup = window.open('', popup_id);
+      if (L.popup) {
+        if (L.popup.location.href != 'about:blank') {
+          L.setPopupState(true);
+          return;
+        }
+        L.popup.close();
+      }
+      delete L.popup;
+
+      YAHOO.util.Cookie.removeSub(L.implicit.s_cookie_id, 'pid');
+    }
+
+    L.createPlayer();
+  };
+
+  Whispercast.Player.onUnload = function() {
+    Whispercast.Player.destroyPlayer();
+  };
+
+  Whispercast.Player.onResize = function() {
+    var L = Whispercast.Player;
+
+    if (L.player) {
+      var width = YAHOO.util.Dom.getViewportWidth();
+      var height = YAHOO.util.Dom.getViewportHeight();
+
+      var menu_height;
+      menu_height = YAHOO.util.Dom.getRegion('menu');
+      menu_height = menu_height.bottom-menu_height.top;
+
+      if (width > 140) {
+        var element = L.player.get('element');
+        element.style.width = width+'px';
+        element.style.height = (height-menu_height)+'px';
+      }
+    }
+  };
+
+  Whispercast.Player.openInPopup = function() {
+    var L = Whispercast.Player;
+
+    if (L.popup) {
+      try {
+        L.popup.focus();
+      } catch(e) {
+        delete L.popup;
+        checkPopup();
+      }
+    } else {
+      if (L.player) {
+        window.open('popup.html', L.implicit.popup_id, 'resizable=yes,menubar=no,toolbar=no,location=no,directories=no,status=no,scrollbars=no,width='+L.params.popup_width+',height='+L.params.popup_height);
+      }
+    }
+  };
+
+  Whispercast.Player.onPopupOpened = function(popup) {
+    var L = Whispercast.Player;
+
+    popup.Whispercast.Player.initialize(L.params);
+    if (L.player) {
+      L.destroyPlayer();
+      YAHOO.util.Cookie.setSub(L.implicit.s_cookie_id, 'pid', L.implicit.popup_id);
+
+      L.popup = popup;
+      L.setPopupState(true);
+    }
+  };
+  Whispercast.Player.onPopupClosed = function(popup) {
+    if (popup.closed) {
+      checkPopup();
+      return;
+    }
+    setTimeout(Whispercast.Player.checkPopup, 10);
+  };
+
+  Whispercast.Player.checkPopup = function() {
+    var L = Whispercast.Player;
+
+    if (!L.popup || L.popup.closed) {
+      YAHOO.util.Cookie.removeSub(L.implicit.s_cookie_id, 'pid');
+
+      if (!L.player) {
+        L.createPlayer();
+      }
+
+      if (L.popup) {
+        delete L.popup;
+      }
+      L.setPopupState(false);
+    }
+  };
+
+  Whispercast.Player.setPopupState = function(on) {
+    var L = Whispercast.Player;
+
+    if (on != L.popup_state) {
+      if (on) {
+        document.getElementById('player').innerHTML = L.implicit.popup_opened_content;
+        document.getElementById('menu').style.visibility = 'hidden';
+
+        if (!L.check_popup_state_timer_id) {
+          L.check_popup_state_timer_id = setTimeout(function() {
+            delete L.check_popup_state_timer_id;
+
+            L.checkPopup();
+            if (L.popup_state) {
+              L.check_popup_state_timer_id = setTimeout(arguments.callee, 1000);
+            }
+          }, 1000);
+        }
+      } else {
+        document.getElementById('menu').style.visibility = 'visible';
+      }
+      L.popup_state = on;
+    }
+  };
+  //-->
+  </script>
+
+  <!-- YUI CSS reset -->
+  <link rel="stylesheet" type="text/css" href="../yui/reset-fonts/reset-fonts.css"/>
+  <link rel="stylesheet" type="text/css" href="../yui/base/base.css"/>
+  <!-- CSS -->
+  <link rel="stylesheet" type="text/css" href="../css/common.css"/>
+</head>
+<body class="normal" onload="Whispercast.Player.onLoad()" onunload="Whispercast.Player.onUnload()" onresize="Whispercast.Player.onResize()">
+  <div id="body">
+  <table border="0" cellpadding="0" cellspacing="0" summary="" width="1%">
+    <tr id="heading">
+
+      <td id="heading_contents" nowrap="nowrap" colspan="2"></td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <div><div id="player"><div>Pentru vizualizare ai nevoie de <a href="http://www.macromedia.com/go/getflashplayer" target="_blank">Flash Player</a>.</div></div></div>
+      </td>
+    </tr>
+
+    <tr id="menu">
+      <td class="left" id="links" nowrap="nowrap"></td>
+      <td class="right" id="popup" nowrap="nowrap" align="right">
+        <!--      <a href="#" title="Deschide playerul în altă fereastră" onclick="Whispercast.Player.openInPopup();return false">popup</a> -->
+      </td>
+    </tr>
+  </table>
+  </div>
+
+</body>
+</html>

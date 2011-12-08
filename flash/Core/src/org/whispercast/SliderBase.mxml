@@ -212,7 +212,7 @@
 			{
 				if (mouseIsOver_ || mouseIsTracking_)
 				{
-					if (dataTip_ == null)
+					if (showDataTip_ && dataTip_ == null)
 					{
 						createDataTip_();
 						updateDataTip_(new Point(stage.mouseX, stage.mouseY));

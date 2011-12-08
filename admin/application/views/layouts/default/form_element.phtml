@@ -1,0 +1,19 @@
+<tal:block phptal:tales="php">
+<tr tal:attributes="style (element.getType() EQ 'Zend_Form_Element_Hidden') ? 'display:none' : '';class element.hasErrors() ? 'invalid' : ''">
+  <td class="label" align="right" valign="top" width="1" tal:condition="element.getType() NE 'Zend_Form_Element_Hidden'">
+    <label tal:content="element.getLabel() . ':'" tal:attributes="for element.getId()" tal:condition="element.getType() NE 'Zend_Form_Element_Submit'"/>
+  </td>
+  <td class="field" align="left" valign="top" width="1" tal:attributes="colspan (element.getType() EQ 'Zend_Form_Element_Hidden') ? '2' : '1'">
+    <hr tal:condition="element.getType() EQ 'Zend_Form_Element_Submit'"/>
+    <div tal:condition="element.getType() EQ 'Zend_Form_Element_MultiCheckbox'" tal:attributes="id element.getId()">
+      <tal:block tal:content="structure str_replace('<br />', '', str_replace('__' . element.getId(), element.getLabel(), content))" tal:attributes="class element.hasErrors() ? 'error' : ''"/>
+    </div>
+    <tal:block tal:condition="element.getType() NE 'Zend_Form_Element_MultiCheckbox'">
+      <tal:block tal:content="structure content" tal:attributes="class element.hasErrors() ? 'error' : ''"/>
+    </tal:block>
+    <script type="text/javascript" tal:condition="element.hasErrors()">
+      Whispercast.Errors.setMessage('${element.getId()}', ${structure view.javascript(element.getMessages())});
+    </script>
+  </td>
+</tr>
+</tal:block>

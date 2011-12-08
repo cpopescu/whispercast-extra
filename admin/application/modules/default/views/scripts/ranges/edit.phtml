@@ -1,0 +1,169 @@
+<tal:block phptal:tales="php">
+<div id="default-ranges-edit-container">
+  <div id="default-ranges-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-ranges-edit-form-dialog-title"></div>
+    <div class="bd" id="default-ranges-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.getElement('begin_date').setLabel(_('Begin date'))"/>
+      <tal:block tal:condition="model.form.getElement('begin_time').setLabel(_('Begin time'))"/>
+      <tal:block tal:condition="model.form.getElement('end_date').setLabel(_('End date'))"/>
+      <tal:block tal:condition="model.form.getElement('end_time').setLabel(_('End time'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-ranges-edit-form-additional">
+        <div>
+          <hr/>
+          <div class="label" i18n:translate="">Associated source:</div>
+          <div id="source-proxy">
+            <div class="field" id="source-selector"></div>
+          </div>
+        </div>
+      </div>
+      <div id="default-ranges-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_List"/>
+<tal:block metal:use-macro="../../../default/views/scripts/streams/library.phtml/Default_Streams_Selector"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-ranges-edit-container',
+    formId: 'default-ranges-edit-form',
+    formTitle: {
+      add: _('Add range...'),
+      update: _('Edit range...')
+    },
+    formCfg: {
+      dateFields: {
+        'begin_date': {
+          name: 'setup[begin]'
+        },
+        'end_date': {
+          name: 'setup[end]'
+        }
+      },
+      timeFields: {
+        'begin_time': {
+          name: 'setup[begin]'
+        },
+        'end_time': {
+          name: 'setup[end]'
+        }
+      },
+      overloads: {
+        _onCreate: function(previous) {
+          var additional = document.getElementById('default-ranges-edit-form-additional');
+          document.getElementById('default-ranges-edit-form').appendChild(additional.parentNode.removeChild(additional));
+
+          Default_Index_List();
+          Default_Streams_Selector();
+
+          this._private.selector = new Whispercast.Lib.Default.Streams.Selector({
+            id: 'source-selector',
+            serverId: sandbox.server.id,
+            width: '65em',
+            owner: this,
+            query: {
+              f: {
+                usable: true,
+                type: ['sources'],
+                saved: true
+              }
+            },
+            disabled: (sandbox.record.id != undefined) ? true : false,
+
+            callbacks: {
+              update: {
+                callback: function(record) {
+                  if (record) {
+                    document.getElementById('source').value = record.id;
+                  } else {
+                    document.getElementById('source').value = '';
+                  }
+                  return true;
+                }
+              }
+            }
+          });
+          this._private.selector.create();
+
+          return previous.call(this);
+        },
+        _onDestroy: function(previous) {
+          if (this._private.selector) {
+            this._private.selector.destroy();
+            delete this._private.selector;
+          }
+
+          if (this._private.calendars) {
+            for (var i in this._private.calendars) {
+              this._private.calendars[i].destroy();
+            }
+            delete this._private.calendars;
+
+            for (var i in this._private.calendarFields) {
+              this._private.calendarFields[i].parentNode.removeChild(this._private.calendarFields[i]);
+              YAHOO.util.Event.purgeElement(document.getElementById(i).parentNode, true);
+            }
+            delete this._private.calendarFields;
+          }
+
+          return previous.call(this);
+        },
+
+        _onRun: function(previous, record) {
+          if (record) {
+            if (record.setup) {
+              var begin = new Date(record.setup.begin.timestamp*1000);
+              this._setDataElement('begin_date', begin);
+              this._setDataElement('begin_time', begin);
+
+              var end = new Date(record.setup.end.timestamp*1000);
+              this._setDataElement('end_date', end);
+              this._setDataElement('end_time', end);
+
+              this._private.selector.setRecord(record.setup.source);
+            }
+          }
+
+          sandbox.initialized ? sandbox.initialized.call(sandbox) :  false;
+          return previous.call(this, record);
+        }
+      }
+    },
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    },
+    required: [
+      'calendar',
+      'autocomplete',
+      'Whispercast.dialog',
+      'Whispercast.form',
+      'Whispercast.table'
+    ]
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-ranges-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

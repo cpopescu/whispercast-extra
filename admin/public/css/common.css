@@ -1,0 +1,217 @@
+html {
+  overflow:scroll;
+}
+
+body {
+  font-family: verdana,arial,helvetica,sans-serif;
+  font-size: 75%;
+  color: #404040;
+  background-color: #ffffff;
+  padding: 0px;
+  margin: 0px;
+}
+
+hr {
+  height: 1px;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0px;
+  margin: 0px;
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+}
+
+a {
+  color: #0000ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+a:hover {
+  color: #ff6600;
+  text-decoration: underline;
+}
+
+img {
+  border: none;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  color: #ff6600;
+  font-weight: normal;
+  margin: 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+h1 {
+  font-size: 200%;
+}
+h2 {
+  font-size: 175%;
+}
+h3 {
+  font-size: 150%;
+}
+h4 {
+  font-size: 125%;
+  font-weight: bold;
+}
+h5 {
+  font-size: 110%;
+  font-weight: bold;
+}
+h6 {
+  font-size: 100%;
+  font-weight: bold;
+}
+
+div, form {
+  margin: 0px;
+  padding: 0px;
+}
+
+input {
+  border: 1px solid #c0c0c0;
+}
+
+input.button, button {
+  background-color: #f0f0f0;
+  border: 1px outset #a0a0a0;
+  padding: 2px 1em 2px 1em;
+  cursor: pointer;
+  background-image:url(../yui/assets/skins/sam/sprite.png);
+}
+select {
+  margin: 2px 0 2px 0;
+}
+
+table {
+  margin: 0;
+  border-collapse: separate;
+}
+
+td, th {
+  border: none;
+  padding: 0;
+}
+
+p, fieldset, pre {
+  margin: 0;
+}
+
+.small {
+  font-size: 90%;
+}
+.large {
+  font-size: 125%;
+}
+
+.highlight {
+  color: #305a7a;
+}
+.highlight-alternate {
+  color: #ff6600;
+}
+
+.dotted {
+  border-bottom: 1px dashed #808080;
+  margin-bottom: 2px;
+}
+
+.underlined {
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 0.3em;
+}
+.disabled {
+  color: #c0c0c0;
+}
+
+.page {
+  width: 800px;
+  position: relative;
+  margin: auto;
+  padding: 1em;
+  border: 1px solid #c0c0c0;
+}
+
+/* YUI adjustments */
+.hd hr,
+.bd hr,
+.ft hr {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+.yui-dialog .ft {
+  margin-top: 1px !important;
+  padding-top: 0.5em !important;
+}
+
+.yui-layout-doc {
+  background-color: #99b3ff !important;
+}
+.yui-resize .yui-resize-handle {
+  background-color: transparent !important;
+}
+.yui-layout .yui-resize-proxy div {
+  border: none !important;
+  opacity: 0.5 !important;
+  background-color: #99b3ff !important;
+}
+
+.yui-layout .yui-layout-unit div.yui-layout-bd {
+  background-color: #e5ecff !important;
+}
+.yui-layout .yui-layout-unit-center div.yui-layout-bd {
+  background-color: #ffffff !important;
+}
+
+.ygtvitem table.ygtv-highlight0 .ygtvlabel {
+  color: black !important;
+}
+.ygtvitem .ygtvlabel,
+.ygtvitem table.ygtv-highlight1 .ygtvlabel {
+  color: red !important;
+}
+
+.ygtvlabel,
+.ygtvlabel:link,
+.ygtvlabel:visited,
+.ygtvlabel:hover {
+  margin: 0 !important;
+  border: 1px dotted transparent !important;
+  background-color: transparent !important;
+}
+.ygtvfocus .ygtvlabel,
+.ygtvfocus .ygtvlabel:link,
+.ygtvfocus .ygtvlabel:visited,
+.ygtvfocus .ygtvlabel:hover {
+  border-color: #808080 !important;
+  background-color: transparent !important;
+}
+
+.ygtvfocus {
+  background-color: transparent !important;
+}
+
+div.ygtvspacer,
+a.ygtvspacer {
+  display: block !important;
+  width: 18px !important;
+  height: 22px !important;
+}
+
+.yui-pg-current, .yui-skin-sam .yui-pg-rpp-options {
+  margin: 0 !important;
+}
+
+.yui-skin-sam .yui-ac,
+.yui-skin-sam .yui-ac-input,
+.yui-skin-sam .yui-ac-container {
+  position: relative !important;
+}
+
+.yui-skin-sam .yui-log {
+  width: auto !important;
+  font-size: inherit !important;
+}
+
+.yui-skin-sam .mask {
+  opacity: 0;
+}

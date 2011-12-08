@@ -1,0 +1,303 @@
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" phptal:tales="php">
+  <head>
+    <!-- YUI stuff BEGIN -->
+    <!-- YUI CSS files: -->
+    <link media="screen" rel="stylesheet" type="text/css" tal:attributes="href view.baseUrl('/yui/reset/reset-min.css')"/>
+    <link media="screen" rel="stylesheet" type="text/css" tal:attributes="href view.baseUrl('/yui/assets/skins/sam/skin.css')"/>
+    <!-- YUI JS files: -->
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/yuiloader/yuiloader-min.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/dom/dom-min.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/event/event-min.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/event-delegate/event-delegate-min.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/history/history-min.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/animation/animation-min.js')"></script>
+    <link media="screen" rel="stylesheet" type="text/css" tal:attributes="href view.baseUrl('/yui/logger/assets/skins/sam/logger.css')" tal:condition="'production' NE APPLICATION_ENV"/> 
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/yui/logger/logger-min.js')" tal:condition="'production' NE APPLICATION_ENV"></script>
+    <!-- YUI stuff END -->
+    <script type="text/javascript">
+      // YUI Dom removeAttribute...
+      YAHOO.lang.augmentObject(YAHOO.util.Dom, {
+        removeAttribute: function(el, attr) {
+          YAHOO.util.Dom.batch(el, YAHOO.util.Dom._removeAttribute, attr);
+        },
+        _removeAttribute: function(el, attr) {
+          if (el && el.removeAttribute) {
+            if (YAHOO.util.Dom.DOT_ATTRIBUTES[attr]) {
+              delete el[attr];
+            } else {
+              attr = YAHOO.util.Dom.CUSTOM_ATTRIBUTES[attr] || attr;
+              el.removeAttribute(attr);
+            }
+          } else {
+            YAHOO.log('removeAttribute method not available for ' + el, 'error', 'Dom');
+          }
+        }
+      });
+      // YUI EventProvider bugfix...
+      YAHOO.lang.augmentObject(YAHOO.util.EventProvider.prototype, {
+        unsubscribe: function(p_type, p_fn, p_obj) {
+          this.__yui_events = this.__yui_events || {};
+          var evts = this.__yui_events;
+          if (p_type) {
+            var ce = evts[p_type];
+            if (ce) {
+              return ce.unsubscribe(p_fn, p_obj);
+            }
+          } else {
+            var ret = true;
+            for (var i in evts) {
+              if (YAHOO.lang.hasOwnProperty(evts, i)) {
+                var retx = evts[i].unsubscribe(p_fn, p_obj);
+                ret &= retx;
+              }
+            }
+            return ret;
+          }
+          return false;
+        }
+      }, true);
+    </script>
+    <link href="" media="screen" rel="stylesheet" type="text/css" tal:attributes="href view.baseUrl('/css/common.css')"/>
+    <tal:block tal:content="structure view.headLink()"/>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/js/base.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/js/uri.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/js/date/date-en-US.js')"></script>
+    <script type="text/javascript" tal:attributes="src view.baseUrl('/js/locale.js')"></script>
+    <script type="text/javascript" tal:condition="'production' NE APPLICATION_ENV">
+      <!--
+      Whispercast.log = function(o, n, d) {
+        if (typeof(YAHOO.widget.LogReader) != 'undefined') {
+          YAHOO.log(o, null, n);
+        } else {
+          if (typeof(console) != 'undefined') {
+            if (typeof(console.log) != 'undefined') {
+              d = (d == undefined) ? 0 : 4*d;
+              var c = new Date();
+              var m = c.getMinutes();
+              var s = c.getSeconds();
+              var x = c.getMilliseconds();
+              var t = c.getHours()+':'+(((m < 10) ? '0' : '')+m)+':'+(((s < 10) ? '0' : '')+s)+'.'+(x < 100 ? '0' : '')+(x < 10 ? '0' : '')+x;
+
+              n = (n == undefined) ? '' : ' '+n;
+              for (var i = n.length; i < 16; i++) {
+                n += ' ';
+              }
+
+              var p = '';
+              for (var i = 0; i < d; i++) {
+                p += ' ';
+              }
+              p += t+n;
+
+              if (!o || (typeof(o) != 'object')) {
+                console.log(p+o);
+                return;
+              }
+
+              if (o.constructor == Array) {
+                console.log(p+(n =='' ? 'ARRAY' : ''));
+                for (var i = 0; i < o.length; i++) {
+                  Whispercast.log(o[i], i, d+1);
+                }
+                return;
+              }
+              if (o.constructor == Object) {
+                console.log(p+(n =='' ? 'OBJECT' : ''));
+                for (var i in o) {
+                  Whispercast.log(o[i], i, d+1);
+                }
+                return;
+              }
+              console.log(p+o);
+            }
+          }
+        }
+      }
+      -->
+    </script>
+    <script type="text/javascript" tal:condition="'production' EQ APPLICATION_ENV">
+      <!--
+      Whispercast.log = function() {}
+      -->
+    </script>
+    <script type="text/javascript">
+      Whispercast.Uri.base = '${view.baseUrl()}';
+      Whispercast.Uri.buildZend = function(module, controller, action, server_id, query) {
+        var s =
+        '${structure view.url(array('module'=>'__module__','controller'=>'__controller__','action'=>'__action__'),null,true)}';
+        if (module) {
+          if (module != 'default') {
+            s = s.replace('__module__', module);
+          } else {
+            s = s.replace('__module__/', '');
+          }
+        } else {
+          s = s.replace('__module__/', '');
+        }
+        s = s.
+        replace('__controller__', controller).
+        replace('__action__', action);
+
+        if (server_id) {
+          query = query ? query : {};
+          query['sid'] = server_id;
+        }
+        return Whispercast.Uri.build(s, query, true);
+      };
+    </script>
+    <script type="text/javascript" tal:condition="isset(user)" tal:attributes="src view.baseUrl('/js/resolver.js')"></script>
+    <script type="text/javascript" tal:condition="isset(user)">
+      // Add all the specific Whispercast modules
+      Whispercast.Resolver.addModule('Whispercast.swfobject', 'js', 'swfobject.js', []);
+
+      Whispercast.Resolver.addModule('Whispercast.errors.css', 'css', 'errors.css', []);
+      Whispercast.Resolver.addModule('Whispercast.errors', 'js', 'errors.js', ['Whispercast.errors.css']);
+
+      Whispercast.Resolver.addModule('Whispercast.player.css', 'css', 'player.css', []);
+      Whispercast.Resolver.addModule('Whispercast.player', 'js', 'player.js', ['Whispercast.swfobject', 'Whispercast.player.css']);
+
+      Whispercast.Resolver.addModule('Whispercast.form.css', 'css', 'form.css', []);
+      Whispercast.Resolver.addModule('Whispercast.form', 'js', 'form.js', ['connection', 'Whispercast.form.css', 'Whispercast.errors']);
+
+      Whispercast.Resolver.addModule('Whispercast.dialog', 'js', 'dialog.js', ['container', 'connection', 'Whispercast.errors', 'Whispercast.form']);
+
+      Whispercast.Resolver.addModule('Whispercast.table.css', 'css', 'table.css', []);
+      Whispercast.Resolver.addModule('Whispercast.table', 'js', 'table.js', ['dragdrop', 'datasource', 'datatable', 'Whispercast.table.css']);
+
+      Whispercast.Resolver.addModule('Whispercast.uploader.css', 'css', 'uploader.css', []);
+      Whispercast.Resolver.addModule('Whispercast.uploader', 'js', 'uploader.js', ['uploader', 'Whispercast.uploader.css']);
+
+      Whispercast.Resolver.addModule('Whispercast.app.css', 'css', 'app.css', []);
+      Whispercast.Resolver.addModule('Whispercast.app', 'js', 'app.js', ['treeview', 'connection', 'Whispercast.dialog', 'Whispercast.app.css']);
+    </script>
+    <script type="text/javascript" tal:condition="isset(user)" tal:attributes="src view.baseUrl('/js/progress.js')"></script>
+    <script type="text/javascript" tal:condition="isset(user)" tal:attributes="src view.baseUrl('/js/sandbox.js')"></script>
+    <script type="text/javascript" tal:condition="isset(user)" tal:attributes="src view.baseUrl('/js/notifier.js')"></script>
+    <script type="text/javascript" tal:condition="isset(user)">
+      <!--
+      // Provide a default sandbox for popup windows
+      if (window.opener && window.opener.Whispercast) {
+        window.sandbox = new Whispercast.Sandbox.Base(
+          function() {
+            Whispercast.Progress.hide('');
+          },
+          function() {
+          }
+        );
+        // Check the opener and close ourself when the opener has closed
+        setTimeout(
+          function() {
+            if (window.opener) {
+              if (!window.opener.closed) {
+                setTimeout(arguments.callee, 1000);
+                return;
+              }
+            }
+            window.close();
+          },
+          1000
+        );
+      }
+      // Bootstrap when DOM is ready
+      YAHOO.util.Event.onDOMReady(function() {
+        if (typeof(YAHOO.widget.LogReader) != 'undefined') {
+          new YAHOO.widget.LogReader('logger');
+        }
+        Whispercast.Progress.show('');
+
+        var callback = function() {
+          if (window.opener && window.opener.Whispercast && window.opener.Whispercast.Notifier) {
+            window.opener.Whispercast.Notifier.registerPeer(window);
+            Whispercast.Notifier.registerPeer(window.opener);
+          }
+          Whispercast.Notifier.notify('windowLoaded', window.name, window);
+
+          YAHOO.util.Event.addListener(window, 'beforeunload', function(e) {
+            Whispercast.Notifier.notify('windowUnloaded', window.name, window);
+
+            if (window.opener && window.opener.Whispercast && window.opener.Whispercast.Notifier) {
+              window.opener.Whispercast.Notifier.unregisterPeer(window);
+              Whispercast.Notifier.unregisterPeer(window.opener);
+            }
+          });
+        }
+
+        // Bootstrap the application
+        if (window.opener && window.opener.Whispercast) {
+          Whispercast.Resolver.resolve(['Whispercast.app'], [], {
+            done: function() {
+              Whispercast.App.initialize(false);
+              callback.call(null);
+            }
+          });
+        } else {
+          Whispercast.Resolver.resolve(['Whispercast.app', 'treeview', 'layout'], [], {
+            done: function() {
+              Whispercast.App.initialize(true);
+              callback.call(null);
+
+              document.getElementById('sidebar').style.display = 'block';
+              document.getElementById('header').style.display = 'block';
+              document.getElementById('body').style.display = 'block';
+              document.getElementById('footer').style.display = 'block';
+
+              Whispercast.Progress.hide('');
+
+              YAHOO.util.Event.onContentReady('clock', function() {
+                var offset = 0;
+
+                (function() {
+                  var d = new Date();
+                  if (offset !== null) {
+                    d.setTime(d.getTime()-offset);
+                  }
+                  document.getElementById('clock').innerHTML =
+                  '<span style="color:red">'+Whispercast.htmlEscape(Whispercast.Locale.formatTime(d, true))+'</span> - <span>'+Whispercast.htmlEscape(Whispercast.Locale.formatDate(d, true))+'</span>';
+
+                  setTimeout(arguments.callee, 500);
+                })();
+
+                Whispercast.Resolver.resolve(['connection'], [], {
+                  done: function() {
+                    (function() {
+                      var callee = arguments.callee;
+                      YAHOO.util.Connect.asyncRequest(
+                        'get',
+                        Whispercast.Uri.buildZend(null, 'servers', 'ping', null, {format:'json'}),
+                        {
+                          success: function(o) {
+                            var response = Whispercast.eval('return ('+o.responseText+')');
+                            if (response.server) {
+                              var d = new Date();
+                              offset = d.valueOf() - response.server*1000;
+                            } else {
+                              offset = 0;
+                            }
+                            setTimeout(callee, 60*1000);
+                          },
+                          failure: function(o) {
+                            setTimeout(callee, 5*1000);
+                          }
+                        }
+                      );
+                    })();
+                  }
+                });
+              });
+            }
+          });
+        }
+      });
+      // -->
+    </script>
+    <tal:block tal:content="structure view.headScript()"/>
+  </head>
+  <body class="yui-skin-sam">
+    <tal:block tal:content="structure view.layout().content"/>
+    <div id="logger"/>
+    <div id="transient" style="position:absolute;left:-1000px;top:-1000px"/>
+  </body>
+</html>

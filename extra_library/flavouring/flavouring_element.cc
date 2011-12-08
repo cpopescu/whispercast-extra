@@ -92,10 +92,8 @@ void FlavouringElement::RequestStruct::ProcessTag(SourceReg* sr,
   // handle EOS
   if ( tag->type() == Tag::TYPE_EOS ) {
     ILOG_INFO << "Forward EOS";
-    mapper_->RemoveRequest(sr->up_req_, sr->up_callback_);
-    internal_.erase(sr->fs_);
-    sr->fs_->Del(this);
-    delete sr;
+    // RemoveRequest() is not allowed, because EOS came from upstream.
+    // Instead, let the downstream handle EOS and RemoveRequest() from us.
   }
 
   // forward tag

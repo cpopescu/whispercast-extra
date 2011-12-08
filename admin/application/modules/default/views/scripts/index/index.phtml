@@ -1,0 +1,46 @@
+<tal:block phptal:tales="php">
+<iframe id="yui-history-iframe" tal:attributes="src view.baseUrl('/images/progress.gif')" style="position:absolute;top:0;left:0;width:1px;height:1px;visibility:hidden"></iframe>
+<input id="yui-history-field" type="hidden"/>
+<div id="sidebar" style="display:none">
+  <div id="tree">SIDEBAR</div>
+</div>
+<div id="header" style="display:none">
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left" valign="middle">
+      <div id="clock">CLOCK</div>
+    </td>
+    <td align="right" valign="middle">
+      <div id="heading">whisper<b>Cast</b></div>
+    </td>
+  </tr>
+</table>
+</div>
+<div id="body" tal:content="structure view.layout().content" style="display:none">BODY</div>
+<div id="footer" style="display:none">
+  <div tal:condition="isset(user)" id="user">
+    <span>You are logged in as <b tal:content="user['user']"></b></span>&nbsp;-&nbsp;<a tal:attributes="href view.baseUrl('/users/logout')"><tal:block i18n:translate="">logout</tal:block></a>.
+  </div>
+</div>
+<script type="text/javascript">
+  // History management
+  Whispercast.History = Whispercast.History ? Whispercast.History : {
+    initialize:
+      function() {
+        var node = YAHOO.util.History.getBookmarkedState('node') || YAHOO.util.History.getQueryStringParameter('node') || '';
+        YAHOO.util.History.register('node', node, function (state) {
+          Whispercast.App.selectNode(state, true);
+        });
+        YAHOO.util.History.onReady(function () {
+          Whispercast.History.initial['node'] = YAHOO.util.History.getCurrentState('node');
+        });
+        try {
+          YAHOO.util.History.initialize('yui-history-field', 'yui-history-iframe');
+        } catch (e) {
+        }
+      },
+      initial: {}
+  };
+  Whispercast.History.initialize();
+</script>
+</tal:block>

@@ -1,0 +1,73 @@
+.form-container {
+  display: block;
+}
+
+form .content,
+.form .content {
+  border: 1px solid #f0f0f0;
+  padding: 0.5em;
+}
+form .label,
+.form .label {
+  color: #305a7a;
+  white-space: nowrap;
+  padding: 3px 3px 3px 0;
+}
+form .invalid .label,
+.form .invalid .label {
+  color: #ffffff;
+}
+form .field,
+.form .field {
+  color: #000000;
+  white-space: nowrap;
+  padding: 1px;
+}
+form .invalid .field,
+.form .invalid .field {
+  color: #ffffff;
+}
+
+form .field input,
+.form .field input {
+  padding: 3px;
+}
+form .field input.form-time,
+form .field input.form-date,
+.form .field input.form-time,
+.form .field input.form-date {
+  text-align: center;
+}
+
+form .field input.invalid,
+.form .field input.invalid {
+  color: #ffffff;
+  background-color: #c00000;
+}
+
+form .field input[readonly],
+.form .field input[readonly] {
+  background-color: #f0f0f0;
+}
+form .field input[readonly].invalid,
+.form .field input[readonly].invalid {
+  color: #ffffff;
+  background-color: #c00000;
+}
+
+form .form-submit,
+form .form-reset,
+form .form-button,
+.form .form-submit,
+.form .form-reset,
+.form .form-button {
+  background-color: #f0f0f0;
+  border: 1px outset #a0a0a0;
+  padding: 2px 1em 2px 1em;
+  cursor: pointer;
+  background-image:url(http://yui.yahooapis.com/2.7.0/build/assets/skins/sam/sprite.png);
+}
+form .form-submit,
+.form .form-submit {
+  width: 100%;
+}

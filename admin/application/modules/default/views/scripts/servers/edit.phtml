@@ -1,0 +1,59 @@
+<tal:block phptal:tales="php">
+<div id="default-servers-edit-container">
+  <div id="default-servers-edit-form-dialog" style="position: absolute; visibility: hidden">
+    <div class="hd" id="default-servers-edit-form-dialog-title"></div>
+    <div class="bd" id="default-servers-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('host').setLabel(_('Server host'))"/>
+      <tal:block tal:condition="model.form.getElement('http_port').setLabel(_('HTTP port'))"/>
+      <tal:block tal:condition="model.form.getElement('rtmp_port').setLabel(_('RTMP port'))"/>
+      <tal:block tal:condition="model.form.getElement('admin_port').setLabel(_('Administration RPC port'))"/>
+      <tal:block tal:condition="model.form.getElement('admin_user').setLabel(_('Administration user'))"/>
+      <tal:block tal:condition="model.form.getElement('admin_password').setLabel(_('Administration password'))"/>
+      <tal:block tal:condition="model.form.getElement('transcoder_port').setLabel(_('Transcoder RPC port'))"/>
+      <tal:block tal:condition="model.form.getElement('transcoder_user').setLabel(_('Transcoder user'))"/>
+      <tal:block tal:condition="model.form.getElement('transcoder_password').setLabel(_('Transcoder password'))"/>
+      <tal:block tal:condition="model.form.getElement('runner_port').setLabel(_('Script runner RPC port'))"/>
+      <tal:block tal:condition="model.form.getElement('runner_user').setLabel(_('Script runner user'))"/>
+      <tal:block tal:condition="model.form.getElement('runner_password').setLabel(_('Script runner password'))"/>
+      <tal:block tal:condition="model.form.getElement('export_host').setLabel(_('Export host'))"/>
+      <tal:block tal:condition="model.form.getElement('export_base').setLabel(_('Export base path'))"/>
+      <tal:block tal:condition="model.form.getElement('disks').setLabel(_('Disk count'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-servers-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-servers-edit-container',
+    formId: 'default-servers-edit-form',
+    formTitle: {
+      add: _('Add server...'),
+      update: _('Edit server...')
+    },
+    resource: {
+      module: 'default',
+      resource: 'servers'
+    }
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-servers-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

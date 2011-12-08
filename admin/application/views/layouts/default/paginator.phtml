@@ -1,0 +1,16 @@
+<tal:block phptal:tales="php">
+<table border="0" cellpadding="0" cellspacing="0" class="pagination" tal:condition="pageCount">
+  <tr>
+    <td>Pagina:&nbsp;</td>
+    <td>
+      <select class="pages" onchange="window.location=this.options[this.selectedIndex].value">
+      <tal:block tal:repeat="page pagesInRange">
+        <option tal:attributes="value view.url(array('page' => page))" tal:content="page"/>
+      </tal:block>
+      </select>
+    </td>
+    <td>&nbsp;din&nbsp;</td>
+    <td tal:content="pageCount"/>
+  </tr>
+</table>
+</tal:block>

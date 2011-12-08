@@ -1,0 +1,25 @@
+.error {
+  color: #ff0000;
+}
+.error .list {
+  color: #c00000;
+  background-color: #ffffe0;
+  padding: 4px;
+  border: 1px solid #a0a0a0;
+}
+.error .filler {
+  padding: 5px;
+}
+
+.invalid {
+  color: #ffffff;
+  background-color: #c00000;
+}
+
+.display-when-invalid {
+  display: none;
+}
+.invalid .display-when-invalid {
+  display: block;
+}
+

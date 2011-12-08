@@ -1,0 +1,240 @@
+#!/bin/bash
+
+pushd `dirname $0` > /dev/null
+source shflags
+cd ..
+
+L=`basename $0`
+D='+[%Y-%m-%d %H:%M:%S]'
+
+BASE=`pwd`
+
+FLAGS_HELP="USAGE: ${FLAGS_PARENT:-$0} [flags] name
+
+Where:
+'name' is the name of the interface instance
+"
+DEFINE_string "db_root_password" "" "The MySQL root password" "r"
+DEFINE_string "db_name" "" "The MySQL admin database name, defaults to {name}" "n"
+DEFINE_string "db_host" "localhost" "The MySQL admin database host" "h"
+DEFINE_string "db_user" "`whoami`" "The MySQL admin database user" "u"
+DEFINE_string "db_password" "" "The MySQL admin database password" "p"
+DEFINE_string "admin_password" "" "The admin user password" "a"
+DEFINE_string "cache_dir" "" "The directory where temporary files will be stored, defaults to \"$BASE/application/tmp/{name}/cache\"" "c"
+DEFINE_string "compiled_dir" "" "The directory where compiled template files will be stored, defaults to \"$BASE/application/tmp/{name}/compiled\"" "o"
+DEFINE_string "uploaded_dir" "" "The directory where to uploaded files will be stored, defaults to \"$BASE/application/tmp/{name}/uploaded\"" "l"
+DEFINE_string "www_dir" "/var/www" "The directory where to install the public part of the interface" "d"
+DEFINE_string "www_path" "" "The path under which the public part of the interface will be available, defaults to {name}" "w"
+DEFINE_string "www_group" "" "The group under which the web server runs" "g"
+DEFINE_string "www_user" "" "The user under which the web server runs" "x"
+
+DEFINE_boolean "help" true "Get help"
+
+function abort() {
+  popd > /dev/null
+  exit
+}
+
+FLAGS "$@" || abort
+eval set -- "${FLAGS_ARGV}"
+
+NAME=$1
+shift
+
+ERROR=0
+
+if [ "$NAME" = "" ]; then
+  echo "Error: no interface instance name was specified";
+  ERROR=1
+fi
+if [ -e "application/configs/$NAME.ini" ]; then
+  echo "Error: \"$NAME\" already exists";
+  ERROR=1
+fi
+
+if [ "$FLAGS_db_name" = "" ]; then
+  FLAGS_db_name="$NAME"
+fi
+if [ "$FLAGS_db_host" = "" ]; then
+  echo "Error: You must supply a database host";
+  ERROR=1
+fi
+if [ "$FLAGS_db_user" = "" ]; then
+  echo "Error: You must supply a database user";
+  ERROR=1
+fi
+if [ "$FLAGS_db_password" = "" ]; then
+  echo "Error: You must supply a database password";
+  ERROR=1
+fi
+if [ "$FLAGS_admin_password" = "" ]; then
+  echo "Error: You must supply an admin superuser password";
+  ERROR=1
+fi
+
+if [ "$FLAGS_cache_dir" = "" ]; then
+  FLAGS_cache_dir="$BASE/application/tmp/$NAME/cache";
+fi
+if [ "$FLAGS_compiled_dir" = "" ]; then
+  FLAGS_compiled_dir="$BASE/application/tmp/$NAME/compiled";
+fi
+if [ "$FLAGS_uploaded_dir" = "" ]; then
+  FLAGS_uploaded_dir="$BASE/application/tmp/$NAME/uploaded";
+fi
+
+if [ "$FLAGS_www_dir" = "" ]; then
+  echo "Error: You must supply the directory where to install the public part of the interface";
+  ERROR=1
+else
+  if [ ! -d "$FLAGS_www_dir" ]; then
+    echo "Error: The provided directory '$FLAGS_www_dir' does not exist";
+    ERROR=1
+  fi
+fi
+if [ "$FLAGS_www_path" = "" ]; then
+  FLAGS_www_path="$NAME"
+fi
+if [ "$FLAGS_www_group" = "" ]; then
+  echo "Error: You must supply the group under which the web server runs";
+  ERROR=1
+fi
+if [ "$FLAGS_www_user" = "" ]; then
+  echo "Error: You must supply the user under which the web server runs";
+  ERROR=1
+fi
+
+if [ $ERROR -ne 0 ]; then
+  echo;
+  flags_help
+  abort
+fi
+
+FLAGS_db_name=`echo "$FLAGS_db_name" | sed -e 's_\`__g'`
+FLAGS_db_host=`echo "$FLAGS_db_host" | sed -e 's_\`__g'`
+FLAGS_db_user=`echo "$FLAGS_db_user" | sed -e 's_\`__g'`
+FLAGS_db_password=`echo "$FLAGS_db_password" | sed -e 's_\`__g'`
+FLAGS_admin_password=`echo $FLAGS_admin_password | sed -e 's_\`__g'`
+
+echo "The admin interface install parameters:
+"
+printf "%20s %s" "DB ROOT PASSWORD:" "$FLAGS_db_root_password"; echo
+echo
+printf "%20s %s" "DB NAME:" "$FLAGS_db_name"; echo
+printf "%20s %s" "DB HOST:" "$FLAGS_db_host"; echo
+printf "%20s %s" "DB USER:" "$FLAGS_db_user"; echo
+printf "%20s %s" "DB PASSWORD:" "$FLAGS_db_password"; echo
+echo
+printf "%20s %s" "ADMIN PASSWORD:" "$FLAGS_admin_password"; echo
+echo
+printf "%20s %s" "CACHE DIR:" "$FLAGS_cache_dir"; echo
+printf "%20s %s" "COMPILED PATH:" "$FLAGS_compiled_dir"; echo
+printf "%20s %s" "UPLOADED GROUP:" "$FLAGS_uploaded_dir"; echo
+echo
+printf "%20s %s" "WWW DIR:" "$FLAGS_www_dir"; echo
+printf "%20s %s" "WWW PATH:" "$FLAGS_www_path"; echo
+printf "%20s %s" "WWW GROUP:" "$FLAGS_www_group"; echo
+printf "%20s %s" "WWW USER:" "$FLAGS_www_user"; echo
+echo
+
+read -p "Continue with setup (y/n)?"
+if [ "$REPLY" != "y" ]; then
+  echo "Error: Aborted"
+  abort
+fi
+
+FLAGS_db_name=`echo "$FLAGS_db_name" | sed -e 's_\\\\_\\\\\\\\_g' -e 's_/_\\\\/_g' -e 's_&_\\\\&_g'`
+FLAGS_db_host=`echo "$FLAGS_db_host" | sed -e 's_\\\\_\\\\\\\\_g' -e 's_/_\\\\/_g' -e 's_&_\\\\&_g'`
+FLAGS_db_user=`echo "$FLAGS_db_user" | sed -e 's_\\\\_\\\\\\\\_g' -e 's_/_\\\\/_g' -e 's_&_\\\\&_g'`
+FLAGS_db_password=`echo "$FLAGS_db_password" | sed -e 's_\\\\_\\\\\\\\_g' -e 's_/_\\\\/_g' -e 's_&_\\\\&_g'`
+FLAGS_admin_password=`echo $FLAGS_admin_password | sed -e 's_\\\\_\\\\\\\\_g' -e 's_/_\\\\/_g' -e 's_&_\\\\&_g'`
+
+COMMAND="mkdir -p \"$FLAGS_www_dir/$FLAGS_www_path\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+
+COMMAND="ln -sf \"$BASE/public/css\" \"$FLAGS_www_dir/$FLAGS_www_path/css\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="ln -sf \"$BASE/public/images\" \"$FLAGS_www_dir/$FLAGS_www_path/images\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="ln -sf \"$BASE/public/js\" \"$FLAGS_www_dir/$FLAGS_www_path/js\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="ln -sf \"$BASE/public/player\" \"$FLAGS_www_dir/$FLAGS_www_path/player\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="ln -sf \"$BASE/public/swf\" \"$FLAGS_www_dir/$FLAGS_www_path/swf\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="ln -sf \"$BASE/public/yui\" \"$FLAGS_www_dir/$FLAGS_www_path/yui\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+
+SED_NAME=`echo "$NAME" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_DB_NAME=`echo "$FLAGS_db_name" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_DB_USER=`echo "$FLAGS_db_user" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_DB_PASSWORD=`echo "$FLAGS_db_password" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_DB_HOST=`echo "$FLAGS_db_host" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_ADMIN_PASSWORD=`echo "$FLAGS_admin_password" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_CACHE_DIR=`echo "$FLAGS_cache_dir" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_COMPILED_DIR=`echo "$FLAGS_compiled_dir" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+SED_UPLOADED_DIR=`echo "$FLAGS_uploaded_dir" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+
+BASE_DIR=`readlink -f ..`
+SED_BASE_DIR=`echo "$BASE_DIR" | sed -e 's/\\(\\.\\|\\/\\|\\*\\|\\[\\|\\]\\|\\\\\\)/\\\\&/g'`
+
+sed -e "s/@@@NAME@@@/$SED_NAME/g" -e "s/@@@DB_NAME@@@/$SED_DB_NAME/g" -e "s/@@@DB_USER@@@/$SED_DB_USER/g" -e "s/@@@DB_PASSWORD@@@/$SED_DB_PASSWORD/g" -e "s/@@@DB_HOST@@@/$SED_DB_HOST/g" -e "s/@@@ADMIN_PASSWORD@@@/$SED_ADMIN_PASSWORD/g" -e "s/@@@CACHE_DIR@@@/$SED_CACHE_DIR/g" -e "s/@@@COMPILED_DIR@@@/$SED_COMPILED_DIR/g" -e "s/@@@UPLOADED_DIR@@@/$SED_UPLOADED_DIR/g" install/application.ini > "application/configs/$NAME.ini"
+
+sed -e "s/@@@NAME@@@/$SED_NAME/g" -e "s/@@@DB_NAME@@@/$SED_DB_NAME/g" -e "s/@@@DB_USER@@@/$SED_DB_USER/g" -e "s/@@@DB_PASSWORD@@@/$SED_DB_PASSWORD/g" -e "s/@@@DB_HOST@@@/$SED_DB_HOST/g" -e "s/@@@ADMIN_PASSWORD@@@/$SED_ADMIN_PASSWORD/g" -e "s/@@@CACHE_DIR@@@/$SED_CACHE_DIR/g" -e "s/@@@COMPILED_DIR@@@/$SED_COMPILED_DIR/g" -e "s/@@@UPLOADED_DIR@@@/$SED_UPLOADED_DIR/g" install/database.sql | mysql --user root --password "$FLAGS_db_root_password"
+
+ADMIN_DIR=`readlink -f .`
+ln -sf "$ADMIN_DIR/library/PHPTAL-1.2.1" "$ADMIN_DIR/library/PHPTAL"
+ln -sf "$ADMIN_DIR/library/ZendFramework-1.10.3-minimal/library/Zend" "$ADMIN_DIR/library/Zend"
+
+sudo $SHELL -c "echo \"Options Indexes FollowSymLinks\" > \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "echo \"DirectoryIndex index.php\" > \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+
+sudo $SHELL -c "echo \"RewriteEngine On\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+COMMAND="echo \"RewriteBase /$FLAGS_www_path\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "$COMMAND"
+
+sudo $SHELL -c "echo \"RewriteCond %{THE_REQUEST} index\.php\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+COMMAND="echo \"RewriteRule ^.*\$ - [NC,L,R=404]\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "$COMMAND"
+
+sudo $SHELL -c "echo \"RewriteCond %{REQUEST_FILENAME} -s [OR]\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "echo \"RewriteCond %{REQUEST_FILENAME} -l [OR]\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "echo \"RewriteCond %{REQUEST_FILENAME} -d\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "echo \"RewriteRule ^.*\$ - [NC,L]\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+
+sudo $SHELL -c "echo \"RewriteRule ^.*\$ index.php [NC,L]\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+
+sudo $SHELL -c "echo \"php_value soap.wsdl_cache_enabled  0\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+COMMAND="echo \"php_value include_path \\\"$ADMIN_DIR/rpc\\\"\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "$COMMAND"
+sudo $SHELL -c "echo \"php_value post_max_size 1025M\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+sudo $SHELL -c "echo \"php_value upload_max_filesize 1024M\" >> \"$FLAGS_www_dir/$FLAGS_www_path/.htaccess\""
+
+sudo $SHELL -c "echo \"<?php\" > \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"define('APPLICATION_PATH', '${ADMIN_DIR}/application');\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"define('APPLICATION_BASE_URL', '/${FLAGS_www_path}');\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"defined('APPLICATION_ENV') || define('APPLICATION_ENV', (getenv('APPLICATION_ENV') ? getenv('APPLICATION_ENV') : 'production'));\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"set_include_path(implode(PATH_SEPARATOR, array(APPLICATION_PATH . '/../library', get_include_path())));\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"require_once 'Zend/Loader/Autoloader.php';\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "echo \"Zend_Loader_Autoloader::getInstance();\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+COMMAND="echo \"\\\$application = new Zend_Application(APPLICATION_ENV, '$ADMIN_DIR/application/configs/$NAME.ini');\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "$COMMAND"
+COMMAND="echo \"\\\$application->bootstrap()->run();\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+sudo $SHELL -c "$COMMAND"
+sudo $SHELL -c "echo \"?>\" >> \"$FLAGS_www_dir/$FLAGS_www_path/index.php\""
+
+COMMAND="mkdir -p \"$FLAGS_cache_dir\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="mkdir -p \"$FLAGS_compiled_dir\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+COMMAND="mkdir -p \"$FLAGS_uploaded_dir\" > /dev/null"
+sudo $SHELL -c "$COMMAND"
+
+COMMAND="chown -R \"${FLAGS_www_group}:${FLAGS_www_user}\" \"$FLAGS_www_dir/$FLAGS_www_path\""
+sudo $SHELL -c "$COMMAND"
+
+COMMAND="chown -R \"${FLAGS_www_group}:${FLAGS_www_user}\" \"$FLAGS_cache_dir\""
+sudo $SHELL -c "$COMMAND"
+COMMAND="chown -R \"${FLAGS_www_group}:${FLAGS_www_user}\" \"$FLAGS_compiled_dir\""
+sudo $SHELL -c "$COMMAND"
+COMMAND="chown -R \"${FLAGS_www_group}:${FLAGS_www_user}\" \"$FLAGS_uploaded_dir\""
+sudo $SHELL -c "$COMMAND"

@@ -1,0 +1,21 @@
+<script type="text/javascript">
+if (window.opener && window.opener.Whispercast) {
+  window.opener.location.reload(true);
+  window.close();
+}
+</script>
+<tal:block phptal:tales="php">
+<div class="page">
+  <tal:block tal:condition="view.headLink().appendStylesheet(view.baseUrl('/css/form.css'))"/>
+  <tal:block tal:condition="view.headLink().appendStylesheet(view.baseUrl('/css/errors.css'))"/>
+  <tal:block tal:condition="view.headScript().appendFile(view.baseUrl('/js/errors.js'))"/>
+
+  <tal:block tal:condition="model.form.getElement('user').setLabel(_('User'))"/>
+  <tal:block tal:condition="model.form.getElement('password').setLabel(_('Password'))"/>
+  <tal:block tal:condition="model.form.getElement('submit').setLabel(_('Login'))"/>
+  <tal:block tal:content="structure model.form.render()"/>
+
+  <hr tal:condition="model.errors"/>
+  <div id="default-users-login-form-errors" class="error" tal:content="structure model.errors"/>
+</div>
+</tal:block>

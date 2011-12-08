@@ -198,6 +198,8 @@
 					
 					autoHideControlBarActivate_(null);
 					layout = new BasicLayout();
+					
+					controlBar.setStyle('backgroundAlpha', 0.7);
 				}
 				else
 				{
@@ -211,6 +213,8 @@
 					}
 					layout = new VerticalLayout();
 					(layout as VerticalLayout).gap = 0;
+					
+					controlBar.setStyle('backgroundAlpha', 1);
 				}
 			}
 			
@@ -236,7 +240,7 @@
 					if (!m.output.isPlaying || m.output.isPausing)
 						s.output.stopOrPause();
 				}
-				
+
 				controlBar.addEventListener("Whispercast_ControlBar_playAndStop_Clicked", f);
 				controlBar.addEventListener("Whispercast_ControlBar_pauseAndResume_Clicked", f);
 			}

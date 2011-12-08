@@ -1,0 +1,26 @@
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "DTD/xhtml1-transitional.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> 
+  <head> 
+    <style type="text/css">
+      .error h3 {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <tal:block phptal:tales="php">
+    <div class="error">
+      <h2 tal:content="message"></h2> 
+      <h3><pre tal:content="exception.getMessage()"></pre></h3>
+      <tal:block tal:condition="'production' NE APPLICATION_ENV"> 
+        <h3>Stack trace:</h3> 
+        <pre tal:content="exception.getTraceAsString()"></pre> 
+        <h3>Request Parameters:</h3> 
+        <pre tal:content="print_r(request.getParams(), true)"></pre> 
+      </tal:block>
+    </div>
+    </tal:block>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+<tal:block phptal:tales="php">
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  if (sandbox.record) {
+    Whispercast.Resolver.resolve(['Whispercast.dialog'], [], {done:function() {
+      sandbox.dialog = new Whispercast.Dialog.Prompt(
+        _('Delete aggregator...'),
+        Whispercast.strformat(_('Are you sure you want to delete agregator "<b>%1</b>" ?'), sandbox.record.name)+
+        '<div id="default-aggregators-delete-errors"><hr class="display-when-invalid"/></div>',
+        {
+          'Yes': {
+            handler: function() {
+              Whispercast.Errors.clearMessage('default-aggregators-delete');
+              Whispercast.Progress.show('default-aggregators-delete', sandbox.dialog.getDialog().body.parentNode, undefined, 1000);
+
+              YAHOO.util.Connect.asyncRequest(
+                'POST',
+                Whispercast.Uri.buildZend('default', 'aggregators', 'delete', sandbox.server.id, {id:sandbox.record.id,format:'json'}),
+                {
+                  success: function(o) {
+                    var response = Whispercast.eval('return ('+o.responseText+')');
+                    if (response.model.result > 0) {
+                      Whispercast.Notifier.notify('default.streams', 'delete', sandbox.record);
+                      sandbox.dialog.hide();
+                    } else {
+                      Whispercast.Errors.setMessage('default-aggregators-delete-errors', response.model.errors);
+                    }
+                    Whispercast.Progress.hide('default-aggregators-delete');
+                  },
+                  failure: function(o) {
+                    Whispercast.Errors.setMessage('default-aggregators-delete-errors', ['',YAHOO.util.Connect.formatRequestError(o)]);
+                    Whispercast.Progress.hide('default-aggregators-delete');
+                  }
+                },
+                'id='+sandbox.record.id
+              );
+            },
+            isDefault: true
+          },
+          'Cancel': {
+          }
+        }
+      );
+      sandbox.dialog.show();
+      sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+    }});
+  } else {
+    sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+  }
+}
+sandbox.destroy = function() {
+  if (sandbox.dialog) {
+    sandbox.dialog.destroy();
+  }
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+
+}
+//-->
+</script>
+</tal:block>

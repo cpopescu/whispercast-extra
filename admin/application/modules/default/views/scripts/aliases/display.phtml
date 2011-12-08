@@ -1,0 +1,74 @@
+<tal:block phptal:tales="php">
+<div id="default-aliases-index-container">
+  <div id="default-aliases-index-results" style="margin: 1em"></div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+</script>
+
+<tal:block metal:use-macro="../streams/library.phtml/Default_Streams_Table"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Resolver.resolve(['Whispercast.table'], [], {done: function() {
+    Default_Streams_Table();
+
+    YAHOO.util.Event.onContentReady('default-aliases-index-container', function(e) {
+      sandbox.table = new Whispercast.Lib.Default.Streams.Table( {
+        container: 'default-aliases-index-results',
+        columns:
+        {
+          0: false
+        },
+        config:
+        {
+          dynamicData: true,
+          initialLoad:{
+            request: 'pageCurrent=1&pagePerPage=10&sortBy=category&sortOrder=1'
+          },
+          sortedBy:{
+            key: 'category',
+            dir: YAHOO.widget.DataTable.CLASS_ASC
+          }
+        },
+        serverId: sandbox.server.id,
+        links:
+        [
+          '<button id="default-aliases-index-results-add">'+_('Add a new alias...')+'</button>',
+          '<button id="default-aliases-index-results-reload">'+_('Reload')+'</button>'
+        ],
+        query:
+        {
+          f: {
+            type: ['aliases']
+          }
+        }
+      });
+
+
+      sandbox.table.run(Whispercast.closure(this, function() {
+        YAHOO.util.Event.on('default-aliases-index-results-add', 'click', function() {
+          Whispercast.App.retrieveContent('',Whispercast.Uri.buildZend('default', 'aliases', 'add', sandbox.server.id));
+        });
+        YAHOO.util.Event.on('default-aliases-index-results-reload', 'click', function() {
+          sandbox.table.reload();
+        });
+
+        sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+      }));
+    });
+  }});
+};
+sandbox.destroy = function() {
+  if (sandbox.table) {
+    sandbox.table.destroy();
+  }
+
+  YAHOO.util.Event.purgeElement(document.getElementById('default-aliases-index-container'), true);
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+};
+//-->
+</script>
+</tal:block>

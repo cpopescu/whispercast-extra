@@ -1,0 +1,1178 @@
+<tal:block phptal:tales="php">
+<tal:block metal:define-macro="Default_Streams">
+<script type="text/javascript">
+<!--
+if (Whispercast.Lib == undefined) {
+  Whispercast.Lib = {};
+}
+if (Whispercast.Lib.Default == undefined) {
+  Whispercast.Lib.Default = {};
+}
+if (Whispercast.Lib.Default.Streams == undefined) {
+  Whispercast.Lib.Default.Streams = {
+    getTypes: function() {
+      return {
+        'aliases': _('Alias'),
+        'sources': _('Source'),
+        'files': _('File'),
+        'switches': _('Switch'),
+        'aliases': _('Alias'),
+        'playlists': _('Playlist'),
+        'programs': _('Program'),
+        'ranges': _('Range'),
+        'aggregators': _('Aggregator')
+      };
+    },
+    getTypesPlural: function() {
+      return {
+        'users': _('Users'),
+        'sources': _('Sources'),
+        'files': _('Files'),
+        'switches': _('Switches'),
+        'aliases': _('Aliases'),
+        'playlists': _('Playlists'),
+        'programs': _('Programs'),
+        'ranges': _('Ranges'),
+        'aggregators': _('Aggregators')
+      };
+    },
+    getActions: function() {
+      return {
+        'add': _('Add'),
+        'get': _('View'),
+        'set': _('Modify'),
+        'delete': _('Delete'),
+        'operate': _('Operate')
+      };
+    },
+    getStates: function() {
+      return {
+        'files.new': _('Uploading'),
+        'files.upload_cancelled': _('Upload canceled'),
+        'files.upload_failed': _('Upload failed'),
+        'files.uploaded': _('Uploaded'),
+        'files.waiting': _('Waiting'),
+        'files.transferring': _('Preprocessing'),
+        'files.transferred': _('Preprocessed'),
+        'files.transcoding': _('Transcoding'),
+        'files.failed': _('Transcoding failed')
+      };
+    },
+    getFields: function() {
+      return [
+        {key: 'id'},
+        {key: 'server_id'},
+        {key: 'category_id'},
+        {key: 'category'},
+        {key: 'type'},
+        {key: 'name'},
+        {key: 'description'},
+        {key: 'tags'},
+        {key: 'duration'},
+        {key: 'path'},
+        {key: 'export'},
+        {key: 'public'},
+        {key: 'downloadable'},
+        {key: 'state'},
+        {key: 'loop'},
+        {key: 'protocol'},
+        {key: 'source'}
+      ];
+    },
+    getStreamUrl: function(server, path, protocol, params) {
+      var url;
+      switch (protocol) {
+        case 'rtmp':
+          if (server.rtmp_port != 1935) {
+            url = 'rtmp://'+server.export_host+':'+server.rtmp_port+'/whispercast/'+server.export_base+path;
+          }
+          else {
+            url = 'rtmp://'+server.export_host+'/whispercast/'+server.export_base+path;
+          }
+          break;
+        case 'http':
+          if (server.http_port != 80) {
+            url = 'http://'+server.export_host+':'+server.http_port+'/media/'+server.export_base+path;
+          }
+          else {
+            url = 'http://'+server.export_host+'/media/'+server.export_base+path;
+          }
+          break;
+      }
+      if (params) {
+        var query = [];
+        for (var i in params) {
+          query.push(i+'='+Whispercast.htmlEscape(params[i]));
+        }
+        url += '?'+query.join('&');
+      }
+      return url;
+    },
+  };
+}
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Streams_Updater">
+<tal:block metal:use-macro="Default_Streams"/>
+<script type="text/javascript">
+<!--
+Default_Streams_Updater = function() {
+  if (Whispercast.Lib.Default.Streams.Updater == undefined) {
+    var _queue = {};
+    var _fifo = [];
+
+    var _update = function(serverId, queue, response) {
+      if (response) {
+        for (var i in response.model.records) {
+          var record = response.model.records[i];
+          var result = response.model.results[record.id];
+        
+          if (result && result.result) {
+            if (result.progress >= 0) {
+              record.progress = result.progress;
+            } else {
+              record.progress = -1;
+            }
+            
+            if (record.state) {
+              switch(record.state) {
+                case 'files.new':
+                case 'files.uploading':
+                case 'files.upload_cancelled':
+                case 'files.upload_failed':
+                case 'files.failed':
+                  delete queue.records[record.id];
+                  break;
+                default:
+                  Whispercast.log('Requeing '+record.id+', '+record.state, 'UPDATER');
+                  queue.records[record.id] = record;
+              }
+            } else {
+              record.state = null;
+              delete queue.records[record.id];
+            }
+            Whispercast.Notifier.notify('default.streams', 'update', record);
+          }
+        }
+      }
+
+      var ids = [];
+      for (var i in queue.records) {
+        ids.push(i);
+      }
+
+      if (ids.length > 0) {
+        Whispercast.Lib.Default.Streams.Updater.update(ids, serverId);
+      }
+    };
+
+    var _request = null;
+    var _timer = null;
+
+    // TODO: Make the timeout configurable..
+    var _schedule = function() {
+      if (_timer == null) {
+        if (Whispercast.Notifier.hasListener('default.streams')) {
+          _timer = setTimeout(function() {
+            _timer = null;
+            _process();
+          }, 5000);
+        }
+      }
+    };
+    var _process = function() {
+      if (_request == null) {
+        if (_fifo.length > 0) {
+          var serverId = _fifo.shift();
+
+          var queue = _queue[serverId];
+          delete _queue[serverId];
+
+          var eids = [];
+          for (var i = 0; i < queue.ids.length; i++) {
+            eids.push('id[]='+queue.ids[i]);
+          }
+
+          _request = 
+          YAHOO.util.Connect.asyncRequest(
+            'post',
+            Whispercast.Uri.buildZend('default','streams','update',serverId,{format:'json'}),
+            {
+              success: function(o) {
+                var response = Whispercast.eval('return ('+o.responseText+')');
+                _update(serverId, queue, response); 
+
+                _request =  null;
+                _schedule();
+              },
+              failure: function(o) {
+                _update(serverId, queue, null);
+
+                _request =  null;
+                _schedule();
+              }
+            },
+            eids.join('&')
+          );
+        }
+      } else {
+        _schedule();
+      }
+    };
+
+    Whispercast.Lib.Default.Streams.Updater = {
+      update: function(ids, serverId) {
+        if (_queue[serverId] == undefined) {
+          _queue[serverId] = {
+            ids: [],
+            records: {}
+          };
+          _fifo.push(serverId);
+        }
+
+        var queue = _queue[serverId];
+        for (var i = 0; i < ids.length; i++) {
+          var id = ids[i];
+          if (queue.records[id] == undefined) {
+            queue.ids.push(id);
+            queue.records[id] = {};
+          }
+        }
+        _process();
+      }
+    };
+  }
+};
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Streams_Table">
+<tal:block metal:use-macro="Default_Streams_Updater"/>
+<style type="text/css">
+.default-streams-table-url,
+.default-streams-table-path {
+  display: none;
+  font-size: 90%;
+  font-style: italic;
+  color: #c0c0c0;
+}
+.yui-dt-highlighted .default-streams-table-url {
+  color: #404040;
+}
+.yui-dt-selected .default-streams-table-url {
+  color: #f0f0f0;
+}
+</style>
+<script type="text/javascript">
+<!--
+Default_Streams_Table = function() {
+  Default_Streams_Updater();
+
+  if (Whispercast.Lib.Default.Streams.Table == undefined) {
+    var AutoCompleteEdit = function(table, id, delay) {
+      this._table = table;
+      this._id = id;
+      this._delay = delay;
+    };
+    AutoCompleteEdit.prototype.create = function() {
+      this._element = document.getElementById(this._id);
+      this._value = this._element.value;
+
+      var table = this._table.getTable();
+      this._generateRequest = table.get('generateRequest');
+      table.set('generateRequest', Whispercast.closure(this, function(state, paginator) {
+        var s = this._generateRequest.call(this, state, paginator);
+        if (this._value != '') {
+          return s+'&f[query]='+Whispercast.htmlEscape(this._value);
+        }
+        return s;
+      }));
+
+      this._process = Whispercast.closure(this, function() {
+        var value = this._element.value;
+        if (value != this._value) {
+          this._value = value;
+          this._table.reload();
+        }
+      });
+
+      YAHOO.util.Event.addListener(this._element, 'keyup', Whispercast.closure(this, function(e) {
+        if (this._processTimerId) {
+          clearTimeout(this._processTimerId);
+          delete this._processTimerId;
+        }
+        this._processTimerId = setTimeout(this._process, this._delay);
+      }), this);
+      YAHOO.util.Event.addListener(this._element, 'keydown', Whispercast.closure(this, function(e) {
+        if (this._processTimerId) {
+          clearTimeout(this._processTimerId);
+          delete this._processTimerId;
+        }
+      }), this);
+      YAHOO.util.Event.addListener(this._element, 'focus', Whispercast.closure(this, function(e) {
+      }), this);
+      YAHOO.util.Event.addListener(this._element, 'blur', Whispercast.closure(this, function(e) {
+      }), this);
+    };
+    AutoCompleteEdit.prototype.destroy = function() {
+      if (this._generateRequest) {
+        this._table.getTable().set('generateRequest', this._generateRequest);
+        delete this._generateRequest;
+      }
+      if (this._element) {
+        YAHOO.util.Event.purgeElement(this._element, true);
+        delete this._element;
+      }
+    };
+
+    var _currentFilterId = 0;
+    
+    Whispercast.Lib.Default.Streams.Table = function(cfg) {
+      cfg.filterId = 'f'+(_currentFilterId++);
+      cfg.hasPreview = (cfg.hasPreview != undefined) ? cfg.hasPreview : true;
+      cfg.filters =  (cfg.filters != undefined) ? cfg.filters : ['<span class="label">'+_(', filtered by:')+'</span><input type="text" class="field" id="'+cfg.filterId+'_filter"></input>'];
+      Whispercast.Lib.Default.Streams.Table.superclass.constructor.call(this, cfg);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Streams.Table, Whispercast.Table.Base, {
+      _initialize: function(cfg) {
+        this._serverId = cfg.serverId;
+        this._query = cfg.query;
+        if (this._query == undefined) {
+          this._query = {};
+        }
+
+        var requests = {};
+        var columns = {
+          0: [{key: 'type', label: _('Type'), sortable: true,
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              this._formatCell(el, record, column, column.types[data]);
+            }),
+            types: Whispercast.Lib.Default.Streams.getTypes(),
+            contentStyle: 'width:5.5em;text-align:right'
+          }],
+          1: [{key: 'category', label: _('Category'), sortable: true}],
+          2: [{key: 'public', label: _('Public'), sortable: true,
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              this._formatCell(el, record, column, (data != 0) ? _('Yes') : _('No'));
+            })
+          }],
+          3: [{key: 'name', label: _('Name'), sortable: true, fill: true,
+            formatter: 
+              cfg.hasThumbs ?
+              Whispercast.closure(this, function(el, record, column, data) {
+                var thumb_url;
+                var response = this.getDataSourceResponse();
+                if (response && response.meta && response.meta.server) {
+                  var export_path = record.getData('export');
+                  if (export_path) {
+                    var base = export_path.substr(7);
+                    thumb_url = Whispercast.Lib.Default.Streams.getStreamUrl(response.meta.server, '/thumbnails/'+base+'.thumbs/'+base+'-0000005000.jpg', 'http', {wuname:response.meta.server.preview_user,wword:response.meta.server.preview_password});
+                  }
+                }
+
+                data = Whispercast.htmlEscape(data);
+
+                if (thumb_url) {
+                  var title = record.getData('description');
+                  title = title ? ' title="'+Whispercast.htmlEscape(title)+'"' : '';
+
+                  data =
+                  '<table border="0" cellpadding="0" cellspacing="0" style="border:0"><tr>'+
+                  '<td style="border:0" valign="top"><img src="'+thumb_url+'" width="80" style="float:left;margin-right:0.25em;padding:1px;border:1px solid #c0c0c0"'+title+'></td>'+
+                  '<td style="border:0">'+data+'</td>'+
+                  '</tr></table>';
+                }
+
+                var id = 'default_streams_table_'+record.getData('id')+'_path';
+                data += '<hr/><a href="#" style="white-space:nowrap" onclick="Whispercast.Lib.Default.Streams.Table.__action=\'path\';return false">'+_('Copy stream ID')+'</a>';
+
+                if (record.getData('public') != 0) {
+                  if (response && response.meta && response.meta.server) {
+                    data += '&nbsp;&middot;&nbsp;';
+                    data += '<a href="#" style="white-space:nowrap" onclick="Whispercast.Lib.Default.Streams.Table.__action=\'url\';return false">'+_('Copy URL')+'</a>';
+                  }
+                }
+
+                this._formatCell(el, record, column, data, false);
+              })
+              :
+              Whispercast.closure(this, function(el, record, column, data) {
+                var response = this.getDataSourceResponse();
+
+                data = Whispercast.htmlEscape(data)+'<hr/>';
+
+                var id = 'default_streams_table_'+record.getData('id')+'_path';
+                data += '<a href="#" onclick="Whispercast.Lib.Default.Streams.Table.__action=\'path\';return false">'+_('Stream ID')+'</a>';
+
+                if (record.getData('public') != 0) {
+                  if (response && response.meta && response.meta.server) {
+                    data += '&nbsp;&middot;&nbsp;';
+                    data += '<a href="#" onclick="Whispercast.Lib.Default.Streams.Table.__action=\'rtmp_url\';return false">'+_('RTMP URL')+'</a>';
+                    data += '&nbsp;&middot;&nbsp;';
+                    data += '<a href="#" onclick="Whispercast.Lib.Default.Streams.Table.__action=\'http_url\';return false">'+_('HTTP URL')+'</a>';
+                  }
+                }
+                this._formatCell(el, record, column, data, false);
+              })
+            ,
+            action: Whispercast.closure(this, function(table, record) {
+              var text;
+              var title;
+              switch (Whispercast.Lib.Default.Streams.Table.__action)
+              {
+                case 'path':
+                  title = _('Stream ID');
+                  text = record.getData('path').substring(1);
+                  break;
+                case 'rtmp_url':
+                  title = _('RTMP URL');
+                  var response = this.getDataSourceResponse();
+                  if (response && response.meta && response.meta.server)
+                    text = Whispercast.htmlEscape(Whispercast.Lib.Default.Streams.getStreamUrl(response.meta.server, record.getData('export'), 'rtmp'));
+                  break;
+                case 'http_url':
+                  title = _('HTTP URL');
+                  var response = this.getDataSourceResponse();
+                  if (response && response.meta && response.meta.server)
+                    text = Whispercast.htmlEscape(Whispercast.Lib.Default.Streams.getStreamUrl(response.meta.server, record.getData('export'), 'http'));
+                  break;
+              }
+              if (text) {
+                if (false && window.clipboardData) {
+                  window.clipboardData.clearData();
+                  window.clipboardData.setData('Text', text);
+                } else {
+                  new Whispercast.Dialog.Prompt(_('Copy to clipboard'), '<div class="form"><div class="label">'+title+':<div class="field"><input type="text" value="'+Whispercast.htmlEscape(text)+'" size="'+Math.min(120, Math.floor(text.length*1.05)+4)+'"/></div>', null);
+                }
+              }
+            })
+          }],
+          4: [{key: 'streams.duration', label: _('Duration'), sortable: true,
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              var recordData = record.getData();
+              if (recordData.duration) {
+                var duration = recordData.duration/1000;
+
+                var hours = Math.floor(duration/3600);
+                var minutes = Math.floor((duration - hours*3600)/60);
+                var seconds = Math.floor(duration - hours*3600 - minutes*60);
+              
+                this._formatCell(el, record, column, hours+':'+((minutes < 10)?('0'+minutes):minutes)+':'+((seconds < 10)?('0'+seconds):seconds));
+              }
+            })
+          }],
+          5: [{key: 'downloadable', label: '',
+            action: Whispercast.closure(this, function(table, record) {
+              if (record.getData('downloadable') != 0) {
+                if (record.getData('state') == null) {
+                  var response = this.getDataSourceResponse();
+                  if (response && response.meta && response.meta.server) {
+                    var url = Whispercast.Lib.Default.Streams.getStreamUrl(response.meta.server, '/download'+record.getData('export'), 'http', {wuname:response.meta.server.preview_user,wword:response.meta.server.preview_password});
+                    window.open(url);
+                  }
+                }
+              }
+            }),
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              if (data != 0) {
+                switch (record.getData('state')) {
+                  case null:
+                    el.innerHTML = '<a><span>'+_('Download')+'</span></a>';
+                    break;
+                  default:
+                    el.innerHTML = '<span class="disabled">'+_('Download')+'</span>';
+                }
+              } else {
+                el.innerHTML = '<span class="disabled">'+_('Download')+'</span>';
+              }
+            })
+          }],
+          6: [{key: 'state', label: _('Preview'), sortable: true, contentStyle: 'white-space: nowrap',
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              var recordData = record.getData();
+
+              var progress = '';
+              if (recordData.progress >= 0) {
+                progress = ' ('+(Math.round(10000*recordData.progress)/100)+'%)';
+              } else {
+                switch (data) {
+                  case 'files.new':
+                  case 'files.transcoding':
+                    progress = ' (? %)';
+                    break;
+                }
+              }
+
+              var state = data ? Whispercast.htmlEscape(column.states[data]+progress) : '';
+              var tooltip = state;
+
+              switch (data) {
+                case null:
+                  if (this._cfg.hasPreview) {
+                    state = '<a class="default-streams-table-action"><span id="http">'+_('HTTP')+'</span></a>&nbsp;&middot;&nbsp;<a class="default-streams-table-action"><span id="rtmp">'+_('RTMP')+'</span></a>';
+                  } else {
+                    state = _('Available');
+                  }
+                  break;
+                case 'files.failed':
+                  var response = this.getDataSourceResponse();
+                  if (response && response.meta && response.meta.server) {
+                    state += '<br/>[ <a class="default-streams-table-action"><span>'+_('Retry')+'</span></a> ] ';
+                  }
+                  break;
+              }
+              this._formatCell(el, record, column, state, false, tooltip);
+            }),
+            action: Whispercast.closure(this, function(table, record, column, element) {
+              var state = record.getData('state');
+
+              var response = table.getDataSourceResponse();
+              if (response && response.meta && response.meta.server) {
+                switch (state) {
+                  case null:
+                    if (this._cfg.hasPreview) {
+                      var url = Whispercast.Lib.Default.Streams.getStreamUrl(response.meta.server, '/preview'+record.getData('export'), YAHOO.util.Dom.getAttribute(element, 'id'), {wuname:response.meta.server.preview_user,wword:response.meta.server.preview_password});
+                      Whispercast.App.popup('whispercast_'+record.getData('server_id')+'_default_streams_'+record.getData('id')+'_preview', Whispercast.Uri.build('player/player.html'), {play:url,play_on_load:1}, 'status=0,toolbar=0,location=0,menubar=0,width=330,height=276,resizable=yes');
+                    }
+                    break;
+                  case 'files.failed':
+                    if (requests[record.getData('id')] == undefined) {
+                      record.setData('state', 'files.waiting');
+                      table.getTable().render();
+
+                      requests[record.getData('id')] = 
+                      YAHOO.util.Connect.asyncRequest(
+                        'post',
+                        Whispercast.Uri.buildZend('default','files','retry',record.getData('server_id'),{id:record.getData('id'),format:'json'}),
+                        {
+                          success: function(o) {
+                            Whispercast.Lib.Default.Streams.Updater.update([record.getData('id')], record.getData('server_id'));
+                            delete requests[record.getData('id')];
+                          },
+                          failure: function(o) {
+                            Whispercast.Lib.Default.Streams.Updater.update([record.getData('id')], record.getData('server_id'));
+                            delete requests[record.getData('id')];
+                          }
+                        }
+                      );
+                    }
+                    break;
+                }
+              }
+            }),
+            states: Whispercast.Lib.Default.Streams.getStates()
+          }],
+          7: [{key: 'osd', label: '',
+            action: Whispercast.closure(this, function(table, record) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'osd')) { 
+                  Whispercast.App.retrieveContent('', Whispercast.Uri.buildZend('default', 'osd', 'set', record.getData('server_id'), {'id':id}));
+              }
+            }),
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'osd')) { 
+                el.innerHTML = '<a><span>'+_('OSD')+'</span></a>';
+              } else {
+                el.innerHTML = '<span class="disabled">'+_('OSD')+'</span>';
+              }
+            })
+          }],
+          8: [{key: 'edit', label: '', 
+            action: Whispercast.closure(this, function(table, record) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'set')) { 
+                Whispercast.App.retrieveContent('', Whispercast.Uri.buildZend('default', record.getData('type'), 'set', record.getData('server_id'), {'id':id}));
+              }
+            }),
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'set')) { 
+                el.innerHTML = '<a><span>'+_('Edit')+'</span></a>';
+              } else {
+                el.innerHTML = '<span class="disabled">'+_('Edit')+'</span>';
+              }
+            })
+          }],
+          9: [{key: 'delete', label: '',
+            action: Whispercast.closure(this, function(table, record) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'delete')) { 
+                Whispercast.App.retrieveContent('', Whispercast.Uri.buildZend('default', record.getData('type'), 'delete', record.getData('server_id'), {'id':id,'f':{'nstate':['*','files.new']}}));
+              }
+            }),
+            formatter: Whispercast.closure(this, function(el, record, column, data) {
+              var id = record.getData('id');
+              if (this.checkAcl(id, 'delete')) { 
+                el.innerHTML = '<a><span>'+_('Delete')+'</span></a>';
+              } else {
+                el.innerHTML = '<span class="disabled">'+_('Delete')+'</span>';
+              }
+            })
+          }],
+          10: []
+        };
+        var clength = 10;
+
+        if (cfg.columns) {
+          for (var i in cfg.columns) {
+            if (i > 1000) {
+              var j = i-1000;
+              if (j < clength) {
+                columns[j].unshift(cfg.columns[i]);
+              }
+            } else {
+              if (cfg.columns[i] === false) {
+                columns[i][0] = false;
+              } else {
+                if (i < clength && (columns[i][0] !== false)) {
+                  for (var j in cfg.columns[i]) {
+                    columns[i][0][j] = cfg.columns[i][j];
+                  }
+                } else {
+                  columns[clength].push(cfg.columns[i]);
+                }
+              }
+            }
+          }
+        }
+        cfg.columns = [];
+        for (var i in columns) {
+          for (var j = 0; j < columns[i].length; j++) {
+            if (columns[i][j] !== false) {
+              cfg.columns.push(columns[i][j]);
+            }
+          }
+        }
+
+        var config = {
+        };
+        if (cfg.config) {
+          for( var i in cfg.config) {
+            config[i] = cfg.config[i];
+          }
+        }
+        cfg.config = config;
+
+        if (cfg.dataSource == undefined) {
+          this._query.format = 'json';
+
+          cfg.dataSource = new YAHOO.util.DataSource(Whispercast.Uri.buildZend('default','streams','index',this._serverId,this._query)+'&');
+          cfg.dataSource.responseType = YAHOO.util.DataSource.TYPE_JSON;
+          cfg.dataSource.responseSchema = {
+            resultsList: 'model.records',
+            fields: Whispercast.Lib.Default.Streams.getFields(),
+            metaFields: {
+              page: 'model.pagesCurrent',
+              rowsPerPage: 'model.itemsPerPage',
+              totalRecords: 'model.itemsTotal',
+              server: 'server',
+              acl: 'model.acl'
+            }
+          };
+        }
+
+        if (cfg.record == undefined) {
+          cfg.record = {
+            module: 'default',
+            resource: 'streams'
+          };
+        }
+
+        return Whispercast.Lib.Default.Streams.Table.superclass._initialize.call(this, cfg);
+      },
+      destroy: function() {
+        this._autoComplete.destroy();
+        return Whispercast.Lib.Default.Streams.Table.superclass.destroy.call(this);
+      },
+      run: function(callback) {
+        var callback_ = Whispercast.closure(this, function() {
+          try {
+          var filterId = this._cfg.filterId+'_filter';
+          if (document.getElementById(filterId)) {
+            this._autoComplete = new AutoCompleteEdit(this, filterId, 500);
+            this._autoComplete.create();
+          }
+          } catch(e) {
+          }
+          callback.call(null);
+        });
+        return Whispercast.Lib.Default.Streams.Table.superclass.run.call(this, callback_);
+      },
+
+      filterRecord: function(record) {
+        var found = true;
+
+        var filters = this._query.f ? this._query.f : {};
+        if (record.state) {
+          found = false;
+          // check if the record is included in the requested state
+          if (filters.state) {
+            for (var i = 0; i < filters.state.length; i++) {
+              if (filters.state[i] == record.state) {
+                found = true;
+                break;
+              }
+            }
+          } else {
+            found = true;
+          }
+          // check if the record is included in the requested negated state
+          if (filters.nstate) {
+            for (var i = 0; i < filters.nstate.length; i++) {
+              if (filters.nstate[i] == record.state) {
+                found = false;
+                break;
+              }
+            }
+          }
+        }
+        if (found) {
+          found = false;
+          // check if the record is included in the requested types
+          if (filters.type) {
+            for (var i = 0; i < filters.type.length; i++) {
+              if (filters.type[i] == record.type) {
+                found = true;
+                break;
+              }
+            }
+          } else {
+            found = true;
+          }
+          // check if the record is included in the requested negated types
+          if (filters.ntype) {
+            for (var i = 0; i < filters.ntype.length; i++) {
+              if (filters.ntype[i] == record.type) {
+                found = false;
+                break;
+              }
+            }
+          }
+        }
+        if (!found) {
+          Whispercast.log('Record '+record.id+' ('+record.state+'/'+record.type+') was filtered out...', 'STREAMS TABLE');
+          return false;
+        }
+        Whispercast.log('Record '+record.id+' ('+record.state+'/'+record.type+') was not filtered out...', 'STREAMS TABLE');
+        return true;
+      },
+
+      updateNeeded: function(record) {
+        if (record.getData('type') == 'files') {
+          var state = record.getData('state');
+          if (state) {
+            switch (state) {
+              case 'files.new':
+              case 'files.uploading':
+              case 'files.upload_cancelled':
+              case 'files.upload_failed':
+              case 'files.failed':
+                return false;
+              default:
+                return true;
+            }
+          }
+        }
+        return false;
+      },
+      updateAll: function() {
+        var table = this.getTable();
+        var records = table.getRecordSet().getRecords();
+
+        var ids = [];
+
+        var state = table.getState();
+        var limits = (state.pagination && state.pagination.records) ? state.pagination.records : [0, records.length-1];
+
+        for (var i = limits[0]; i <= limits[1]; i++) {
+          if (this.updateNeeded(records[i])) {
+            ids.push(records[i].getData('id'));
+          }
+        }
+
+        if (ids.length > 0) {
+          Whispercast.Lib.Default.Streams.Updater.update(ids, this._serverId);
+        }
+      },
+      
+      checkAcl: function(id, operation) {
+        if (id) {
+          var response = this.getDataSourceResponse();
+          return response && response.meta && response.meta.acl && response.meta.acl[id] && response.meta.acl[id][operation];
+        }
+        return false;
+      }
+    });
+  }
+};
+//-->
+</script>
+</tal:block>
+<tal:block metal:define-macro="Default_Streams_SelectForm">
+<tal:block metal:use-macro="Default_Streams_Table"/>
+<script type="text/javascript">
+<!--
+Default_Streams_SelectForm = function() {
+  Default_Streams_Table();
+
+  if (Whispercast.Lib.Default.Streams.SelectForm == undefined) {
+    Whispercast.Lib.Default.Streams.SelectForm = function(cfg) {
+      var cfgs = Whispercast.clone(cfg);
+      if (cfgs.dialog == undefined) {
+        cfgs.dialog = {};
+      }
+
+      cfgs.dialog.width = (cfgs.dialog.width != undefined) ?  cfgs.dialog.width : '70em';
+      cfgs.dialog.title = (cfgs.dialog.title != undefined) ?  cfgs.dialog.title : _('Select stream...');
+
+      cfgs.dialog.modal = (cfgs.dialog.modal != undefined) ?  cfgs.dialog.modal : true;
+
+      cfgs.dialog.buttons = (cfgs.dialog.buttons != undefined) ?  cfgs.dialog.buttons : [];
+
+      cfgs.overloads = {
+        _onCreate: function(previous) {
+          if (this._cfg.owner) {
+            Whispercast.overload(this._cfg.owner.getDialog(), '_onHide', Whispercast.closure(this, function(previous) {
+              if (this._dialog) {
+                this._dialog.hide();
+              }
+              return previous.call(this._cfg.owner.getDialog());
+            }));
+            Whispercast.overload(this._cfg.owner.getDialog(), '_onDestroy', Whispercast.closure(this, function(previous) {
+              if (this._dialog) {
+                this._dialog.destroy();
+                delete this._dialog;
+              }
+              return previous.call(this._cfg.owner.getDialog());
+            }));
+          }
+
+          this._private.streams = new Whispercast.Lib.Default.Streams.Table({
+            container: this._cfg.id+'-streams',
+            columns:
+            {
+              5: false, // Download
+              7: false, // OSD
+              8: false, // Edit
+              9: false // Delete
+            },
+            config:
+            {
+              dynamicData: true,
+              sortedBy:{
+                key: 'category',
+                dir: YAHOO.widget.DataTable.CLASS_ASC
+              },
+              paginator: {
+                rowsPerPage: 5,
+                rowsPerPageOptions: [5, 10]
+              }
+            },
+            serverId: this._cfg.serverId,
+            filters: this._cfg.filters ? this._cfg.filters : undefined,
+            links: this._cfg.links ? this._cfg.links : [],
+            query: this._cfg.query ? this._cfg.query : {}
+          });
+
+          return previous.call(this);
+        },
+        _onDestroy: function(previous) {
+          if (this._private.streams) {
+            if (this._private.streamsCallback) {
+              this._private.streams.getTable().unsubscribe('rowClickEvent', this._private.streamsCallback);
+              delete this._private.streamsCallback;
+            }
+
+            this._private.streams.destroy();
+            delete this._private.streams;
+          }
+          return previous.call(this);
+        },
+
+        _onRun: function(previous, record) {
+          Whispercast.Progress.show(this._cfg.id, this._cfg.owner ? this._cfg.owner.getDialog().getDialog().body.parentNode : null);
+
+          this._private.streams.run(Whispercast.closure(this, function() {
+            this._private.streamsCallback = Whispercast.closure(this, function(e) {
+              YAHOO.util.Event.preventDefault(e);
+
+              var record = this._private.streams.getTable().getRecord(YAHOO.util.Event.getTarget(e)).getData();
+              if (this._cfg.select) {
+                this._cfg.select.callback.call(null, record);
+              }
+            });
+            this._private.streams.getTable().subscribe('rowClickEvent', this._private.streamsCallback);
+
+            Whispercast.Progress.hide(this._cfg.id);
+            previous.call(this, record);
+          }));
+        }
+      };
+
+      Whispercast.Lib.Default.Streams.SelectForm.superclass.constructor.call(this, cfgs);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Streams.SelectForm, Whispercast.Form.Base, {
+    });
+  }
+};
+//-->
+</script>
+</tal:block>
+<tal:block metal:define-macro="Default_Streams_Selector">
+<tal:block metal:use-macro="Default_Streams_SelectForm"/>
+<style type="text/css">
+.default-streams-selector {
+}
+.default-streams-selector .field {
+  padding: 0;
+}
+.default-streams-selector-name {
+  position: absolute;
+  left: 0;
+}
+.default-streams-selector-type {
+  position: absolute;
+  right: 0;
+  padding: 0 0.5em 0 0.5em;
+  color: #a0a0a0;
+  background-color: #ffffff;
+  text-align: right;
+  font-style: italic;
+}
+.yui-ac-highlight .default-streams-selector-type {
+  color: #c0c0c0;
+  background-color: #426FD9;
+}
+</style>
+<script type="text/javascript">
+<!--
+Default_Streams_Selector = function() {
+  Default_Streams_SelectForm();
+
+  if (Whispercast.Lib.Default.Streams.Selector == undefined) {
+    Whispercast.Lib.Default.Streams.Selector = function(cfg) {
+      Whispercast.Lib.Default.Streams.Selector.superclass.constructor.call(this, cfg);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Streams.Selector, Whispercast.Base, {
+      _setRecord: function(record, update) {
+        if (this._cfg.callbacks && this._cfg.callbacks.update) {
+          if (!this._cfg.callbacks.update.callback.call(null, record)) {
+            return false;
+          }
+        }
+
+        if (record) {
+          this._private.record = record;
+          document.getElementById(this._cfg.id+'-stream-id').value = this._private.record.id;
+          document.getElementById(this._cfg.id+'-stream-type').value = this._private.record.type;
+          Whispercast.log('Selected "'+this._private.record.name+'"..', 'STREAMS SELECTOR');
+        } else {
+          delete this._private.record;
+          document.getElementById(this._cfg.id+'-stream-id').value = '';
+          document.getElementById(this._cfg.id+'-stream-type').value = '';
+          Whispercast.log('Selected none...', 'STREAMS SELECTOR');
+        }
+
+        if (update) {
+          if (this._private.record) {
+            document.getElementById(this._cfg.id+'-stream-name').value = this._private.record.name;
+            if (this._cfg.callbacks && this._cfg.callbacks.select) {
+              YAHOO.util.Dom.removeAttribute(this._cfg.id+'-submit', 'disabled');
+            }
+          } else {
+            document.getElementById(this._cfg.id+'-stream-name').value = '';
+            if (this._cfg.callbacks && this._cfg.callbacks.select) {
+              YAHOO.util.Dom.setAttribute(this._cfg.id+'-submit', 'disabled', 'disabled');
+            }
+          }
+        }
+        return true;
+      },
+
+      setRecord: function(record) {
+        return this._setRecord(record, true);
+      },
+      getRecord: function() {
+        return this._private.record;
+      },
+
+      setDisabled: function(disabled) {
+        if (disabled) {
+          this._private.disabled = true;
+          YAHOO.util.Dom.setAttribute(this._cfg.id+'-stream-name', 'disabled', 'disabled');
+          YAHOO.util.Dom.setAttribute(this._cfg.id+'-select', 'disabled', 'disabled');
+          YAHOO.util.Dom.setAttribute(this._cfg.id+'-submit', 'disabled', 'disabled');
+        } else {
+          delete this._private.disabled;
+          YAHOO.util.Dom.removeAttribute(this._cfg.id+'-stream-name', 'disabled');
+          YAHOO.util.Dom.removeAttribute(this._cfg.id+'-select', 'disabled');
+          YAHOO.util.Dom.removeAttribute(this._cfg.id+'-submit', 'disabled');
+        }
+      },
+
+      create: function() {
+        this._serverId = this._cfg.serverId;
+        this._query = this._cfg.query;
+        if (this._query == undefined) {
+          this._query = {};
+        }
+
+        this._private.container = document.createElement('form');
+        YAHOO.util.Dom.setAttribute(this._private.container, 'id', this._cfg.id+'-container');
+        YAHOO.util.Dom.setAttribute(this._private.container, 'width', '100%');
+        YAHOO.util.Dom.addClass(this._private.container, 'default-streams-selector');
+
+        var disabledAttribute = (this._cfg.disabled ? ' disabled="disabled"':'');
+
+        var selectorContent = ''
+        if (this._cfg.label) {
+          selectorContent = '<div class="label">'+Whispercast.htmlEscape(this._cfg.label)+'</div>';
+        }
+        selectorContent +=        
+        '<table cellpadding="0" cellspacing="0" id="'+this._cfg.id+'-table"'+(this._cfg.width ? (' style="width:'+this._cfg.width+'"') : ' width="100%"')+'><tr>'+
+        '<td class="field">'+
+        '<input type="text" id="'+this._cfg.id+'-stream-name" name="'+this._cfg.id+'-stream-name" style="width:99%"'+disabledAttribute+'/>'+
+        '<input type="hidden" id="'+this._cfg.id+'-stream-id" name="'+this._cfg.id+'-stream-id"'+disabledAttribute+'/>'+
+        '<input type="hidden" id="'+this._cfg.id+'-stream-type" name="'+this._cfg.id+'-stream-type"'+disabledAttribute+'/>'+
+        '</td>';
+        if (this._cfg.callbacks) {
+          if (this._cfg.callbacks.select && this._cfg.callbacks.select.text) {
+            selectorContent += '<td width="1%"><button type="submit" id="'+this._cfg.id+'-submit" disabled="disabled" style="white-space:nowrap">'+Whispercast.htmlEscape(this._cfg.callbacks.select.text)+'</button></td>';
+          }
+        };
+        selectorContent += '<td width="1%"><button type="button" id="'+this._cfg.id+'-select" style="white-space:nowrap"'+disabledAttribute+'>'+_('Select...')+'</button></td>'+
+        '</tr></table>'+
+        '<div id="'+this._cfg.id+'-dropdown"/>';
+
+        this._private.container.innerHTML = selectorContent;
+
+        var dialog = document.createElement('div');
+        YAHOO.util.Dom.setStyle(dialog, 'position', 'absolute');
+        YAHOO.util.Dom.setStyle(dialog, 'visibility', 'hidden');
+        YAHOO.util.Dom.setAttribute(dialog, 'id', this._cfg.id+'-form-dialog');
+
+        dialog.innerHTML =
+        '<div class="hd" id="'+this._cfg.id+'-form-dialog-title"></div>'+
+        '<div class="bd" id="'+this._cfg.id+'-form-dialog-body">'+
+        '<form id="'+this._cfg.id+'-form">'+
+        '<div id="'+this._cfg.id+'-form-streams"></div>'+
+        '<div id="'+this._cfg.id+'-form-errors" class="error"></div>'+
+        '</form>'+
+        '</div>';
+        
+        this._private.container.appendChild(dialog);
+        document.getElementById(this._cfg.id).appendChild(this._private.container);
+
+        this._private.selectForm = new Whispercast.Lib.Default.Streams.SelectForm({
+          id: this._cfg.id+'-form',
+          owner: this._cfg.owner,
+          select: {
+            callback: Whispercast.closure(this, function(record) {
+              if (this._setRecord(record, true)) {
+                if (this._cfg.callbacks && this._cfg.callbacks.select) {
+                  if (this._cfg.callbacks.select.callback.call(null, this._private.record)) {
+                    this._private.selectForm.getDialog().hide();
+                  }
+                  return;
+                }
+                this._private.selectForm.getDialog().hide();
+              }
+            })
+          },
+          cancelOnHide: false,
+          serverId: this._cfg.serverId,
+          filters: this._cfg.filters ? this._cfg.filters : undefined,
+          links: this._cfg.links,
+          query: this._cfg.query
+        });
+
+        this._query.format = 'json';
+
+        this._private.types = Whispercast.Lib.Default.Streams.getTypes();
+
+        this._private.autocompleteDS = new YAHOO.util.DataSource(Whispercast.Uri.buildZend('default','streams','index',this._serverId,this._query)+'&');
+        this._private.autocompleteDS.scriptQueryParam = 'f[query]';
+        this._private.autocompleteDS.responseType = YAHOO.util.DataSource.TYPE_JSON;
+        this._private.autocompleteDS.responseSchema = {
+          resultsList: 'model.records',
+          fields: [
+            {key: 'name'},
+            {key: 'id'},
+            {key: 'type'},
+            {key: 'export'},
+            {key: 'path'}
+          ]
+        };
+        this._private.autocomplete = new YAHOO.widget.AutoComplete(this._cfg.id+'-stream-name',this._cfg.id+'-dropdown', this._private.autocompleteDS, {
+          animHoriz: false,
+          animVert: false,
+          queryQuestionMark: false,
+          queryDelay: 0.2,
+          forceSelection: true,
+          queryMatchSubset: true,
+          queryMatchContains: true,
+          suppressInputUpdate: true,
+          typeAhead: true,
+          useIFrame: true,
+          useShadow: true
+        });
+
+        this._private.autocomplete.formatResult = Whispercast.closure(this, function(oResultData, sQuery, sResultMatch) {
+          return '<div class="default-streams-selector-item" title="'+sResultMatch+'"><span class="default-streams-selector-name">'+sResultMatch+'</span><span class="default-streams-selector-type">'+this._private.types[oResultData[2]]+'</span>&nbsp;</div>';
+        });
+
+        this._private.autocomplete.itemSelectEvent.subscribe(Whispercast.closure(this, function(type, args) {
+          return this._setRecord({name:args[2][0], id:args[2][1], type:args[2][2], 'export':args[2][3], path:args[2][4]}, true);
+        }));
+        this._private.autocomplete.textboxKeyEvent.subscribe(Whispercast.closure(this, function(type, args) {
+          setTimeout(Whispercast.closure(this, function() {
+            if (this._private.record) {
+              var streams = document.getElementById(this._cfg.id+'-stream-name');
+              if (streams) {
+                if (streams.value != this._private.record.name) {
+                  this._setRecord(null, false);
+                }
+              }
+            }
+          }), 0);
+        }));
+
+        YAHOO.util.Event.on(this._cfg.id+'-select', 'click', Whispercast.closure(this, function(e) {
+          YAHOO.util.Event.preventDefault(e);
+          this._private.selectForm.run();
+        }));
+
+        YAHOO.util.Event.on(this._cfg.id+'-container', 'submit', Whispercast.closure(this, function(e) {
+          YAHOO.util.Event.preventDefault(e);
+          if (this._cfg.callbacks && this._cfg.callbacks.select) {
+            this._cfg.callbacks.select.callback.call(null, this._private.record);
+          }
+        }));
+      },
+      destroy: function() {
+        if (this._private.selectForm) {
+          this._private.selectForm.destroy();
+          delete this._private.selectForm.destroy();
+        }
+        if (this._private.autocomplete) {
+          this._private.autocomplete.destroy();
+          delete this._private.autocomplete;
+        }
+        if (this._private.container) {
+          YAHOO.util.Event.purgeElement(this._private.container, true);
+
+          this._private.container.parentNode.removeChild(this._private.container);
+          delete this._private.container;
+        }
+      }
+    });
+  }
+};
+//-->
+</script>
+</tal:block>
+</tal:block>

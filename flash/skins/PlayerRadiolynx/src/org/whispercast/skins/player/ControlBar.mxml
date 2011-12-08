@@ -29,6 +29,8 @@
 		@namespace whispercast_skins "org.whispercast.skins.player.*";
 		
 		* {
+			backgroundAlpha: 1;
+			
 			foreColorLow: #a62b54;
 			foreColorHigh: #d1366a;
 			
@@ -78,6 +80,7 @@
 			
 			protected function onCreationComplete(event:FlexEvent):void
 			{
+				hostComponent.setStyle('backgroundAlpha', scrubBar.getStyle('backgroundAlpha'));
 				hostComponent.setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
 				hostComponent.setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
 				hostComponent.setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
@@ -104,7 +107,7 @@
 	</s:transitions>
 	
 	<s:Group id="controlBar" width="100%">
-		<s:Rect left="0" top="0" right="0" bottom="0">
+		<s:Rect id="background" left="0" top="0" right="0" bottom="0" alpha="{getStyle('backgroundAlpha')}">
 			<s:fill>
 				<s:LinearGradient rotation="90">
 					<s:GradientEntry color="0x252525"/>
@@ -114,7 +117,7 @@
 		</s:Rect>
 		<s:HGroup width="100%" verticalAlign="middle" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5" gap="10">
 			<!-- Play/Stop  button -->
-			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="46" height="46" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
+			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="24" height="24" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
 			<s:HGroup width="100%">
 				<s:Group id="progressBarGroup" width="100%" height="20" visible.noProgressGroup="false">
 					<!-- Progress bar -->
@@ -143,7 +146,7 @@
 						<whispercast:HSliderBar id="scrubBar" width="100%" height="100%" minimum="0" maximum="{hostComponent.output.duration}" snapInterval="0" liveDragging="false" slideDuration="0" visible="{hostComponent.output.seekable}" enabled="{hostComponent.output.isPlaying &amp;&amp; hostComponent.output.seekable}" skinClass="org.whispercast.skins.player.ScrubBar"/>
 					</s:Group>
 					<!-- Progress bar border -->
-					<s:Rect width="100%" height="100%" alpha="0.5">
+					<s:Rect width="100%" height="100%" alpha="{0.5*getStyle('backgroundAlpha')}">
 						<s:stroke>
 							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
 								<s:GradientEntry color="{getStyle('backColorLow')}"/>
@@ -162,7 +165,7 @@
 							<s:Label id="duration" text="-:--:--" lineBreak="explicit" width="43" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
 						</s:HGroup>
 						<!-- Time border -->
-						<s:Rect width="100%" height="100%" alpha="0.5">
+						<s:Rect width="100%" height="100%" alpha="{0.5*getStyle('backgroundAlpha')}">
 							<s:stroke>
 								<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
 									<s:GradientEntry color="{getStyle('backColorLow')}"/>
@@ -177,13 +180,13 @@
 						<whispercast:HSliderBar id="volumeBar" width="40" height="18" minimum="0" maximum="1" slideDuration="0" value="{hostComponent.output.volume}" snapInterval="0" showDataTip="false" skinClass="org.whispercast.skins.player.VolumeBar"/>
 					</s:HGroup>
 					<!-- Switch button -->
-					<s:ToggleButton id="toggleSecondary" toolTip="Toggle Picture-In-Picture" skinClass="org.whispercast.skins.player.ToggleButton" buttonMode="true" enabled="{parentApplication.isSecondaryAvailable}" selected="{!parentApplication.isSecondaryVisible}"/>
+					<s:ToggleButton id="toggleSecondary" toolTip="Toggle Picture-In-Picture" skinClass="org.whispercast.skins.player.ToggleButton" buttonMode="true" enabled="{FlexGlobals.topLevelApplication.isSecondaryAvailable}" selected="{!FlexGlobals.topLevelApplication.isSecondaryVisible}"/>
 					<!-- Fullscreen button -->
-					<s:ToggleButton id="fullScreen" toolTip="Toggle Fullscreen" skinClass="org.whispercast.skins.player.FullscreenButton" buttonMode="true" selected="{parentApplication.isFullscreen}"/>
+					<s:ToggleButton id="fullScreen" toolTip="Toggle Fullscreen" skinClass="org.whispercast.skins.player.FullscreenButton" buttonMode="true" selected="{FlexGlobals.topLevelApplication.isFullscreen}"/>
 				</s:HGroup>
 			</s:HGroup>
 		</s:HGroup>
-		<s:Rect width="100%" height="100%">
+		<s:Rect id="border" width="100%" height="100%" alpha="{getStyle('backgroundAlpha')}">
 			<s:stroke>
 				<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
 					<s:GradientEntry color="0x151515"/>

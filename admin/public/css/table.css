@@ -1,0 +1,39 @@
+.yui-dt-message {
+  display: none !important;
+}
+.yui-skin-sam .yui-dt table {
+  border-style: solid none none none !important;
+}
+.yui-skin-sam .yui-dt table .yui-pg-container table {
+  border: none !important;
+  border-top: 1px solid #e0e0e0 !important;
+}
+
+.yui-skin-sam .yui-dt td.yui-dt-first,
+.yui-skin-sam .yui-dt td.yui-dt-last,
+.yui-skin-sam .yui-dt th.yui-dt-first,
+.yui-skin-sam .yui-dt th.yui-dt-last {
+  border-width: 1px !important;
+  border-color: #7f7f7f !important;
+}
+.yui-skin-sam .yui-dt td.yui-dt-first,
+.yui-skin-sam .yui-dt th.yui-dt-first {
+  border-style: none solid none solid !important;
+}
+
+.yui-skin-sam .yui-dt .yui-dt-last td,
+.yui-skin-sam .yui-dt .yui-dt-last th {
+  border-bottom: 1px solid #7f7f7f !important;
+}
+
+.yui-skin-sam .yui-dt tr.yui-dt-first td {
+  border-top: none !important;
+}
+.yui-skin-sam .yui-dt tr.yui-dt-selected a {
+  color: #ffffff !important;
+}
+
+.table-cell {
+  display: block !important;
+  overflow: hidden !important;
+}

@@ -1,0 +1,230 @@
+<tal:block phptal:tales="php">
+<tal:block metal:define-macro="Default_Index">
+<script type="text/javascript">
+<!--
+if (Whispercast.Lib == undefined) {
+  Whispercast.Lib = {};
+}
+if (Whispercast.Lib.Default == undefined) {
+  Whispercast.Lib.Default = {};
+}
+if (Whispercast.Lib.Default.Index == undefined) {
+  Whispercast.Lib.Default.Index = {};
+}
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Index_Edit">
+<tal:block metal:use-macro="Default_Index"/>
+<script type="text/javascript">
+<!--
+(function() {
+  if (Whispercast.Lib.Default.Index.Edit == undefined) {
+    Whispercast.Lib.Default.Index.Edit = {
+      run: function(sandbox, cfg, callback) {
+        if (sandbox.form) {
+          sandbox.form.run(sandbox.record);
+          return;
+        }
+
+        Whispercast.Resolver.resolve(cfg.required ? cfg.required : ['Whispercast.dialog', 'Whispercast.form'], [], {done:function() {
+          var formCfg = {
+            id: cfg.formId,
+            dialog: {
+              title: sandbox.record.id ? cfg.formTitle.update : cfg.formTitle.add
+            },
+            overloads: {
+              _onRun: function(previous, record) {
+                sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+                return previous.call(this, record);
+              },
+
+              _onSubmitComplete: function(previous, success, response) {
+                var result = previous.call(this, success, response);
+                if (result) {
+                  Whispercast.Notifier.notify(cfg.resource.module+'.'+cfg.resource.resource, sandbox.record.id ? 'update' : 'add', response.model.record);
+                }
+                return result;
+              }
+            }
+          };
+          if (cfg.formCfg) {
+            Whispercast.merge(formCfg, cfg.formCfg);
+          }
+          YAHOO.util.Event.onContentReady(cfg.containerId, function(e) {
+            sandbox.form = new Whispercast.Form.Base(formCfg);
+            if (callback) {
+              callback.call(null);
+            }
+
+            sandbox.form.run(sandbox.record);
+          });
+        }});
+      },
+      destroy: function(sandbox, cfg, callback) {
+        if (sandbox.form) {
+          sandbox.form.destroy();
+        }
+        if (callback) {
+          callback.call(null);
+        }
+
+        YAHOO.util.Event.purgeElement(document.getElementById(cfg.containerId), true);
+        sandbox.destroyed ? sandbox.destroyed.call(sandbox) :  false;
+      }
+    };
+  }
+})();
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Index_List">
+<tal:block metal:use-macro="Default_Index"/>
+<style type="text/css">
+.default-index-list {
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+.default-index-list-item {
+  cursor: pointer;
+  padding: 0.3em 0.1em 0.3em 0.3em;
+  vertical-align: middle;
+  line-height: 1.5em;
+  border-bottom: 1px solid #e0e0e0;
+}
+.default-index-list-item a {
+  color: #426FD9;
+}
+.default-index-list-item.odd {
+  background-color: #edf5ff;
+}
+.default-index-list-item.even {
+  background-color: #f8f8f8;
+}
+.default-index-list-item.highlight {
+  background-color: #b2d2ff;
+}
+.default-index-list-item.highlight a {
+}
+</style>
+<script type="text/javascript">
+<!--
+Default_Index_List = function() {
+  if (Whispercast.Lib.Default.Index.List == undefined) {
+    Whispercast.Lib.Default.Index.List = function(cfg) {
+      Whispercast.Lib.Default.Index.List.superclass.constructor.call(this, cfg);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Index.List, Whispercast.Base, {
+      _ensureVisible: function(record) {
+        var element = this._private.elements[record.__id];
+        if (element) {
+          var iheight = this._private.container.clientHeight;
+          var iscroll = this._private.container.scrollTop;
+
+          var rheight = element.clientHeight;
+          var roffset = element.offsetTop;
+
+          if (rheight > iheight || roffset < iscroll) {
+            this._private.container.scrollTop = roffset;
+          } else if ((roffset + rheight) > (iscroll + iheight)) {
+            this._private.container.scrollTop = roffset + rheight - iheight;
+          }
+        }
+      },
+
+      getRecords: function() {
+        return this._private.records;
+      },
+
+      addRecord: function(record) {
+        record.__id = this._private.records.length;
+        this._private.records.push(record);
+
+        var element = document.createElement('li');
+        YAHOO.util.Dom.addClass(element, 'default-index-list-item');
+        YAHOO.util.Dom.addClass(element, (record.__id % 2) ? 'odd' : 'even');
+
+        this._cfg.format.call(null, record, element);
+
+        this._private.elements.push(element);
+        this._private.container.appendChild(element);
+
+        this._ensureVisible(record);
+      },
+      removeRecord: function(record) {
+        var element = this._private.elements[record.__id];
+        if (element) {
+          var odd = YAHOO.util.Dom.hasClass(element, 'odd');
+
+          YAHOO.util.Event.purgeElement(element, true);
+          element.parentNode.removeChild(element);
+
+          this._private.elements.splice(record.__id, 1);
+
+          this._private.records.splice(record.__id, 1);
+          for (var i = record.__id; i < this._private.records.length; i++) {
+            var r = this._private.records[i];
+            var e = this._private.elements[i];
+            YAHOO.util.Dom.removeClass(e, odd ? 'even' : 'odd');
+            r.__id = i;
+            YAHOO.util.Dom.addClass(e, odd ? 'odd' : 'even');
+
+            odd = !odd;
+          }
+        }
+        delete record.__id;
+      },
+      updateRecord: function(record, updated) {
+        var element = this._private.elements[record.__id];
+        if (element) {
+          YAHOO.util.Event.purgeElement(element, true);
+
+          while(element.childNodes.length > 0) {
+            YAHOO.util.Event.purgeElement(element.childNodes[0], true);
+            element.removeChild(element.childNodes[0]);
+          }
+
+          updated.__id = record.__id;
+          this._private.records[record.__id] = updated;
+
+          this._cfg.format.call(null, updated, element);
+        }
+      },
+
+      create: function() {
+        this._private.records = [];
+        this._private.elements = [];
+
+        this._private.container = document.createElement('ul');
+        YAHOO.util.Dom.addClass(this._private.container, 'default-index-list');        
+
+        YAHOO.util.Event.delegate(this._private.container, 'mouseover', function(e, matchedEl, container) {
+          YAHOO.util.Dom.addClass(matchedEl, 'highlight');
+        }, 'li');
+        YAHOO.util.Event.delegate(this._private.container, 'mouseout', function(e, matchedEl, container) {
+          YAHOO.util.Dom.removeClass(matchedEl, 'highlight');
+        }, 'li');
+
+        document.getElementById(this._cfg.id).appendChild(this._private.container);
+     },
+      destroy: function() {
+        if (this._private.container) {
+          YAHOO.util.Event.purgeElement(this._private.container, true);
+
+          this._private.container.parentNode.removeChild(this._private.container);
+          delete this._private.container;
+        }
+        delete this._private.elements;
+        delete this._private.records;
+      }
+    });
+  }
+};
+//-->
+</script>
+</tal:block>
+</tal:block>

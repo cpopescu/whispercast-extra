@@ -1,0 +1,115 @@
+/* Top */
+#header #clock {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 0 0 0 4px;
+  white-space:pre;
+}
+#header #heading {
+  color: #ff6600;
+  font-size: 32px;
+  margin: 0 4px 0 0;
+}
+#footer #user {
+ text-align: center;
+ font-size: 12px;
+ margin: 4px 0 0 0;
+}
+
+/* Treeview */
+.icon {
+  padding: 2px 2px 2px 20px;
+}
+.icon-servers {
+  background: transparent url(../images/servers.png) no-repeat;
+}
+.icon-servers-add,
+.icon-servers-delete {
+  padding: 2px;
+  font-style: italic;
+}
+
+.icon-server {
+  font-weight: bold;
+  background: transparent url(../images/server.png) no-repeat;
+}
+
+.icon-console {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-sources {
+  background: transparent url(../images/sources.png) no-repeat;
+}
+.icon-sources-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-files {
+  background: transparent url(../images/files.png) no-repeat;
+}
+.icon-files-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-switches {
+  background: transparent url(../images/switches.png) no-repeat;
+}
+.icon-switches-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-aliases {
+  background: transparent url(../images/aliases.png) no-repeat;
+}
+.icon-aliases-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-programs {
+  background: transparent url(../images/programs.png) no-repeat;
+}
+.icon-programs-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-playlists {
+  background: transparent url(../images/playlists.png) no-repeat;
+}
+.icon-playlists-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-ranges {
+  background: transparent url(../images/ranges.png) no-repeat;
+}
+.icon-ranges-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-remotes {
+  background: transparent url(../images/remotes.png) no-repeat;
+}
+.icon-remotes-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-aggregators {
+  background: transparent url(../images/aggregators.png) no-repeat;
+}
+.icon-aggregators-add {
+  padding: 2px;
+  font-style: italic;
+}
+.icon-users {
+  background: transparent url(../images/users.png) no-repeat;
+}
+.icon-users-add {
+  padding: 2px;
+  font-style: italic;
+}
+
+.no-icon {
+  padding: 2px;
+  font-style: italic;
+}

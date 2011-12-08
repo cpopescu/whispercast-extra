@@ -1,0 +1,49 @@
+<tal:block phptal:tales="php">
+<div id="default-switches-edit-container">
+  <div id="default-switches-edit-form-dialog" style="position:absolute; visibility:hidden">
+    <div class="hd" id="default-switches-edit-form-dialog-title"></div>
+    <div class="bd" id="default-switches-edit-form-dialog-body">
+      <tal:block tal:condition="model.form.getElement('name').setLabel(_('Name'))"/>
+      <tal:block tal:condition="model.form.getElement('description').setLabel(_('Description'))"/>
+      <tal:block tal:condition="model.form.getElement('tags').setLabel(_('Tags'))"/>
+      <tal:block tal:condition="model.form.getElement('category_id').setLabel(_('Category'))"/>
+      <tal:block tal:condition="model.form.getElement('public').setLabel(_('Public'))"/>
+      <tal:block tal:condition="model.form.getElement('usable').setLabel(_('Can be used'))"/>
+      <tal:block tal:condition="model.form.removeElement('submit')"/>
+      <tal:block tal:content="structure model.form.render()"/>
+      <div id="default-switches-edit-form-errors" class="error"></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<tal:block metal:use-macro="../../../default/views/scripts/index/library.phtml/Default_Index_Edit"/>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Lib.Default.Index.Edit.run(sandbox, {
+    containerId: 'default-switches-edit-container',
+    formId: 'default-switches-edit-form',
+    formTitle: {
+      add: _('Add switch...'),
+      update: _('Edit switch...')
+    },
+    resource: {
+      module: 'default',
+      resource: 'streams'
+    }
+  });
+};
+sandbox.destroy = function() {
+  Whispercast.Lib.Default.Index.Edit.destroy(sandbox, {
+    containerId: 'default-switches-edit-container'
+  });
+};
+//-->
+</script>
+</tal:block>

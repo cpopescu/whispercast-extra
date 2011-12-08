@@ -1,0 +1,65 @@
+<tal:block phptal:tales="php">
+<script type="text/javascript">
+sandbox.server = ${structure json_encode(server)};
+sandbox.record = ${structure json_encode(model.record)};
+</script>
+
+<script type="text/javascript">
+<!--
+sandbox.run = function() {
+  Whispercast.Resolver.resolve(['Whispercast.dialog'], [], {done:function() {
+    sandbox.dialog = new Whispercast.Dialog.Prompt(
+      _('Delete server...'),
+      '<span class="warning">'+_('All the streams associated to this server will be deleted aswell.')+'</span>'+
+      '<hr/>'+
+      Whispercast.strformat(_('Are you sure you want to delete server "<b>%1</b>" ?'), sandbox.record.name)+
+      '<div id="default-servers-delete-errors" class="error"></div>',
+      {
+        'Yes': {
+          handler: function() {
+            Whispercast.Errors.clearMessage('default-servers-delete-errors');
+            Whispercast.Progress.show('default-servers-delete', sandbox.dialog.getDialog().body.parentNode, undefined, 1000);
+
+            YAHOO.util.Connect.asyncRequest(
+              'POST',
+              Whispercast.Uri.buildZend(null, 'servers', 'delete', null, {id:sandbox.record.id,format:'json'}),
+              {
+                success: function(o) {
+                  var response = Whispercast.eval('return ('+o.responseText+')');
+                  if (response.model.result > 0) {
+                    Whispercast.Notifier.notify('default.servers', 'delete', sandbox.record.id);
+                    sandbox.dialog.hide();
+                  } else {
+                    document.getElementById('default-servers-delete-errors').appendChild(document.createElement('hr'));
+                    Whispercast.Errors.setMessage('default-servers-delete-errors', response.model.errors);
+                  }
+                  Whispercast.Progress.hide('default-servers-delete');
+                },
+                failure: function(o) {
+                  Whispercast.Errors.setMessage('default-servers-delete-errors', YAHOO.util.Connect.formatRequestError(o));
+                  Whispercast.Progress.hide('default-servers-delete');
+                }
+              },
+              'id='+sandbox.record.id
+            );
+          },
+          isDefault: true
+        },
+        'Cancel': {
+        }
+      }
+    );
+    sandbox.dialog.show();
+    sandbox.initialized ? sandbox.initialized.call(sandbox) : false;
+  }});
+}
+sandbox.destroy = function() {
+  if (sandbox.dialog) {
+    sandbox.dialog.destroy();
+  }
+  sandbox.destroyed ? sandbox.destroyed.call(sandbox) : false;
+
+}
+//-->
+</script>
+</tal:block>

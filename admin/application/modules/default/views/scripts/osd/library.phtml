@@ -1,0 +1,311 @@
+<tal:block phptal:tales="php">
+<tal:block metal:define-macro="Default_Osd">
+<script type="text/javascript">
+<!--
+if (Whispercast.Lib == undefined) {
+  Whispercast.Lib = {};
+}
+if (Whispercast.Lib.Default == undefined) {
+  Whispercast.Lib.Default = {};
+}
+if (Whispercast.Lib.Default.Osd == undefined) {
+  Whispercast.Lib.Default.Osd = {};
+}
+//-->
+</script>
+</tal:block>
+
+<tal:block metal:define-macro="Default_Osd_Edit">
+<tal:block metal:use-macro="Default_Osd"/>
+<style type="text/css">
+.default-osd-edit-list {
+  padding: 0.5em;
+  background-color: #e0f0e0;
+  border-right: 1px outset #808080;
+}
+.default-osd-edit-list .list {
+  border: 1px solid #c0c0c0;
+  height: 202px;
+}
+.default-osd-edit-list .name {
+  float: left;
+}
+.default-osd-edit-list .actions {
+  float: right;
+  margin: 0 0.25em 0 0;
+}
+.default-osd-edit-id {
+  width: 100%;
+}
+.default-osd-edit-editor {
+  width: 40em;
+  height: 10em;
+}
+</style>
+<script type="text/javascript">
+<!--
+Default_Osd_Edit = function() { 
+  if (Whispercast.Lib.Default.Osd.Edit == undefined) {
+    Whispercast.Lib.Default.Osd.Edit = function(cfg) {
+      var cfgs = Whispercast.clone(cfg);
+      if (cfgs.dialog == undefined) {
+        cfgs.dialog = {};
+      }
+
+      cfgs.dialog.width = (cfgs.dialog.width != undefined) ?  cfgs.dialog.width : '70em';
+      cfgs.dialog.title = (cfgs.dialog.title != undefined) ?  cfgs.dialog.title : _('Edit...');
+
+      cfgs.dialog.buttons = (cfgs.dialog.buttons != undefined) ?  cfgs.dialog.buttons : [];
+
+      cfgs.overloads = {
+      };
+
+      Whispercast.Lib.Default.Osd.Edit.superclass.constructor.call(this, cfgs);
+    };
+    YAHOO.lang.extend(Whispercast.Lib.Default.Osd.Edit, Whispercast.Base, {
+      create: function() {
+        this._private.container = document.createElement('form');
+        YAHOO.util.Dom.setAttribute(this._private.container, 'id', this._cfg.id+'-form');
+        YAHOO.util.Dom.setAttribute(this._private.container, 'width', '100%');
+
+        var dialog = document.createElement('div');
+        YAHOO.util.Dom.setStyle(dialog, 'position', 'absolute');
+        YAHOO.util.Dom.setStyle(dialog, 'visibility', 'hidden');
+        YAHOO.util.Dom.setAttribute(dialog, 'id', this._cfg.id+'-form-dialog');
+
+        dialog.innerHTML =
+        '<div class="hd" id="'+this._cfg.id+'-form-dialog-title"></div>'+
+        '<div class="bd" id="'+this._cfg.id+'-form-dialog-body">'+
+        '<form id="'+this._cfg.id+'-form">'+
+        '<select id="'+this._cfg.id+'-form-id" class="default-osd-edit-id"></select>'+
+        '<textarea id="'+this._cfg.id+'-form-editor" class="default-osd-edit-editor"></textarea>'+
+        '<div id="'+this._cfg.id+'-form-errors" class="error"></div>'+
+        '</form>'+
+        '</div>';
+        
+        this._private.container.appendChild(dialog);
+        document.getElementById(this._cfg.id).appendChild(this._private.container);
+
+        this._private.editor = new YAHOO.widget.Editor(this._cfg.id+'-form-editor', {
+          animate: false,
+          focusAtStart: true,
+          markup: 'default',
+          extracss: 'li {margin-left: -2em} ul {margin: 0}',
+          toolbar: {
+              limitCommands: true,
+              collapse: false,
+              buttons: [
+                  { group: 'textstyle', label: _('Style'),
+                      buttons: [
+                          { type: 'push', label: _('Bold'), value: 'bold' },
+                          { type: 'push', label: _('Italic'), value: 'italic' },
+                      ]
+                  },
+                  { type: 'separator' },
+                  { group: 'color', label: _('Color'),
+                      buttons: [
+                          { type: 'color', label: _('Font Color'), value: 'forecolor', disabled: true }
+                      ]
+                  },
+                  { type: 'separator' },
+                  { group: 'justification', label: _('Alignment'),
+                      buttons: [
+                          { type: 'push', label: _('Left'), value: 'justifyleft' },
+                          { type: 'push', label: _('Center'), value: 'justifycenter' },
+                          { type: 'push', label: _('Right'), value: 'justifyright' }
+                    ]
+                  },
+                  { type: 'separator' },
+                  { group: 'fontstyle', label: _('Size'),
+                      buttons: [
+                          { type: 'spin', label: '13', value: 'fontsize', range: [ 9, 75 ], disabled: true }
+                      ]
+                  },
+                  { type: 'separator' },
+                  { group: 'insertitem', label: _('Insert'),
+                      buttons: [
+                          { type: 'push', label: _('Create Link'), value: 'createlink', disabled: true },
+                          { type: 'push', label: _('Insert Image'), value: 'insertimage' }
+                      ]
+                  },
+                  { type: 'separator' },
+                  { group: 'color', label: _('List'),
+                      buttons: [
+                          { type: 'push', label: _('Create a List'), value: 'insertunorderedlist' }
+                      ]
+                  },
+                  { type: 'separator' },
+                  { group: 'undoredo', label: _('Undo/Redo'),
+                      buttons: [
+                          { type: 'separator' },
+                          { type: 'push', label: _('Undo'), value: 'undo' },
+                          { type: 'push', label: _('Redo'), value: 'redo' }
+                      ]
+                  }
+              ]
+          }
+        });
+        Whispercast.overload(this._private.editor, 'destroy', function(previous) {
+          previous.apply(this);
+          this.setStyle('visibility', 'hidden');
+        });
+
+        this._private.form = new Whispercast.Form.Base({
+          editor: this._private.editor,
+          record: this._private.record,
+          recordIds: this._private.recordIds,
+
+          id: this._cfg.id+'-form',
+          dialog: {
+            id: this._cfg.id+'-form-dialog',
+            title: this._private.title,
+            overloads: {
+              _onCreate: function(previous) {
+                return previous.call(this);
+              },
+              _onDestroy: function(previous) {
+                return previous.call(this);
+              }
+            }
+          },
+          overloads: {
+            _onCreate: function(previous) {
+              var select = document.getElementById(this._cfg.id+'-id');
+              while (select.options.length > 0) {
+                select.removeChild(select.firstChild);
+              }
+              if (this._cfg.record.id) {
+                var id = document.createElement('option');
+                id.value = this._cfg.record.id;
+                id.innerHTML =  Whispercast.htmlEscape(this._cfg.record.id); 
+                select.appendChild(id);
+                select.selectedIndex = 0;
+                select.disabled = true;
+              } else {
+                for (var i = 0; i < this._cfg.recordIds.length; i++) {
+                  var id = document.createElement('option');
+                  id.value = this._cfg.recordIds[i];
+                  id.innerHTML =  Whispercast.htmlEscape(this._cfg.recordIds[i]); 
+                  select.appendChild(id);
+                  select.selectedIndex = 0;
+                  select.disabled = false;
+                }
+              }
+
+              if (this._cfg.record.value) {
+                document.getElementById(this._cfg.id+'-editor').value =
+                this._cfg.record.value.
+                replace(/<p\s*[^>]*>(.*?)<\/p>/gi, '$1').
+                replace(/<font color="#[0-9,a-f]*">(.*?)<\/font>/gi, '$1');
+              } else {
+                document.getElementById(this._cfg.id+'-editor').value = '';
+              }
+              return previous.call(this);
+            },
+            _onDestroy: function(previous) {
+              return previous.call(this);
+            },
+            _onSubmitSuccess: function(previous, o, response) {
+              this._cfg.editor.saveHTML();
+
+              var cr = /color:\s*#([0-9,a-f]*)/gi;
+              var ar = /text-align:\s*([a-z]*)/gi;
+
+              var html = document.getElementById(this._cfg.id+'-editor').value;
+              html = html.replace(/<em(\s+[^>]*)?>/gi, '<i$1>');
+              html = html.replace(/<\/em>/gi, '</i>');
+              html = html.replace(/<strong(\s+[^>]*)?>/gi, '<b$1>');
+              html = html.replace(/<\/strong>/gi, '</b>');
+
+              html = html.replace(/<div(\s*[^>]*)?>(.*?)<\/div>/gi, function(s, p1, p2) {
+                var c;
+                var prefix;
+                var suffix;
+
+                prefix = suffix = '';
+
+                c = ar.exec(p1);
+                if (c != null) {
+                  ar.lastIndex = 0;
+                  prefix += '<p align="'+c[1]+'">';
+                  suffix = '</p>'+suffix;
+                }
+                return prefix+'<div '+p1+'>'+p2+'</div>'+suffix;
+              });
+              var tags = ['a', 'b', 'i', 'u', 'span'];
+              for (var i = 0; i < tags.length; i++) {
+                var r;
+                r = new RegExp('<'+tags[i]+'(\\s+[^>]*)?>(.*?)</'+tags[i]+'>', 'gi');
+                html = html.replace(r, function(s, p1, p2) {
+                  var c;
+                  var prefix;
+                  var suffix;
+
+                  prefix = suffix = '';
+
+                  c = cr.exec(p1);
+                  if (c != null) {
+                    cr.lastIndex = 0;
+                    prefix += '<font color="#'+c[1]+'">';
+                    suffix = '</font>'+suffix;
+                  }
+                  return prefix+'<'+tags[i]+' '+p1+'>'+p2+'</'+tags[i]+'>'+suffix;
+                });
+              }
+              html = html.replace(/<br>\s*<\/div>/gi, '</div>');
+              
+              if (this._cfg.record.callback) {
+                var select = document.getElementById(this._cfg.id+'-id');
+                this._cfg.record.callback.call(null, select.options[select.selectedIndex].value, html);
+              }
+              return previous.call(this, o, response);
+            }
+          }
+        });
+
+        this._private.editor.addListener('afterRender',  Whispercast.closure(this, function() {
+          this._private.form.run();
+        }));
+        this._private.editor.render();
+      },
+      destroy: function() {
+        if (this._private.editor) {
+          this._private.editor.destroy();
+          delete this._private.editor;
+        }
+        if (this._private.form) {
+          this._private.form.destroy();
+          delete this._private.form;
+        }
+
+        if (this._private.container) {
+          YAHOO.util.Event.purgeElement(this._private.container, true);
+
+          this._private.container.parentNode.removeChild(this._private.container);
+          delete this._private.container;
+        }
+      },
+
+      run: function(cfg) {
+        if (!this._private.loading) {
+          this.destroy();
+
+          this._private.loading = true;
+
+          this._private.title = cfg.title;
+          this._private.record = cfg.record;
+          this._private.recordIds = cfg.recordIds;
+
+          setTimeout(Whispercast.closure(this, function() {
+            this.create();
+            delete this._private.loading;
+          }), 0);
+        }
+      }
+    });
+  }
+};
+//-->
+</script>
+</tal:block>
+</tal:block>
