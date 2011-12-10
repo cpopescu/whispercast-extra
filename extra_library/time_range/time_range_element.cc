@@ -336,7 +336,11 @@ bool TimeRangeRequest::IssueRequest(int64 seek_pos_ms) {
       streaming::kDefaultFlavourMask;
   crt_req_->mutable_info()->media_origin_pos_ms_ = skip_times_ms_[crt_file_];
   crt_req_->mutable_info()->seek_pos_ms_ = seek_pos_ms;
-  crt_req_->mutable_info()->limit_ms_ = durations_ms_[crt_file_];
+  if (crt_file_ == files_.size()-1) {
+    crt_req_->mutable_info()->limit_ms_ = durations_ms_[crt_file_];
+  } else {
+    crt_req_->mutable_info()->limit_ms_ = -1;
+  }
   crt_req_->mutable_info()->internal_id_ =
       strutil::StringPrintf("%p", this);
 
@@ -439,12 +443,14 @@ void TimeRangeRequest::ProcessTag(const Tag* tag) {
   current_ts_ms_ = segment_start_ts_ms_ +
       (segment_current_ts_ms_-segment_skip_time_ms_);
 
+  /*
   // Check if reached the end of the segment
   if ( segment_current_ts_ms_ > segment_skip_time_ms_ + segment_duration_ms_ ) {
     play_next_alarm_.Set(NewPermanentCallback(this,
         &TimeRangeRequest::PlayNext), true, 0, false, true);
     return;
   }
+  */
 
   if ( tag->type() == streaming::Tag::TYPE_SOURCE_STARTED ) {
     if ( !start_tag_sent_ ) {

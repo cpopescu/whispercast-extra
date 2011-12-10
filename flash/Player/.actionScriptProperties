@@ -10,7 +10,7 @@
         </excludedEntries>
       </libraryPathEntry>
       <libraryPathEntry kind="3" linkType="1" path="/Core/bin/Core.swc" useDefaultLinkType="false"/>
-      <libraryPathEntry kind="3" linkType="1" path="/PlayerRadiolynx/bin/PlayerRadiolynx.swc" useDefaultLinkType="false"/>
+      <libraryPathEntry kind="3" linkType="1" path="/PlayerAlternate/bin/PlayerAlternate.swc" useDefaultLinkType="false"/>
     </libraryPath>
     <sourceAttachmentPath/>
   </compiler>

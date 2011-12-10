@@ -292,9 +292,7 @@
 					isSeeking_ = isSeeking;
 					if (!isSeeking_)
 					{
-						updateTime_(seekPending_);
 						seekPending_ = NaN;
-						
 						if (seekPendingNext_)
 						{
 							seek(seekPendingNext_);
@@ -318,8 +316,6 @@
 			}
 			private function setMetadata_(metadata:Object):void
 			{
-				timeOrigin_ = netStream_ ? netStream_.time : 0;
-				
 				metadata_ = metadata;
 				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_metadata"));
 				
@@ -330,6 +326,8 @@
 				
 				if (metadata_)
 				{
+					timeOrigin_ = netStream_ ? netStream_.time : 0;
+					
 					if (metadata_.width && metadata_.height)
 						setVideoSize_(metadata_.width, metadata_.height);
 					
@@ -430,6 +428,9 @@
 			private function setDuration_(duration:Number, current:Number = NaN):void
 			{
 				duration_ = duration;
+				if (isNaN(duration_))
+					timeOrigin_ = 0;
+					
 				updateTime_(NaN);
 				
 				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_duration"));
@@ -454,6 +455,10 @@
 					time = isNaN(duration_) ? NaN : current;
 				else
 					time = isNaN(duration_) ? NaN : (netStream_ ? netStream_.time : NaN);
+				
+				if (time < timeStartAt_) {
+					return;
+				}
 				
 				if (!isNaN(time))
 				{
@@ -500,7 +505,7 @@
 			{
 				if (complete_ && (isBuffering_ || isBuffering))
 				{
-					updateTime_(duration_);
+					updateTime_(duration_ + timeOrigin_);
 				
 					setIsPlaying_(false);
 					cleanup_();
@@ -645,7 +650,6 @@
 						break;
 						
 					case "NetStream.Play.Complete":
-						setDuration_(NaN);
 						break;
 					case "NetStream.Play.Stop":
 						complete_ = true;
@@ -690,7 +694,7 @@
 			
 			private var updateHandlerCount_:Number = 0; 
 			private function onUpdateHandler_(event:Event):void {
-				if (!isSeeking_ && !isPausing_)
+				if (!isSeeking_ && !isPausing_ && isPlaying_)
 					if (updateHandlerCount_%5 == 0) {
 						updateTime_(NaN);
 					}
@@ -799,7 +803,6 @@
 					updateHandlerRegistered_ = false;
 				}
 				
-				timeOrigin_ = 0;
 				if (!isPlaying_)
 					timeStartAt_ = 0;
 				
@@ -841,6 +844,9 @@
 						if (!wasPlaying)
 							setDuration_(NaN);
 						setIsBuffering_(true);
+						
+						updateTime_(0);
+						setIsSeeking_(false);
 						
 						netConnection_ = new NetConnection();
 						netConnection_.objectEncoding = 0;
@@ -948,12 +954,13 @@
 				if (!isPausing)
 				{
 					updateTime_(time);
+					
+					setIsSeeking_(true);
 					if (time >= timeStartAt_)
 					{
 						seekWhenPaused_ = NaN;
 						seekPending_ = time;
 						
-						setIsSeeking_(true);
 						netStream_.seek(time);
 					}
 					else
