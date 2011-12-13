@@ -66,7 +66,7 @@ class FlavouringElement
     void UnregisterAll(bool send_eos);
 
     // all upstream sources (we're registered to) call this function.
-    void ProcessTag(SourceReg* sr, const Tag* tag);
+    void ProcessTag(SourceReg* sr, const Tag* tag, int64 timestamp_ms);
   };
 
   // associated with the upstream source

@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
       }
       // Output to FLV file
       if ( out.IsOpen() ) {
-        out.Write(tags[i]);
+        out.Write(tags[i], -1);
       }
     }
   }

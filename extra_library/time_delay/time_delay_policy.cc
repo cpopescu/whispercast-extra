@@ -139,7 +139,7 @@ bool TimeDelayPolicy::NotifyEos() {
   return true;
 }
 
-bool TimeDelayPolicy::NotifyTag(const Tag* tag) {
+bool TimeDelayPolicy::NotifyTag(const Tag* tag, int64 timestamp_ms) {
   // TODO [cpopescu]: skip
   return true;
 }

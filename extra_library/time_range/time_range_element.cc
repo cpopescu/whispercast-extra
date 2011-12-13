@@ -168,17 +168,17 @@ class TimeRangeRequest : public streaming::ElementController {
     if ( callback_ != NULL ) {
       if ( start_tag_sent_ ) {
         callback_->Run(scoped_ref<Tag>(new SourceEndedTag(0,
-            streaming::kDefaultFlavourMask, 0,
-            media_name_, media_name_)).get());
+            streaming::kDefaultFlavourMask,
+            media_name_, media_name_)).get(), 0);
       }
       callback_->Run(scoped_ref<Tag>(new streaming::EosTag(
-          0, streaming::kDefaultFlavourMask, 0)).get());
+          0, streaming::kDefaultFlavourMask, false)).get(), 0);
       // after EOS make sure nothing follows
       callback_ = NULL;
     }
   }
-  void ProcessTag(const streaming::Tag* tag);
-  bool ProcessMetadataTag(const streaming::FlvTag* flv_tag);
+  void ProcessTag(const streaming::Tag* tag, int64 timestamp_ms);
+  bool ProcessMetadataTag(const streaming::FlvTag* flv_tag, int64 timestamp_ms);
 
   ElementMapper* const mapper_;
   net::Selector* const selector_;
@@ -210,7 +210,7 @@ class TimeRangeRequest : public streaming::ElementController {
 
   bool start_tag_sent_;
 
-  // the current timestamp
+  // the current timestamp, relative to the entire range
   int64 current_ts_ms_;
   // the current segment start and current timestamp (relative to the segment)
   int64 segment_start_ts_ms_;
@@ -315,7 +315,7 @@ bool TimeRangeRequest::StartRequest(
   crt_file_ = -1;
 
   // start with seek
-  if ( req->info().seek_pos_ms_ > 0 ) {
+  if ( req->info().seek_pos_ms_ >= 0 ) {
     SeekInternal(req->info().seek_pos_ms_);
     return crt_file_ >= 0;
   }
@@ -330,6 +330,9 @@ bool TimeRangeRequest::IssueRequest(int64 seek_pos_ms) {
   segment_start_ts_ms_ = start_times_ms_[crt_file_]-start_time_.GetTime();
   segment_skip_time_ms_ = skip_times_ms_[crt_file_];
   segment_duration_ms_ = durations_ms_[crt_file_];
+
+  LOG_ERROR << "ISSUE REQUEST "
+      << crt_file_ << " @" << seek_pos_ms;
 
   crt_req_ = new streaming::Request();
   crt_req_->mutable_caps()->flavour_mask_ =
@@ -404,9 +407,14 @@ void TimeRangeRequest::SeekInternal(int64 seek_pos_ms) {
     }
   }
 
+  int64 file_seek_pos_ms = seek_pos_ms - start_times_ms_[l];
+  if (file_seek_pos_ms < 0) {
+    file_seek_pos_ms = 0;
+  }
+
   if ( l == crt_file_ && crt_req_ != NULL && crt_req_->controller() != NULL &&
       crt_req_->controller()->SupportsSeek() ) {
-    crt_req_->controller()->Seek(seek_pos_ms - start_times_ms_[l]);
+    crt_req_->controller()->Seek(file_seek_pos_ms);
   } else {
     if ( crt_req_ != NULL ) {
       mapper_->RemoveRequest(crt_req_, processing_callback_);
@@ -414,12 +422,13 @@ void TimeRangeRequest::SeekInternal(int64 seek_pos_ms) {
     }
 
     crt_file_ = l;
-    IssueRequest(seek_pos_ms - start_times_ms_[l]);
+    LOG_ERROR << "SeekInternal @" <<  file_seek_pos_ms;
+    IssueRequest(file_seek_pos_ms);
   }
 }
 
 // NEEDS: separate call context from downstream.
-void TimeRangeRequest::ProcessTag(const Tag* tag) {
+void TimeRangeRequest::ProcessTag(const Tag* tag, int64 timestamp_ms) {
   CHECK_NOT_NULL(callback_) << " " << this << " Tag received after Close()"
                                ", tag: " << tag->ToString();
 
@@ -439,53 +448,43 @@ void TimeRangeRequest::ProcessTag(const Tag* tag) {
     return;
   }
 
-  segment_current_ts_ms_ = tag->timestamp_ms();
-  current_ts_ms_ = segment_start_ts_ms_ +
-      (segment_current_ts_ms_-segment_skip_time_ms_);
+  segment_current_ts_ms_ = timestamp_ms;
+  current_ts_ms_ = segment_start_ts_ms_ + segment_current_ts_ms_;
 
-  /*
-  // Check if reached the end of the segment
-  if ( segment_current_ts_ms_ > segment_skip_time_ms_ + segment_duration_ms_ ) {
-    play_next_alarm_.Set(NewPermanentCallback(this,
-        &TimeRangeRequest::PlayNext), true, 0, false, true);
-    return;
+  // check if we reached the end
+  if (crt_file_ == files_.size()-1) {
+    if ( segment_current_ts_ms_ > segment_skip_time_ms_ + segment_duration_ms_ ) {
+      play_next_alarm_.Set(NewPermanentCallback(this,
+          &TimeRangeRequest::PlayNext), true, 0, false, true);
+      return;
+    }
   }
-  */
 
   if ( tag->type() == streaming::Tag::TYPE_SOURCE_STARTED ) {
     if ( !start_tag_sent_ ) {
       callback_->Run(scoped_ref<Tag>(new SourceStartedTag(0,
           kDefaultFlavourMask,
-          tag->timestamp_ms(),
           media_name_, media_name_)
-      ).get());
+      ).get(), 0);
       start_tag_sent_ = true;
     }
     return;
   }
-  if ( tag->type() == streaming::Tag::TYPE_SEGMENT_STARTED ) {
-    callback_->Run(scoped_ref<Tag>(new SegmentStartedTag(0,
-        kDefaultFlavourMask,
-        tag->timestamp_ms(),
-        segment_start_ts_ms_ +
-        static_cast<const SegmentStartedTag*>(tag)->media_timestamp_ms()
-        )
-    ).get());
-    return;
-  }
+
 
   if ( tag->type() == streaming::Tag::TYPE_FLV ) {
     const FlvTag* flv_tag = static_cast<const FlvTag*>(tag);
     if ( flv_tag->body().type() == streaming::FLV_FRAMETYPE_METADATA ) {
-      if ( ProcessMetadataTag(flv_tag) ) {
+      if ( ProcessMetadataTag(flv_tag, current_ts_ms_) ) {
         return;
       }
     }
   }
-  callback_->Run(tag);
+  callback_->Run(tag, current_ts_ms_);
 }
 
-bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag) {
+bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag,
+                                          int64 timestamp_ms) {
   CHECK_EQ(flv_tag->body().type(), streaming::FLV_FRAMETYPE_METADATA);
   const FlvTag::Metadata& metadata = flv_tag->metadata_body();
 
@@ -501,7 +500,7 @@ bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag) {
     new_meta.mutable_values()->Erase("offset");
     new_meta.mutable_values()->Erase("filesize");
 
-    callback_->Run(new_meta_tag.get());
+    callback_->Run(new_meta_tag.get(), timestamp_ms);
     metadata_sent_ = true;
     return true;
   }
@@ -512,7 +511,7 @@ bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag) {
         0,
         current_ts_ms_,
         false) ) {
-      callback_->Run(cue_point.get());
+      callback_->Run(cue_point.get(), timestamp_ms);
     }
     return true;
   }
@@ -794,7 +793,7 @@ void TimeRangeElement::Close(Closure* call_on_close) {
 
   for ( int i = 0; i < callbacks.size(); ++i ) {
     callbacks[i].second->Run(scoped_ref<Tag>(new streaming::EosTag(
-            0, streaming::kDefaultFlavourMask, 0, true)).get());
+            0, streaming::kDefaultFlavourMask, true)).get(), 0);
   }
 }
 void TimeRangeElement::GetRange(

@@ -25,7 +25,9 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
  protected:
   ///////////////////////////////////////////////////////////////////////
 
-  virtual void FilterTag(const streaming::Tag* tag, TagList* out) {
+  virtual void FilterTag(const streaming::Tag* tag,
+                         int64 timestamp_ms,
+                         TagList* out) {
     if ( tag->type() == streaming::Tag::TYPE_OSD ) {
       scoped_ref<streaming::FlvTag> flv_tag =
           osd_to_flv_encoder_.Encode(
@@ -33,11 +35,11 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
       flv_tag->set_attributes(streaming::Tag::ATTR_METADATA);
       flv_tag->set_flavour_mask(tag->flavour_mask());
       // forward tag
-      out->push_back(flv_tag.get());
+      out->push_back(FilteredTag(flv_tag.get(), timestamp_ms));
       return;
     }
     // default: forward tag
-    out->push_back(tag);
+    out->push_back(FilteredTag(tag, timestamp_ms));
   }
  private:
   // Knows how to encode OSD tags in FLV metadata tags.

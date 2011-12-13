@@ -55,8 +55,9 @@ int main(int argc, char* argv[]) {
                  ", splitter type: " << reader.splitter()->type_name();
     common::Exit(1);
   }
+  int64 timestamp_ms;
   scoped_ref<streaming::Tag> header_tag;
-  if ( reader.Read(&header_tag) != streaming::READ_OK ) {
+  if ( reader.Read(&header_tag, &timestamp_ms) != streaming::READ_OK ) {
     LOG_ERROR << "Failed to read header tag";
     common::Exit(1);
   }
@@ -74,8 +75,9 @@ int main(int argc, char* argv[]) {
   }
 
   while ( true ) {
+    int64 timestamp_ms;
     scoped_ref<streaming::Tag> tag;
-    streaming::TagReadStatus err = reader.Read(&tag);
+    streaming::TagReadStatus err = reader.Read(&tag, &timestamp_ms);
     if ( err == streaming::READ_EOF ) {
       break;
     }
@@ -103,7 +105,7 @@ int main(int argc, char* argv[]) {
         }
       }
     }
-    writer.Write(*flv_tag);
+    writer.Write(*flv_tag, -1);
 
     if ( insert_overlay && !FLAGS_overlay_url.empty() ) {
       CreateOverlayParams params;
@@ -129,7 +131,7 @@ int main(int argc, char* argv[]) {
                                 streaming::OsdTag::CREATE_OVERLAY, params);
       scoped_ref<streaming::FlvTag> flv_osd_tag =
           streaming::OsdToFlvEncoder().Encode(*overlay.get());
-      writer.Write(*flv_osd_tag.get());
+      writer.Write(*flv_osd_tag.get(), -1);
     }
   }
 
@@ -141,7 +143,7 @@ int main(int argc, char* argv[]) {
                               streaming::OsdTag::DESTROY_OVERLAY, params);
     scoped_ref<streaming::FlvTag> flv_osd_tag =
         streaming::OsdToFlvEncoder().Encode(*overlay.get());
-    writer.Write(*flv_osd_tag.get());
+    writer.Write(*flv_osd_tag.get(), -1);
   }
 
   writer.Close();

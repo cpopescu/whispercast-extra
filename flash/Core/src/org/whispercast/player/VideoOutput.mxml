@@ -148,7 +148,7 @@
 			}
 			public function set bufferTime(bufferTime:Number):void
 			{
-				bufferTime_ = bufferTime;
+				bufferTime_ = 0;//bufferTime;
 				if (netStream_)
 					netStream_.bufferTime = bufferTime;
 			}
@@ -326,11 +326,14 @@
 				
 				if (metadata_)
 				{
-					timeOrigin_ = netStream_ ? netStream_.time : 0;
-					
 					if (metadata_.width && metadata_.height)
 						setVideoSize_(metadata_.width, metadata_.height);
 					
+					if (metadata_.origin != null)
+						timeOrigin_ = metadata_.origin;
+					else
+						timeOrigin_ = netStream_ ? netStream_.time : 0;
+					trace("ORIGIN: " + timeOrigin_); 
 					setDuration_(metadata.duration ? metadata.duration : NaN);
 				}
 				else
@@ -340,6 +343,7 @@
 				}
 				
 				updateTime_(NaN);
+				setIsSeeking_(false);
 				
 				var _isPlaying:Boolean = isPlaying;
 				if (_isPlaying != isPlaying)
@@ -595,6 +599,7 @@
 			
 			private function net_StatusHandler(event:NetStatusEvent):void
 			{
+				trace(event.info.code);
 				Logger.debug(this, 'Event: {0}', event);
 				switch (event.info.code)
 				{
@@ -662,6 +667,7 @@
 						stop();
 						break;
 					case "NetStream.Buffer.Full":
+					case "NetStream.Buffer.Flush":
 						setIsBuffering_(false);
 						break;
 					case "NetStream.Buffer.Empty":
@@ -823,7 +829,12 @@
 						
 						Logger.info(this, 'Connecting to {0}...', host_);
 						netConnection_.connect(host_);
+						
+						return;
 					}
+				
+				updateTime_(NaN);
+				setIsSeeking_(false);
 			}
 			
 			public function play(startAt:Number = NaN):Boolean
@@ -844,9 +855,6 @@
 						if (!wasPlaying)
 							setDuration_(NaN);
 						setIsBuffering_(true);
-						
-						updateTime_(0);
-						setIsSeeking_(false);
 						
 						netConnection_ = new NetConnection();
 						netConnection_.objectEncoding = 0;

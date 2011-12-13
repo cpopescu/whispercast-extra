@@ -67,7 +67,7 @@ class OsdStateKeeperElement
 
   // A dead-end callback, looks like a client callback for the element_.
   // We receive & process osd tags here, in order to update our osd state.
-  void ProcessTag(const Tag* tag);
+  void ProcessTag(const Tag* tag, int64 timestamp_ms);
 
   void ProcessOsd(const CreateOverlayParams& fparams);
   void ProcessOsd(const DestroyOverlayParams& fparams);
@@ -83,9 +83,10 @@ class OsdStateKeeperElement
   void ProcessOsd(const DestroyMovieParams& fparams);
 
  public:
-  typedef list< scoped_ref<const Tag> > TagList;
   // Injects current osd state tags to the given client.
-  void AppendBootstrap(TagList* tags, uint32 flavour_mask, int64 timestamp_ms);
+  void AppendBootstrap(FilteringCallbackData::TagList* tags,
+                       uint32 flavour_mask,
+                       int64 timestamp_ms);
 
  protected:
   //////////////////////////////////////////////////////////////////
@@ -140,10 +141,12 @@ class OsdStateKeeperElement
  private:
   template <typename FPARAMS>
   void AppendOsd(const FPARAMS& p,
-                 TagList* tags,
+                 FilteringCallbackData::TagList* tags,
                  uint32 flavour_mask,
                  int64 timestamp_ms) {
-    tags->push_back(new OsdTag(0, flavour_mask, timestamp_ms, p));
+    tags->push_back(FilteringCallbackData::FilteredTag(
+        new OsdTag(0, flavour_mask, timestamp_ms, p), timestamp_ms
+    ));
   }
 
   DISALLOW_EVIL_CONSTRUCTORS(OsdStateKeeperElement);

@@ -63,7 +63,7 @@ void FlavouringElement::RequestStruct::Unregister(FlavourStruct* fs,
   // send EOS downstream for the removed flavour
   if ( send_eos ) {
     callback_->Run(scoped_ref<Tag>(new EosTag(
-        0, fs->flavour_mask_, 0, true)).get());
+        0, fs->flavour_mask_, true)).get(), 0);
   }
 
   // no longer registered to this flavour
@@ -79,12 +79,12 @@ void FlavouringElement::RequestStruct::UnregisterAll(bool send_eos) {
 }
 
 void FlavouringElement::RequestStruct::ProcessTag(SourceReg* sr,
-    const Tag* tag) {
+    const Tag* tag, int64 timestamp_ms) {
   // change flavour_mask to the requested flavour. Avoid cloning if the tag
   // already has the requested flavour.
   scoped_ref<const Tag> to_send = tag;
   if ( tag->flavour_mask() != sr->fs_->flavour_mask_ ) {
-    Tag* clone = tag->Clone(-1);
+    Tag* clone = tag->Clone();
     clone->set_flavour_mask(sr->fs_->flavour_mask_);
     to_send = clone;
   }
@@ -97,7 +97,7 @@ void FlavouringElement::RequestStruct::ProcessTag(SourceReg* sr,
   }
 
   // forward tag
-  callback_->Run(to_send.get());
+  callback_->Run(to_send.get(), timestamp_ms);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -236,7 +236,7 @@ void FlavouringElement::InternalClose(Closure* call_on_close) {
     // TODO(cosmin): Possible bug: send EOS on a single flavour!
     uint32 mask = client->req_->caps().flavour_mask_;
     client->callback_->Run(scoped_ref<Tag>(new EosTag(
-        0, 1 << RightmostFlavourId(mask), 0, true)).get());
+        0, 1 << RightmostFlavourId(mask), true)).get(), 0);
   }
 
   // NEXT: As a result of all the EOSes sent, each client must RemoveRequest()

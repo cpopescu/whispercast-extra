@@ -57,9 +57,9 @@ class OsdTag : public Tag {
         ftype_(FunctionTypeCode<T>()),
         fparams_(fparams.Clone()) {
   }
-  OsdTag(const OsdTag& other, int64 timestamp_ms)
+  OsdTag(const OsdTag& other)
       : Tag(other),
-        timestamp_ms_(timestamp_ms != -1 ? timestamp_ms : other.timestamp_ms_),
+        timestamp_ms_(other.timestamp_ms_),
         ftype_(other.ftype_),
         fparams_(other.fparams_->Clone()) {
   }
@@ -75,13 +75,13 @@ class OsdTag : public Tag {
   // returns the osd function parameters
   const rpc::Custom& fparams() const   { return  *fparams_; }
 
+  int64 timestamp_ms() const { return timestamp_ms_; }
   void set_timestamp_ms(int64 timestamp_ms) { timestamp_ms_ = timestamp_ms; }
 
   ///////////////////////////////////////////
   //
   // Tag interface methods
   //
-  virtual int64 timestamp_ms() const { return timestamp_ms_; }
   virtual int64 duration_ms() const { return 0; }
   virtual uint32 size() const { return 0; }
   virtual const char* ContentType() {
@@ -94,8 +94,8 @@ class OsdTag : public Tag {
                                  static_cast<int>(ftype()), fname(),
                                  fparams().ToString().c_str());
   }
-  virtual Tag* Clone(int64 timestamp_ms) const {
-    return new OsdTag(*this, timestamp_ms);
+  virtual Tag* Clone() const {
+    return new OsdTag(*this);
   }
 
  protected:

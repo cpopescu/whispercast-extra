@@ -311,7 +311,7 @@ void SchedulePlaylistPolicy::LoadState() {
     }
   }
   if ( !changed ) {
-    GoToNext(false);
+    GoToNext(true); // true = force switch to sth now
   }
 }
 bool SchedulePlaylistPolicy::SaveState() {

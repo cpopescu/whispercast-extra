@@ -213,10 +213,10 @@ bool LogicPlaylistPolicy::NotifyEos() {
 }
 
 
-bool LogicPlaylistPolicy::NotifyTag(const Tag* tag) {
+bool LogicPlaylistPolicy::NotifyTag(const Tag* tag, int64 timestamp_ms) {
   if ( IsActionTag(tag->type()) ) {
     const int key = ActionID(tag->type());
-    ProcessAction(key, 0, tag);
+    ProcessAction(key, 0, tag, timestamp_ms);
   }
   return true;
 }
@@ -237,7 +237,8 @@ void LogicPlaylistPolicy::NotifyTimeout() {
 
 
 void LogicPlaylistPolicy::ProcessTag(int id,
-                                     const Tag* tag) {
+                                     const Tag* tag,
+                                     int64 timestamp_ms) {
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     LOG_INFO << " =======>>> " << name() << " EOS on extra id: " << id;
     streaming::Request* const req = extra_reqs_[id];
@@ -254,13 +255,14 @@ void LogicPlaylistPolicy::ProcessTag(int id,
     // LOG_INFO << " =======>>> " << name() << " Processing EXTRA TAG : " << key
     //         << " extra_id: " << id << " tag: " << tag->ToString()
     //         << " [[" << tag->ToString() << "]]";
-    ProcessAction(key, id + 1, tag);
+    ProcessAction(key, id + 1, tag, timestamp_ms);
   }
 }
 
 void LogicPlaylistPolicy::ProcessAction(int key,
                                         int extra_id,
-                                        const Tag* tag) {
+                                        const Tag* tag,
+                                        int64 timestamp_ms) {
   // LOG_INFO << " =======>>> " << name() << " Processing action for key: "
   //          << key
   //         << " extra_id: " << extra_id << " tag: " << tag->ToString()

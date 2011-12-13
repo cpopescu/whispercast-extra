@@ -23,17 +23,19 @@ class OsdStateKeeperCallbackData : public streaming::FilteringCallbackData  {
   //
   // FilteringCallbackData methods
   //
-  virtual void FilterTag(const streaming::Tag* tag, TagList* out) {
+  virtual void FilterTag(const streaming::Tag* tag,
+                         int64 timestamp_ms,
+                         TagList* out) {
     // Always forward the incoming original tag.
     // Some OSD tags may be appended to 'out'.
-    out->push_back(tag);
+    out->push_back(FilteredTag(tag, timestamp_ms));
 
     CHECK_NOT_NULL(element_);
     if ( bootstrap_played_ || tag->type() == streaming::Tag::TYPE_EOS ) {
       return;
     }
     bootstrap_played_ = true;
-    element_->AppendBootstrap(out, flavour_mask(), tag->timestamp_ms());
+    element_->AppendBootstrap(out, flavour_mask(), timestamp_ms);
   }
  private:
   streaming::OsdStateKeeperElement* element_;
@@ -249,7 +251,7 @@ bool OsdStateKeeperElement::SaveState() {
   return state_keeper_->SetValue(kStateName, s);
 }
 
-void OsdStateKeeperElement::ProcessTag(const Tag* tag) {
+void OsdStateKeeperElement::ProcessTag(const Tag* tag, int64 timestamp_ms) {
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     CHECK_NOT_NULL(process_tag_callback_);
     CHECK_NOT_NULL(internal_req_);
@@ -552,7 +554,9 @@ void OsdStateKeeperElement::ProcessOsd(const DestroyMovieParams& fparams) {
 }
 
 void OsdStateKeeperElement::AppendBootstrap(
-    TagList* tags, uint32 flavour_mask, int64 timestamp_ms) {
+    FilteringCallbackData::TagList* tags,
+    uint32 flavour_mask,
+    int64 timestamp_ms) {
   // play Overlays state
   for ( map<string, CreateOverlayParams*>::const_iterator
             it = overlays_.begin(); it != overlays_.end(); ++it ) {

@@ -167,7 +167,7 @@ bool FeatureDetectorElement::DescribeMedia(const string& media, MediaInfoCallbac
 
 void FeatureDetectorElement::Close(Closure* call_on_close) {
   processing_queue_.Clear();
-  processing_queue_.Put(NULL);
+  processing_queue_.Put(ProcessedTag(NULL, 0));
 
   processing_thread_->Join();
   processing_thread_ = NULL;
@@ -207,24 +207,17 @@ void FeatureDetectorElement::OpenMedia() {
   }
 }
 
-void FeatureDetectorElement::ProcessTag(const Tag* tag) {
+void FeatureDetectorElement::ProcessTag(const Tag* tag, int64 timestamp_ms) {
   while ( !callbacks_to_bootstrap_.empty() ) {
     Request* req = callbacks_to_bootstrap_.begin()->first;
     ProcessingCallback* callback = callbacks_to_bootstrap_.begin()->second;
     callbacks_to_bootstrap_.erase(callbacks_to_bootstrap_.begin());
 
     crt_callback_ = callback;
-
     crt_callback_->Run(scoped_ref<Tag>(new SourceStartedTag(
         0,
         kDefaultFlavourMask,
-        tag->timestamp_ms(),
-        name(), name())).get());
-    crt_callback_->Run(scoped_ref<Tag>(new SegmentStartedTag(
-        0,
-        kDefaultFlavourMask,
-        tag->timestamp_ms(),
-        0)).get());
+        name(), name())).get(), timestamp_ms);
 
     if ( crt_callback_ != NULL ) {
       distributor_.add_callback(req, callback);
@@ -257,7 +250,7 @@ void FeatureDetectorElement::ProcessTag(const Tag* tag) {
       controller->Pause(true);
     }
   }
-  if ( !processing_queue_.Put(tag, 0) ) {
+  if ( !processing_queue_.Put(ProcessedTag(tag, timestamp_ms), 0) ) {
     LOG_WARNING << name() << " Full processing queue ..." << tag->ToString();
   }
 }
@@ -321,13 +314,13 @@ void FeatureDetectorElement::ProcessingThread() {
   feature::BitmapExtractor extractor(feature_width_, feature_height_,
                                      PIX_FMT_RGB24);
   while ( true ) {
-    scoped_ref<const Tag> tag = processing_queue_.Get();
-    if ( tag.get() == NULL ) {
+    ProcessedTag ptag = processing_queue_.Get();
+    if ( ptag.tag_.get() == NULL ) {
       break;
     }
 
     vector<scoped_ref<const feature::BitmapExtractor::PictureStruct> > pictures;
-    extractor.GetNextPictures(tag.get(), &pictures);
+    extractor.GetNextPictures(ptag.tag_.get(), &pictures);
     for ( uint32 i = 0; i < pictures.size(); i++ ) {
       ProcessImage(pictures[i].get());
     }
@@ -336,7 +329,8 @@ void FeatureDetectorElement::ProcessingThread() {
       selector_->RunInSelectLoop(
           NewCallback(this,
                       &FeatureDetectorElement::SubmitCompleteTag,
-                      tag,
+                      ptag.tag_,
+                      ptag.timestamp_ms_,
                       crt_match_timestamp_,
                       crt_match_id_));
       crt_match_ = feature::NO_MATCH;
@@ -346,7 +340,8 @@ void FeatureDetectorElement::ProcessingThread() {
       selector_->RunInSelectLoop(
           NewCallback(this,
                       &FeatureDetectorElement::SubmitTag,
-                      tag));
+                      ptag.tag_,
+                      ptag.timestamp_ms_));
     }
 
     {
@@ -361,21 +356,22 @@ void FeatureDetectorElement::ProcessingThread() {
 }
 
 void FeatureDetectorElement::SubmitCompleteTag(scoped_ref<const Tag> tag,
+                                               int64 timestamp_ms,
                                                int64 match_timestamp,
                                                int match_id) {
   scoped_ref<Tag> feature(new FeatureFoundTag(0, tag->flavour_mask(),
           strutil::StringPrintf("%s/%s", name().c_str(),
                                 features_[match_id]->name_.c_str()),
-          match_timestamp,
           features_[match_id]->length_ms_));
   LOG_INFO << name() << " Feature detected: "
-           << " @: " << match_timestamp << " reported @:" << tag->timestamp_ms()
+           << " @: " << match_timestamp << " reported @:" << timestamp_ms
            << " - feature: " << feature->ToString();
-  distributor_.DistributeTag(feature.get());
+  distributor_.DistributeTag(feature.get(), match_timestamp);
 }
 
-void FeatureDetectorElement::SubmitTag(scoped_ref<const Tag> tag) {
-  distributor_.DistributeTag(tag.get());
+void FeatureDetectorElement::SubmitTag(scoped_ref<const Tag> tag,
+                                       int64 timestamp_ms) {
+  distributor_.DistributeTag(tag.get(), timestamp_ms);
 }
 
 //////////////////////////////////////////////////////////////////////

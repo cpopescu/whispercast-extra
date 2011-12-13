@@ -41,7 +41,7 @@ class TimeDelayPolicy : public Policy,
 
   virtual bool Initialize();
   virtual bool NotifyEos();
-  virtual bool NotifyTag(const Tag* tag);
+  virtual bool NotifyTag(const Tag* tag, int64 timestamp_ms);
 
   virtual void Reset() {}
   virtual string GetPolicyConfig() { return ""; }

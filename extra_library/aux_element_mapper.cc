@@ -558,7 +558,7 @@ void AuxElementMapper::UpdatePolicySpec(const PolicySpecs& spec) {
 void AuxElementMapper::ClosePendingRequest(LookupReqStruct* lr) {
   // Lookup failed, no tags were sent to this client, use EOS with timestamp 0
   lr->callback_->Run(scoped_ref<Tag>(new EosTag(
-      0, lr->req_->caps().flavour_mask_, 0)).get());
+      0, lr->req_->caps().flavour_mask_, false)).get(), 0);
 }
 
 }

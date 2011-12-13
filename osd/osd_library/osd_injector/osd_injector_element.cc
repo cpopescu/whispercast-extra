@@ -26,16 +26,16 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
     if (here_process_tag_callback_ == NULL) {
       CHECK(registered_type_ == streaming::Tag::TYPE_OSD);
 
-      scoped_ref<streaming::Tag> t(tag.Clone(-1));
+      scoped_ref<streaming::Tag> t(tag.Clone());
       t->set_flavour_mask(flavour_mask());
       DLOG_DEBUG << "Directly injected OSD: " << t->ToString();
 
       CHECK_NOT_NULL(client_process_tag_callback_);
-      client_process_tag_callback_->Run(t.get());
+      client_process_tag_callback_->Run(t.get(), 0);
       return;
     }
     pending_osd_tags_.push_back(scoped_ref<streaming::OsdTag>(
-        new streaming::OsdTag(tag, -1)));
+        new streaming::OsdTag(tag)));
   }
 
   // Register our processing callback to upstream element
@@ -60,7 +60,9 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
   //
   // FilteringCallbackData methods
   //
-  virtual void FilterTag(const streaming::Tag* tag, TagList* out);
+  virtual void FilterTag(const streaming::Tag* tag,
+                         int64 timestamp_ms,
+                         TagList* out);
 
  private:
   // Osd tags to be sent on next media tag.
@@ -70,10 +72,12 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
 
 ///////////////////////////////////////////////////////////////////////////
 
-void OsdCallbackData::FilterTag(const streaming::Tag* tag, TagList* out) {
+void OsdCallbackData::FilterTag(const streaming::Tag* tag,
+                                int64 timestamp_ms,
+                                TagList* out) {
   // Always forward the incoming original tag.
   // Some OSD tags may be appended.
-  out->push_back(tag);
+  out->push_back(FilteredTag(tag, timestamp_ms));
 
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     return;
@@ -82,9 +86,9 @@ void OsdCallbackData::FilterTag(const streaming::Tag* tag, TagList* out) {
   for ( uint32 i = 0; i < pending_osd_tags_.size(); i++ ) {
     scoped_ref<streaming::OsdTag>& osd = pending_osd_tags_[i];
     osd->set_flavour_mask(flavour_mask());
-    osd->set_timestamp_ms(tag->timestamp_ms());
+    osd->set_timestamp_ms(timestamp_ms);
     LOG_DEBUG << "Injected OSD (" << media_name_ << "): " << osd->ToString();
-    out->push_back(osd.get());
+    out->push_back(FilteredTag(osd.get(), timestamp_ms));
   }
   pending_osd_tags_.clear();
 

@@ -94,7 +94,7 @@ class SchedulePlaylistPolicy
   virtual void Refresh() { }
   virtual void Reset() { }
   virtual bool NotifyEos();
-  virtual bool NotifyTag(const Tag* tag) { return true; }
+  virtual bool NotifyTag(const Tag* tag, int64 timestamp_ms) { return true; }
   virtual string GetPolicyConfig() { return ""; }
 
   ////////////////////////////////////////////////////////////////////////

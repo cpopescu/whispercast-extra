@@ -105,8 +105,9 @@ bool FlvFeatureExtractor::ProcessFile(
   }
 
   while ( true ) {
+    int64 timestamp_ms;
     scoped_ref<streaming::Tag> tag;
-    streaming::TagReadStatus err = reader.Read(&tag);
+    streaming::TagReadStatus err = reader.Read(&tag, &timestamp_ms);
     if ( err == streaming::READ_EOF ) {
       break;
     }

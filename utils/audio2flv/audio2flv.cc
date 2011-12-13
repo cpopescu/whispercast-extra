@@ -64,7 +64,7 @@ void OutputBlankVideo(streaming::FlvFileWriter& writer) {
   } else {
     vp6->mutable_video_body().append_data(kVP6_INTRAFRAME, sizeof(kVP6_INTRAFRAME));
   }
-  writer.Write(vp6);
+  writer.Write(vp6, -1);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -106,7 +106,7 @@ void OutputMp3Headings(const streaming::Mp3FrameTag* tag,
   metadata.mutable_values()->Set("videocodecid", new rtmp::CNumber(4));
   metadata.mutable_values()->Set("videodatarate", new rtmp::CNumber(600));
   metadata.mutable_values()->Set("width", new rtmp::CNumber(32));
-  writer.Write(meta_head);
+  writer.Write(meta_head, -1);
 }
 
 void OutputMp3Tag(const streaming::Mp3FrameTag* tag,
@@ -123,7 +123,7 @@ void OutputMp3Tag(const streaming::Mp3FrameTag* tag,
 
   writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
       0, streaming::kDefaultFlavourMask, tag->timestamp_ms(),
-      new streaming::FlvTag::Audio(frame))));
+      new streaming::FlvTag::Audio(frame))), -1);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -163,7 +163,7 @@ void OutputAacHeadings(const streaming::AacFrameTag* tag,
 
   writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
       0, streaming::kDefaultFlavourMask, 0,
-      new streaming::FlvTag::Metadata(streaming::kOnMetaData, values))));
+      new streaming::FlvTag::Metadata(streaming::kOnMetaData, values))), -1);
 
   io::MemoryStream frame;
   uint8 header = GetAacHeaderByte(tag);
@@ -203,7 +203,7 @@ void OutputAacHeadings(const streaming::AacFrameTag* tag,
 
   writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
       0, streaming::kDefaultFlavourMask, 0,
-      new streaming::FlvTag::Audio(frame))));
+      new streaming::FlvTag::Audio(frame))), -1);
 }
 
 void OutputAacTag(const streaming::AacFrameTag* tag,
@@ -221,7 +221,7 @@ void OutputAacTag(const streaming::AacFrameTag* tag,
 
   writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
       0, streaming::kDefaultFlavourMask, tag->timestamp_ms(),
-      new streaming::FlvTag::Audio(frame))));
+      new streaming::FlvTag::Audio(frame))), -1);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -243,8 +243,9 @@ int main(int argc, char* argv[]) {
 
   bool is_first_tag = false;
   while ( true ) {
+    int64 timestamp_ms;
     scoped_ref<streaming::Tag> tag;
-    streaming::TagReadStatus result = reader.Read(&tag);
+    streaming::TagReadStatus result = reader.Read(&tag, &timestamp_ms);
     if ( result == streaming::READ_EOF ) {
       break;
     }

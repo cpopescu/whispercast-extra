@@ -47,10 +47,11 @@ class FeatureDetectorElement :
 
  private:
   void UnpauseController();
-  void ProcessTag(const Tag* tag);
+  void ProcessTag(const Tag* tag, int64 timestamp_ms);
 
-  void SubmitTag(scoped_ref<const Tag> tag);
+  void SubmitTag(scoped_ref<const Tag> tag, int64 timestamp_ms);
   void SubmitCompleteTag(scoped_ref<const Tag> tag,
+                         int64 timestamp_ms,
                          int64 match_timestamp,
                          int match_id);
 
@@ -80,7 +81,15 @@ class FeatureDetectorElement :
   Closure* open_media_callback_;
   Closure* unpause_controller_callback_;
 
-  synch::ProducerConsumerQueue< scoped_ref<const Tag> > processing_queue_;
+  struct ProcessedTag {
+    ProcessedTag(const Tag* tag, int64 timestamp_ms) :
+      tag_(tag),
+      timestamp_ms_(timestamp_ms) {
+    }
+    scoped_ref<const Tag> tag_;
+    int64 timestamp_ms_;
+  };
+  synch::ProducerConsumerQueue<ProcessedTag> processing_queue_;
   static const int kMaxUnPausePendingTags = 200;
   static const int kMaxPausePendingTags = 400;
   static const int kMaxPendingTags = 500;

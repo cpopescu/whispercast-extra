@@ -96,7 +96,7 @@ class OsdAssocCallbackData : public streaming::FilteringCallbackData {
   // Schedules for injection a copy of the given OSD tag.
   void InjectOsdTag(const streaming::OsdTag& tag) {
     pending_osd_tags_.push_back(
-        static_cast<streaming::OsdTag*>(tag.Clone(-1)));
+        static_cast<streaming::OsdTag*>(tag.Clone()));
   }
 
   vector< scoped_ref<streaming::OsdTag> >*
@@ -112,7 +112,9 @@ class OsdAssocCallbackData : public streaming::FilteringCallbackData {
   //
   // FilteringCallbackData methods
   //
-  virtual void FilterTag(const streaming::Tag* tag, TagList* out);
+  virtual void FilterTag(const streaming::Tag* tag,
+                         int64 timestamp_ms,
+                         TagList* out);
  private:
   void PrependOsdTags(TagList* out, int64 crt_timestamp_ms,
       const vector< scoped_ref<streaming::OsdTag> >& tags) const;
@@ -164,20 +166,21 @@ void OsdAssocCallbackData::PrependOsdTags(
     LOG_DEBUG << media_name_ << ": Inserting: " << osd->ToString();
     osd->set_flavour_mask(flavour_mask());
     osd->set_timestamp_ms(timestamp_ms);
-    out->push_front(osd);
+    out->push_front(FilteredTag(osd, timestamp_ms));
   }
 }
 
-void OsdAssocCallbackData::FilterTag(const streaming::Tag* tag, TagList* out) {
+void OsdAssocCallbackData::FilterTag(
+    const streaming::Tag* tag, int64 timestamp_ms, TagList* out) {
 
   // Always forward the original incoming tag.
   // Some OSD tags may prepended before the original.
-  out->push_back(tag);
+  out->push_back(FilteredTag(tag, timestamp_ms));
 
   // EOS - clean all tags..
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     if ( !pending_osd_tags_.empty() ) {
-      PrependOsdTags(out, tag->timestamp_ms(), pending_osd_tags_);
+      PrependOsdTags(out, timestamp_ms, pending_osd_tags_);
     }
     pending_osd_tags_.clear();
     vector< scoped_ref<streaming::OsdTag> > eos_osd_tags;
@@ -191,7 +194,7 @@ void OsdAssocCallbackData::FilterTag(const streaming::Tag* tag, TagList* out) {
     }
     assoc_paths_.clear();
     if ( !eos_osd_tags.empty() ) {
-      PrependOsdTags(out, tag->timestamp_ms(), eos_osd_tags);
+      PrependOsdTags(out, timestamp_ms, eos_osd_tags);
     }
     return;
   }
@@ -222,7 +225,7 @@ void OsdAssocCallbackData::FilterTag(const streaming::Tag* tag, TagList* out) {
   }
   if ( !pending_osd_tags_.empty() && tag->is_video_tag() ) {
     // we inject osd tags using the timestamp of the current media tag
-    PrependOsdTags(out, tag->timestamp_ms(), pending_osd_tags_);
+    PrependOsdTags(out, timestamp_ms, pending_osd_tags_);
     pending_osd_tags_.clear();
   }
   return;

@@ -84,7 +84,10 @@ class OsdAssociatorClientElement : public FilteringElement,
 
    ///////////////////////////////////////////////////////////////////////
    // FilteringCallbackData methods
-   virtual void FilterTag(const streaming::Tag* tag, TagList* out);
+   virtual void FilterTag(const streaming::Tag* tag,
+                          int64 timestamp_ms,
+                          FilteringCallbackData::TagList* out);
+
   private:
    // the stream path
    const string creation_path_;

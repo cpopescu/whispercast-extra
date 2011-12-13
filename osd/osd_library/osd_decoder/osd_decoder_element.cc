@@ -28,11 +28,13 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
 
   ///////////////////////////////////////////////////////////////////////
 
-  virtual void FilterTag(const streaming::Tag* tag, TagList* out) {
+  virtual void FilterTag(const streaming::Tag* tag,
+                         int64 timestamp_ms,
+                         TagList* out) {
     if ( tag->type() != streaming::Tag::TYPE_FLV ) {
       // not a FLV tag
       // forward tag
-      out->push_back(tag);
+      out->push_back(FilteredTag(tag, timestamp_ms));
       return;
     }
     const streaming::FlvTag* flv_tag =
@@ -41,7 +43,7 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
     if ( osd.get() == NULL ) {
       // decoding failed. Probably not an OSD metadata tag.
       // forward tag
-      out->push_back(tag);
+      out->push_back(FilteredTag(tag, timestamp_ms));
       return;
     }
 
@@ -50,7 +52,7 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
                << " OSD (" << flv_tag->ToString() << "): "
                << osd->ToString();
     // forward tag
-    out->push_back(osd.get());
+    out->push_back(FilteredTag(osd.get(), timestamp_ms));
     return;
   }
 

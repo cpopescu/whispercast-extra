@@ -49,7 +49,7 @@ class LogicPlaylistPolicy
     SwitchToState(default_state_name_);
   }
   virtual bool NotifyEos();
-  virtual bool NotifyTag(const Tag* tag);
+  virtual bool NotifyTag(const Tag* tag, int64 timestamp_ms);
 
   virtual string GetPolicyConfig();
 
@@ -74,8 +74,8 @@ class LogicPlaylistPolicy
 
   void NotifyTimeout();
 
-  void ProcessAction(int key, int extra_id, const Tag* tag);
-  void ProcessTag(int id, const Tag* tag);
+  void ProcessAction(int key, int extra_id, const Tag* tag, int64 timestamp_ms);
+  void ProcessTag(int id, const Tag* tag, int64 timestamp_ms);
 
   ElementMapper* const mapper_;
   net::Selector* const selector_;

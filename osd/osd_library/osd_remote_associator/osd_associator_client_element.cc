@@ -94,10 +94,12 @@ void OsdAssociatorClientElement::ClientCallbackData::ClearOsd() {
   osd_ = NULL;
 }
 void OsdAssociatorClientElement::ClientCallbackData::FilterTag(
-    const streaming::Tag* tag, TagList* out) {
+    const Tag* tag,
+    int64 timestamp_ms,
+    TagList* out) {
   // Always forward the incoming tag.
   // Some OSD tags may be appended.
-  out->push_back(tag);
+  out->push_back(FilteredTag(tag, timestamp_ms));
 
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     ClearOsd();
@@ -106,16 +108,17 @@ void OsdAssociatorClientElement::ClientCallbackData::FilterTag(
   for ( uint32 i = 0; i < pending_osd_tags_.size(); i++ ) {
     OsdTag* osd = pending_osd_tags_[i].get();
     osd->set_flavour_mask(flavour_mask());
-    osd->set_timestamp_ms(tag->timestamp_ms());
+    osd->set_timestamp_ms(timestamp_ms);
     LOG_DEBUG << "Injected OSD (" << media_name_ << "): " << osd->ToString();
-    out->push_back(osd);
+    out->push_back(FilteredTag(osd, timestamp_ms));
   }
   pending_osd_tags_.clear();
 
   if ( tag->type() == streaming::Tag::TYPE_EOS ) {
     // move EOS tag at the end of "tags" list
+    FilteredTag t = *out->begin();
     out->pop_front();
-    out->push_back(tag);
+    out->push_back(t);
   }
 }
 

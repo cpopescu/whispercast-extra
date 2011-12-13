@@ -44,6 +44,7 @@ void BitmapExtractor::GetNextPictures(const streaming::Tag* tag,
     return;
   }
   if ( tag->type() == streaming::Tag::TYPE_COMPOSED ) {
+    /*
     const streaming::ComposedTag* ctd =
       static_cast<const streaming::ComposedTag*>(tag);
     if ( ctd->sub_tag_type() != streaming::Tag::TYPE_FLV ) {
@@ -54,6 +55,7 @@ void BitmapExtractor::GetNextPictures(const streaming::Tag* tag,
           static_cast<const streaming::FlvTag*>(ctd->tags().tag(i).get()),
           tag->timestamp_ms(), out);
     }
+    */
     return;
   }
   if ( tag->type() != streaming::Tag::TYPE_FLV ) {
