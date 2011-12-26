@@ -83,7 +83,7 @@ class Whispercast_Remotes extends Whispercast_Base {
    */
   public function getPath($id) {
     $iid = $this->_interface->getElementPrefix().'_'.$id;
-    return '/'.$iid.'_remote/'.$id;
+    return $iid.'_remote/'.$id;
   }
 
   /**

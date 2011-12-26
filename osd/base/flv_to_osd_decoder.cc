@@ -3,7 +3,6 @@
 
 #include <whisperlib/common/base/common.h>
 #include <whisperlib/net/rpc/lib/codec/json/rpc_json_decoder.h>
-#include <whisperstreamlib/rtmp/rtmp_protocol.h>
 #include "osd/base/flv_to_osd_decoder.h"
 
 namespace streaming {

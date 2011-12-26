@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SparkSkin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.player.skins.*">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("spark.components.ToggleButton")]
+	</fx:Metadata>
+	
+	<s:states>
+		<s:State name="up" stateGroups="normalStates"/>
+		<s:State name="over" stateGroups="normalStates,overStates"/>
+		<s:State name="down" stateGroups="normalStates,downStates"/>
+		<s:State name="disabled" stateGroups="normalStates,disabledStates"/>
+		<s:State name="upAndSelected" stateGroups="selectedStates"/>
+		<s:State name="overAndSelected" stateGroups="selectedStates"/>
+		<s:State name="downAndSelected" stateGroups="selectedStates,downStates"/>
+		<s:State name="disabledAndSelected" stateGroups="selectedStates,disabledStates"/>
+	</s:states>
+	
+	<s:Rect width="100%" height="100%">
+		<s:fill>
+			<s:SolidColor color="0x000000" alpha="0"/>
+		</s:fill>
+	</s:Rect>
+	<s:Group horizontalCenter="0" verticalCenter="0" id="volumeSymbol" scaleX="1.35" scaleY="1.4">
+		<!-- big trapezoid in center -->
+		<s:Path winding="evenOdd" data="M 9 13 L 9 0 L 4 4 L 4 9 L 9 13 Z">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.selectedStates="{getStyle('selectedColorLow')}"/>
+			</s:fill>
+		</s:Path>
+		<!-- smaller trapezoid on left -->
+		<s:Path winding="evenOdd" data="M 3 9 L 3 4 L 0 5 L 0 8 L 3 9 Z">
+			<s:fill>
+				<s:SolidColor color="{getStyle('foreColorLow')}" color.overStates="{getStyle('foreColorHigh')}" color.selectedStates="{getStyle('selectedColorLow')}"/>
+			</s:fill>
+		</s:Path>
+		<s:Line xFrom="1" xTo="12" yFrom="1" yTo="12" visible="false" visible.selectedStates="true">
+			<s:stroke>
+				<s:SolidColorStroke color="{getStyle('selectedColorLow')}" pixelHinting="true"/>
+			</s:stroke>
+		</s:Line>
+	</s:Group>
+</s:SparkSkin>

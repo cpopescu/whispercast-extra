@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:SparkSkin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		xmlns:whispercast="org.whispercast.player.skins.*">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("spark.components.ToggleButton")]
+	</fx:Metadata>
+	
+	<s:states>
+		<s:State name="up" stateGroups="normalStates"/>
+		<s:State name="over" stateGroups="normalStates,overStates"/>
+		<s:State name="down" stateGroups="normalStates,downStates"/>
+		<s:State name="disabled" stateGroups="normalStates,disabledStates"/>
+		<s:State name="upAndSelected" stateGroups="selectedStates"/>
+		<s:State name="overAndSelected" stateGroups="selectedStates,overStates"/>
+		<s:State name="downAndSelected" stateGroups="selectedStates,downStates"/>
+		<s:State name="disabledAndSelected" stateGroups="selectedStates,disabledStates"/>
+	</s:states>
+	
+	<!--- Defines the full-screen symbol. -->
+	<s:Group horizontalCenter="0" verticalCenter="0" id="fullScreenSymbol">
+		<!-- Size of area so left, right, bottom, top work well -->
+		<s:Rect left="0" top="0" width="26" height="20">
+			<s:fill>
+				<s:SolidColor alpha="0" />
+			</s:fill>
+		</s:Rect>
+		
+		<!-- Border -->
+		<s:Rect left="1" top="1" right="1" bottom="1" radiusX="1" radiusY="1">
+			<s:stroke>
+				<s:SolidColorStroke
+					color="{getStyle('foreColorLow')}"
+					color.disabledStates="{getStyle('disabledColorLow')}"
+					color.overStates="{getStyle('foreColorHigh')}"
+					/>
+			</s:stroke>
+		</s:Rect>
+		<!-- Symbol -->
+		<s:Rect left="12" top="6" right="4" bottom="4">
+			<s:stroke>
+				<s:SolidColorStroke
+					color="{getStyle('foreColorLow')}"
+					color.disabledStates="{getStyle('disabledColorLow')}"
+					color.downAndSelected="{getStyle('selectedColorHigh')}"
+					color.upAndSelected="{getStyle('selectedColorLow')}"
+					color.overAndSelected="{getStyle('selectedColorHigh')}"
+					color.over="{getStyle('foreColorHigh')}"
+					/>
+			</s:stroke>
+		</s:Rect>
+		<s:Rect left="13" top="7" right="5" bottom="5" radiusX="1" radiusY="1">
+			<s:fill>
+				<s:SolidColor
+					color="{getStyle('foreColorLow')}"
+					color.disabledStates="{getStyle('disabledColorLow')}"
+					color.downAndSelected="{getStyle('selectedColorHigh')}"
+					color.upAndSelected="{getStyle('selectedColorLow')}"
+					color.overAndSelected="{getStyle('selectedColorHigh')}"
+					color.over="{getStyle('foreColorHigh')}"
+					/>
+			</s:fill>
+		</s:Rect>
+	</s:Group>
+</s:SparkSkin>

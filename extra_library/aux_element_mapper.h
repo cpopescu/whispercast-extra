@@ -84,6 +84,15 @@ class AuxElementMapper
   }
   virtual void RemoveExportClient(const string& protocol, const string& path) {
   }
+  virtual bool AddImporter(Importer* importer) {
+    return false;
+  }
+  virtual void RemoveImporter(Importer* importer) {
+  }
+  virtual Importer* GetImporter(Importer::Type importer_type,
+                                const string& path) {
+    return NULL;
+  }
 
  private:
   bool AddRequest(const char* media_name,

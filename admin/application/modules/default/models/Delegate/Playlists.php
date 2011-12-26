@@ -42,6 +42,14 @@ class Model_Delegate_Playlists extends Model_Delegate_Streams {
       $stream = $streams->fetchRow($streams->select()->where('path = ?', substr($path, strlen($prefix)+1)));
       if ($stream) {
         $playlist[] = $stream->toArray();
+      } else {
+        // TODO: Remove this as it is a temporary hack
+        $p = substr($path, strlen($prefix)+1);
+        $p = preg_replace('/\/s\d+_\d+_normalizer\//', '/', $p);
+        $stream = $streams->fetchRow($streams->select()->where('path = ?', $p));
+        if ($stream) {
+          $playlist[] = $stream->toArray();
+        }
       }
     }
     return array('playlist' => $playlist, 'loop' => $setup['loop'] ? true : false);

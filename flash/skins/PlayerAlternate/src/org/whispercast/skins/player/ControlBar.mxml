@@ -30,6 +30,8 @@
 		@namespace whispercast_skins "org.whispercast.skins.player.*";
 		
 		* {
+			backgroundAlpha: 1;
+			
 			foreColorLow: #6683cc;
 			foreColorHigh: #99b3ff;
 			
@@ -88,16 +90,17 @@
 			
 			protected function onCreationComplete(event:FlexEvent):void
 			{
-				setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
-				setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
-				setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
-				setStyle('backColorHigh', scrubBar.getStyle('backColorHigh'));
-				setStyle('borderColorLow', scrubBar.getStyle('borderColorLow'));
-				setStyle('borderColorHigh', scrubBar.getStyle('borderColorHigh'));
-				setStyle('selectedColorLow', scrubBar.getStyle('selectedColorLow'));
-				setStyle('selectedColorHigh', scrubBar.getStyle('selectedColorHigh'));
-				setStyle('textColorLow', scrubBar.getStyle('textColorLow'));
-				setStyle('textColorHigh', scrubBar.getStyle('textColorHigh'));
+				hostComponent.setStyle('backgroundAlpha', scrubBar.getStyle('backgroundAlpha'));
+				hostComponent.setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
+				hostComponent.setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
+				hostComponent.setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
+				hostComponent.setStyle('backColorHigh', scrubBar.getStyle('backColorHigh'));
+				hostComponent.setStyle('borderColorLow', scrubBar.getStyle('borderColorLow'));
+				hostComponent.setStyle('borderColorHigh', scrubBar.getStyle('borderColorHigh'));
+				hostComponent.setStyle('selectedColorLow', scrubBar.getStyle('selectedColorLow'));
+				hostComponent.setStyle('selectedColorHigh', scrubBar.getStyle('selectedColorHigh'));
+				hostComponent.setStyle('textColorLow', scrubBar.getStyle('textColorLow'));
+				hostComponent.setStyle('textColorHigh', scrubBar.getStyle('textColorHigh'));
 				
 				scrubBar.dataTipFormatFunction = formatTimeScrubBar;
 				volumeBar.dataTipFormatFunction = formatVolumeVolumeBar;
@@ -176,10 +179,7 @@
 		<!-- Control bar background -->
 		<s:Rect width="100%" height="100%">
 			<s:fill>
-				<s:LinearGradient rotation="90">
-					<s:GradientEntry color="{getStyle('backColorHigh')}"/>
-					<s:GradientEntry color="{getStyle('backColorLow')}"/>
-				</s:LinearGradient>
+				<s:SolidColor color="{getStyle('backColorLow')}" alpha="{getStyle('backgroundAlpha')}"/>
 			</s:fill>
 		</s:Rect>
 		<s:HGroup width="100%" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5" verticalAlign="middle" gap="10">
@@ -187,34 +187,15 @@
 			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="22" height="22" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
 			<!-- OSD area -->
 			<s:Group width="100%">
-				<!-- OSD area background -->
-				<!--
-				<s:Rect width="100%" height="100%">
-					<s:fill>
-						<s:SolidColor color="{getStyle('backColorLow')}"/>
-					</s:fill>
-				</s:Rect>
-				-->
 				<s:HGroup width="100%" height="20" verticalAlign="middle">
 					<s:Label id="osd_area" text="" lineBreak="explicit" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
 				</s:HGroup>
-				<!-- OSD area border -->
-				<!--
-				<s:Rect width="100%" height="100%">
-					<s:stroke>
-						<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
-							<s:GradientEntry color="{getStyle('borderColorLow')}"/>
-							<s:GradientEntry color="{getStyle('borderColorHigh')}"/>
-						</s:LinearGradientStroke>
-					</s:stroke>
-				</s:Rect>
-				-->
 			</s:Group>
 			<!-- Controls -->
 			<s:HGroup>
 				<s:Group id="timeGroup" visible="true" visible.noTimeGroup="false">
 					<!-- Time background -->
-					<s:Rect width="100%" height="100%">
+					<s:Rect width="100%" height="100%" alpha="{getStyle('backgroundAlpha')}">
 						<s:fill>
 							<s:SolidColor color="{getStyle('backColorLow')}"/>
 						</s:fill>
@@ -229,8 +210,8 @@
 					<s:Rect width="100%" height="100%">
 						<s:stroke>
 							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
-								<s:GradientEntry color="{getStyle('borderColorLow')}"/>
-								<s:GradientEntry color="{getStyle('borderColorHigh')}"/>
+								<s:GradientEntry color="{getStyle('borderColorLow')}" alpha="{getStyle('backgroundAlpha')}"/>
+								<s:GradientEntry color="{getStyle('borderColorHigh')}" alpha="{getStyle('backgroundAlpha')}"/>
 							</s:LinearGradientStroke>
 						</s:stroke>
 					</s:Rect>
@@ -247,11 +228,11 @@
 			</s:HGroup>
 		</s:HGroup>
 		<!-- Progress bar group -->
-		<s:Group id="progressBarGroup" width="100%" top="{-progressBarGroup.height+1}" visible.noProgressGroup="false">
+		<s:Group id="progressBarGroup" width="100%" top="{-progressBar.height}" visible.noProgressGroup="false">
 			<!-- Progress bar background -->
 			<s:Rect width="100%" height="100%">
 				<s:fill>
-					<s:SolidColor color="{getStyle('backColorLow')}"/>
+					<s:SolidColor color="{getStyle('backColorLow')}" alpha="{getStyle('backgroundAlpha')}"/>
 				</s:fill>
 			</s:Rect>
 			<s:Group id="progressBarProgress" width="100%" height="100%">

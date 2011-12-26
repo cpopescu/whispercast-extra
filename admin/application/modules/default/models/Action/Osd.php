@@ -75,7 +75,7 @@ class Model_Action_Osd extends App_Model_Action_Record {
 
     $osda_id = $interface->getElementPrefix().'_osda';
 
-    $path = $interface->getElementPrefix().'_ts/'.$stream->path;
+    $path = $interface->getElementPrefix().'_ts'.$stream->path;
     $cs = $osd->getData($osda_id, $path, $data);
     if ($cs !== null) {
       throw new Exception($cs);
@@ -154,7 +154,7 @@ class Model_Action_Osd extends App_Model_Action_Record {
             $interface = Whispercast::getInterface($server->id);
             $osd = new Whispercast_Osd($interface);
 
-            $path = $interface->getElementPrefix().'_ts/'.$stream->path;
+            $path = $interface->getElementPrefix().'_ts'.$stream->path;
             if ((bool)$this->_input['overwrite']) {
               $final = $current;
             } else {

@@ -17,20 +17,18 @@
 	<fx:Script>
 		<![CDATA[
 			import flash.filters.BitmapFilterQuality;
-			
-			private var type_:String = "Alternate";
-			public function get type():String
-			{
-				return type_;
-			}
 		]]>
 	</fx:Script>
 	
 	<s:states>
 		<s:State name="normal"/>
+		<s:State name="buffering" stateGroups="bufferingGroup"/>
 		<s:State name="noOSD" stateGroups="noOSDGroup"/>
+		<s:State name="noOSDAndBuffering" stateGroups="noOSDGroup,bufferingGroup"/>
 		<s:State name="noBackground" stateGroups="noBackgroundGroup"/>
+		<s:State name="noBackgroundAndBuffering" stateGroups="noBackgroundGroup,bufferingGroup"/>
 		<s:State name="noOSDOrBackground" stateGroups="noOSDGroup,noBackgroundGroup"/>
+		<s:State name="noOSDOrBackgroundAndBuffering" stateGroups="noOSDGroup,noBackgroundGroup,bufferingGroup"/>
 	</s:states>
 	
 	<s:Group width="100%" height="100%">
@@ -61,7 +59,7 @@
 					</s:stroke>
 				</s:Rect>
 			</s:Group>
-			<whispercast_skins:BufferingIcon id="bufferingIcon" verticalCenter="0" horizontalCenter="0" visible="{output.isPlaying &amp;&amp; !output.isPausing &amp;&amp; (output.isBuffering)}"/>
+			<whispercast_skins:BufferingIcon id="bufferingIcon" verticalCenter="0" horizontalCenter="0" includeIn="bufferingGroup"/>
 		</s:Group>
 	</s:Group>	
 	<s:Group width="100%" height="100%" clipAndEnableScrolling="true">

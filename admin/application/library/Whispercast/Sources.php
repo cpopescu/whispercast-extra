@@ -90,9 +90,9 @@ class Whispercast_Sources extends Whispercast_Base {
 
     switch ($type) {
       case 'rtmp':
-        return '/'.$iid.'rtmp_source';
+        return $iid.'rtmp_source';
       case 'http':
-        return '/'.$iid.'http_source';
+        return $iid.'http_source';
     }
     return null;
   }

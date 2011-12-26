@@ -9,7 +9,8 @@
 			   width="100%"
 			   height="100%"
 			   backgroundColor="0x000000" 
-			   creationComplete="onContentCreationComplete_(event)">
+			   creationComplete="onContentCreationComplete_(event)"
+			   applicationComplete="onApplicationComplete_(event)">
 	<fx:Declarations>
 		<s:Parallel id="controlBarTransition" duration="250">
 			<s:Fade target="{controlBar}"/>
@@ -38,6 +39,34 @@
 	
 	<fx:Script>
 		<![CDATA[
+			import flash.utils.Endian;
+			import flash.display.LoaderInfo;
+			import flash.utils.ByteArray;
+			
+			private function getCompilationDate():Date
+			{
+				var swf:ByteArray = stage.loaderInfo.bytes;
+				swf.endian = Endian.LITTLE_ENDIAN;
+				// Signature + Version + FileLength + FrameSize + FrameRate + FrameCount
+				swf.position = 3 + 1 + 4 + (Math.ceil(((swf[8] >> 3) * 4 - 3) / 8) + 1) + 2 + 2;
+				while(swf.position != swf.length)
+				{
+					var tagHeader:uint = swf.readUnsignedShort();
+					if (tagHeader >> 6 == 41)
+					{
+						// ProductID + Edition + MajorVersion + MinorVersion + BuildLow + BuildHigh
+						swf.position += 4 + 4 + 1 + 1 + 4 + 4;
+						var milli:Number = swf.readUnsignedInt();
+						var date:Date = new Date();
+						date.setTime(milli + swf.readUnsignedInt() * 4294967296);
+						return date; // Sun Oct 31 02:56:28 GMT+0100 2010
+					}
+					else
+						swf.position += (tagHeader & 63) != 63 ? (tagHeader & 63) : swf.readUnsignedInt() + 4;
+				}
+				throw new Error("No ProductInfo tag exists");
+			}
+			
 			import mx.binding.utils.ChangeWatcher;
 			import mx.core.UIComponent;
 			import mx.core.UIComponentGlobals;
@@ -199,7 +228,7 @@
 					autoHideControlBarActivate_(null);
 					layout = new BasicLayout();
 					
-					controlBar.setStyle('backgroundAlpha', 0.7);
+					controlBar.setStyle('backgroundAlpha', 0.8);
 				}
 				else
 				{
@@ -673,6 +702,11 @@
 				
 				dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryAvailable"));
 				dispatchEvent(new FlexEvent("Whispercast_Player_isSecondaryVisible"));
+			}
+			private function onApplicationComplete_(e:FlexEvent):void
+			{
+				var x:Date = getCompilationDate();
+				contextMenu.customItems.push(new ContextMenuItem((player0.skin as VideoPlayerSkin).type + ' ['+x+']', false, true));
 			}
 			
 			private function onPlayerClick_(e:VideoPlayerEvent):void

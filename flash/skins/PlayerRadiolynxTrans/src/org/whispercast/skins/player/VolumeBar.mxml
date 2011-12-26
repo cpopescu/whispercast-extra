@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("spark.components.supportClasses.TrackBase")]
+	</fx:Metadata>
+	
+	<fx:Declarations>
+		<s:LinearGradient rotation="90" id="activeFill">
+			<s:GradientEntry color="{getStyle('foreColorLow')}"/>
+			<s:GradientEntry color="{getStyle('foreColorHigh')}"/>
+		</s:LinearGradient>
+		<s:LinearGradient rotation="90" id="inactiveFill">
+			<s:GradientEntry color="{getStyle('backColorLow')}"/>
+			<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+		</s:LinearGradient>
+	</fx:Declarations>
+	
+	<!-- states -->
+	<s:states>
+		<s:State name="disabled" />
+		<s:State name="normal" />
+	</s:states>
+	
+	<s:Button id="track" width="100%" height="100%" tabEnabled="false" buttonMode="true" skinClass="org.whispercast.skins.player.VolumeBarTrack"/>
+	<s:Button id="thumb" width="5" height="100%" tabEnabled="false" buttonMode="true" skinClass="org.whispercast.skins.player.VolumeBarThumb"/>
+</s:Skin>

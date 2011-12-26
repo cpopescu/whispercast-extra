@@ -8,13 +8,14 @@
 	</fx:Metadata>
 	
 	<fx:Declarations>
+		<s:Power id="transitionEaser" exponent="4"/>
 		<s:Parallel id="transitionExpandedEffect" duration="150">
-			<s:Resize target="{track}"/>
-			<s:Fade target="{thumb}"/>
+			<s:Resize target="{track}" easer="{transitionEaser}"/>
+			<s:Fade target="{thumb}" easer="{transitionEaser}"/>
 		</s:Parallel>
-		<s:Parallel id="transitionNormalEffect" duration="500">
-			<s:Resize target="{track}"/>
-			<s:Fade target="{thumb}"/>
+		<s:Parallel id="transitionNormalEffect" duration="300">
+			<s:Resize target="{track}" easer="{transitionEaser}"/>
+			<s:Fade target="{thumb}" easer="{transitionEaser}"/>
 		</s:Parallel>
 	</fx:Declarations>
 	
@@ -31,11 +32,10 @@
 		<s:Transition effect="{transitionNormalEffect}" toState="normal"/>
 		<s:Transition effect="{transitionNormalEffect}" toState="disabled"/>
 	</s:transitions>
-
 	<s:VGroup width="100%" gap="0">
 		<s:Group width="100%">
-			<s:Button id="track" width="100%" height="4" height.expandedGroup="12" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarTrack"/>
-			<s:Button id="thumb" width="{3*track.height-12}" height="{3*track.height-12}" y="{-track.height+6}" alpha="0.1" alpha.expandedGroup="1" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" visible="true" visible.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarThumb" includeInLayout="false"/>
+			<s:Button id="track" width="100%" height="2" height.expandedGroup="8" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarTrack"/>
+			<s:Button id="thumb" width="{(16*track.height-32)/12}" height="{(16*track.height-32)/6}" y="{(track.height-(16*track.height-32)/6)/2}" alpha="0.1" alpha.expandedGroup="1" tabEnabled="false" buttonMode="true" buttonMode.disabledGroup="false" visible="true" visible.disabledGroup="false" skinClass="org.whispercast.skins.player.ScrubBarThumb" includeInLayout="false"/>
 		</s:Group>
 		<s:Line width="100%" top="1" height="0" alpha="0.5" depth="-1000">
 			<s:stroke>

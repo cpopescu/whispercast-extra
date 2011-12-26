@@ -30,7 +30,6 @@
 namespace streaming {
 class TimeRangeRequest : public streaming::ElementController {
  public:
-  static const int64 kMaxSmoothTransitionMs = 2000;
   TimeRangeRequest(ElementMapper* mapper,
                    net::Selector* selector,
                    const string& home_dir,
@@ -57,11 +56,8 @@ class TimeRangeRequest : public streaming::ElementController {
         pause_count_(0),
         crt_file_(-1),
         start_tag_sent_(false),
-        current_ts_ms_(0),
-        segment_start_ts_ms_(0),
-        segment_current_ts_ms_(0),
-        segment_skip_time_ms_(0),
-        segment_duration_ms_(0),
+        offset_ms_(0),
+        last_timestamp_ms_(0),
         seeking_(false),
         seek_alarm_(*selector),
         play_next_alarm_(*selector) {
@@ -83,6 +79,20 @@ class TimeRangeRequest : public streaming::ElementController {
 
   streaming::ProcessingCallback* const callback() const {
     return callback_;
+  }
+  int64 OffsetMs(int file_no) {
+    CHECK(file_no >= 0 && file_no < start_times_ms_.size())
+        << "Illegal file_no: " << file_no;
+    // first file is strange
+    const int64 first_file_ms_ = skip_times_ms_[0] + durations_ms_[0];
+    if ( file_no == 0 ) {
+      return 0;
+    }
+    if ( file_no == 1 ) {
+      return first_file_ms_;
+    }
+    // file_no is >= 2
+    return start_times_ms_[file_no] - start_times_ms_[1] + first_file_ms_;
   }
 
   // Our interface from the top class
@@ -158,27 +168,32 @@ class TimeRangeRequest : public streaming::ElementController {
   }
 
  private:
-  bool IssueRequest(int64 seek_pos_ms);
+  bool IssueRequest(int64 seek_pos_ms, int64 adjustment_ms);
 
   void PlayNext();
   void SeekInternal(int64 seek_pos_ms);
 
   void SendEos() {
     // NEEDS: separate call context from downstream.
-    if ( callback_ != NULL ) {
-      if ( start_tag_sent_ ) {
-        callback_->Run(scoped_ref<Tag>(new SourceEndedTag(0,
-            streaming::kDefaultFlavourMask,
-            media_name_, media_name_)).get(), 0);
-      }
-      callback_->Run(scoped_ref<Tag>(new streaming::EosTag(
-          0, streaming::kDefaultFlavourMask, false)).get(), 0);
-      // after EOS make sure nothing follows
-      callback_ = NULL;
+    if ( start_tag_sent_ ) {
+      Send(scoped_ref<Tag>(new SourceEndedTag(0,
+          streaming::kDefaultFlavourMask,
+          media_name_, media_name_)).get(), 0);
     }
+    Send(scoped_ref<Tag>(new streaming::EosTag(
+        0, streaming::kDefaultFlavourMask, false)).get(), 0);
+    // after EOS make sure nothing follows
+    callback_ = NULL;
   }
   void ProcessTag(const streaming::Tag* tag, int64 timestamp_ms);
   bool ProcessMetadataTag(const streaming::FlvTag* flv_tag, int64 timestamp_ms);
+
+  void Send(const Tag* tag, int64 timestamp_ms) {
+    if ( callback_ != NULL ) {
+      //LOG_INFO << "### >>>>>>> Send: " << timestamp_ms << " " << tag->ToString();
+      callback_->Run(tag, timestamp_ms);
+    }
+  }
 
   ElementMapper* const mapper_;
   net::Selector* const selector_;
@@ -210,15 +225,10 @@ class TimeRangeRequest : public streaming::ElementController {
 
   bool start_tag_sent_;
 
-  // the current timestamp, relative to the entire range
-  int64 current_ts_ms_;
-  // the current segment start and current timestamp (relative to the segment)
-  int64 segment_start_ts_ms_;
-  int64 segment_current_ts_ms_;
-  // the skip time for the current segment
-  int64 segment_skip_time_ms_;
-  // the current segment duration
-  int64 segment_duration_ms_;
+  // the current timestamp offset (incremented on each file step)
+  int64 offset_ms_;
+  // the timestamp of the last tag received
+  int64 last_timestamp_ms_;
 
   // we are currently seeking
   bool seeking_;
@@ -256,7 +266,8 @@ bool TimeRangeRequest::StartRequest(
 
   ILOG_DEBUG << "start_time: " << start_time.ToShortString()
              << ", end_time: " << end_time.ToShortString()
-             << ", duration: " << total_duration_ms_;
+             << ", duration: " << total_duration_ms_
+             << ", seek_pos_ms_: " << req->info().seek_pos_ms_;
 
   vector<string> files;
   int last_selected = -1;
@@ -283,9 +294,10 @@ bool TimeRangeRequest::StartRequest(
         std::min(duration, end_time.GetTime() - playref_time);
 
     ILOG_DEBUG << "Obtained: [" << crt_media << "] w/ len: " << duration
-               << ", playref_time: " << timer::Date(playref_time)
-               << ", begin_file_timestamp: " << begin_file_timestamp
-               << ", crt_duration: " << crt_duration;
+               << ", start_times_ms: " << playref_time
+               << "(" << timer::Date(playref_time) << ")"
+               << ", skip_times_ms_: " << begin_file_timestamp
+               << ", durations_ms_: " << crt_duration;
 
     if ( crt_duration <= 0 ) {
       break;
@@ -295,7 +307,6 @@ bool TimeRangeRequest::StartRequest(
 
     start_times_ms_.push_back(playref_time);
     skip_times_ms_.push_back(begin_file_timestamp);
-
     durations_ms_.push_back(crt_duration);
 
     play_time.SetTime(playref_time + crt_duration);
@@ -315,7 +326,7 @@ bool TimeRangeRequest::StartRequest(
   crt_file_ = -1;
 
   // start with seek
-  if ( req->info().seek_pos_ms_ >= 0 ) {
+  if ( req->info().seek_pos_ms_ > 0 ) {
     SeekInternal(req->info().seek_pos_ms_);
     return crt_file_ >= 0;
   }
@@ -326,13 +337,10 @@ bool TimeRangeRequest::StartRequest(
   return true;
 }
 
-bool TimeRangeRequest::IssueRequest(int64 seek_pos_ms) {
-  segment_start_ts_ms_ = start_times_ms_[crt_file_]-start_time_.GetTime();
-  segment_skip_time_ms_ = skip_times_ms_[crt_file_];
-  segment_duration_ms_ = durations_ms_[crt_file_];
-
-  LOG_ERROR << "ISSUE REQUEST "
-      << crt_file_ << " @" << seek_pos_ms;
+bool TimeRangeRequest::IssueRequest(int64 seek_pos_ms, int64 adjustment_ms) {
+  offset_ms_ =
+    start_times_ms_[crt_file_] - start_time_.GetTime() + adjustment_ms;
+  //LOG_ERROR << "### Change offset_: " << offset_ms_;
 
   crt_req_ = new streaming::Request();
   crt_req_->mutable_caps()->flavour_mask_ =
@@ -375,7 +383,12 @@ bool TimeRangeRequest::IssueRequest(int64 seek_pos_ms) {
 void TimeRangeRequest::PlayNext() {
   ClearRequest();
 
+  int64 adjustment_ms = 0;
+  if (crt_file_ >= 0) {
+    adjustment_ms = last_timestamp_ms_ - durations_ms_[crt_file_];
+  }
   crt_file_++;
+
   ILOG_DEBUG << "PlayNext: crt_file_: " << crt_file_;
   if ( crt_file_ >= files_.size() ) {
     ILOG_DEBUG << "PlayNext: crt_file_: " << crt_file_
@@ -383,7 +396,7 @@ void TimeRangeRequest::PlayNext() {
     SendEos();
     return;
   }
-  IssueRequest(0);
+  IssueRequest(0, adjustment_ms);
 }
 
 // NEEDS: separate call context from both upstream and downstream.
@@ -407,14 +420,9 @@ void TimeRangeRequest::SeekInternal(int64 seek_pos_ms) {
     }
   }
 
-  int64 file_seek_pos_ms = seek_pos_ms - start_times_ms_[l];
-  if (file_seek_pos_ms < 0) {
-    file_seek_pos_ms = 0;
-  }
-
   if ( l == crt_file_ && crt_req_ != NULL && crt_req_->controller() != NULL &&
       crt_req_->controller()->SupportsSeek() ) {
-    crt_req_->controller()->Seek(file_seek_pos_ms);
+    crt_req_->controller()->Seek(seek_pos_ms - start_times_ms_[l]);
   } else {
     if ( crt_req_ != NULL ) {
       mapper_->RemoveRequest(crt_req_, processing_callback_);
@@ -422,8 +430,7 @@ void TimeRangeRequest::SeekInternal(int64 seek_pos_ms) {
     }
 
     crt_file_ = l;
-    LOG_ERROR << "SeekInternal @" <<  file_seek_pos_ms;
-    IssueRequest(file_seek_pos_ms);
+    IssueRequest(seek_pos_ms - start_times_ms_[l], 0);
   }
 }
 
@@ -448,43 +455,47 @@ void TimeRangeRequest::ProcessTag(const Tag* tag, int64 timestamp_ms) {
     return;
   }
 
-  segment_current_ts_ms_ = timestamp_ms;
-  current_ts_ms_ = segment_start_ts_ms_ + segment_current_ts_ms_;
-
-  // check if we reached the end
-  if (crt_file_ == files_.size()-1) {
-    if ( segment_current_ts_ms_ > segment_skip_time_ms_ + segment_duration_ms_ ) {
+  // check if reached the end of the range
+  if (crt_file_ == (files_.size()-1)) {
+    if ( timestamp_ms >
+         (skip_times_ms_[crt_file_]+durations_ms_[crt_file_]) ) {
       play_next_alarm_.Set(NewPermanentCallback(this,
           &TimeRangeRequest::PlayNext), true, 0, false, true);
       return;
     }
   }
 
+  last_timestamp_ms_ = timestamp_ms;
+
   if ( tag->type() == streaming::Tag::TYPE_SOURCE_STARTED ) {
     if ( !start_tag_sent_ ) {
-      callback_->Run(scoped_ref<Tag>(new SourceStartedTag(0,
+      Send(scoped_ref<Tag>(new SourceStartedTag(0,
           kDefaultFlavourMask,
-          media_name_, media_name_)
-      ).get(), 0);
+          media_name_,
+          media_name_,
+          false,
+          0)).get(), 0);
       start_tag_sent_ = true;
     }
+    // eat source started from the files
     return;
   }
 
-
   if ( tag->type() == streaming::Tag::TYPE_FLV ) {
     const FlvTag* flv_tag = static_cast<const FlvTag*>(tag);
+
     if ( flv_tag->body().type() == streaming::FLV_FRAMETYPE_METADATA ) {
-      if ( ProcessMetadataTag(flv_tag, current_ts_ms_) ) {
+      if ( ProcessMetadataTag(flv_tag, timestamp_ms + offset_ms_) ) {
         return;
       }
     }
   }
-  callback_->Run(tag, current_ts_ms_);
+  //LOG_ERROR << "### SHIFT timestamp: " << timestamp_ms << " + " << offset_ms_;
+  Send(tag, timestamp_ms + offset_ms_);
 }
 
 bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag,
-                                          int64 timestamp_ms) {
+    int64 timestamp_ms) {
   CHECK_EQ(flv_tag->body().type(), streaming::FLV_FRAMETYPE_METADATA);
   const FlvTag::Metadata& metadata = flv_tag->metadata_body();
 
@@ -500,21 +511,11 @@ bool TimeRangeRequest::ProcessMetadataTag(const FlvTag* flv_tag,
     new_meta.mutable_values()->Erase("offset");
     new_meta.mutable_values()->Erase("filesize");
 
-    callback_->Run(new_meta_tag.get(), timestamp_ms);
+    Send(new_meta_tag.get(), timestamp_ms);
     metadata_sent_ = true;
     return true;
   }
-  if ( metadata.name().value() == streaming::kOnCuePoint ) {
-    scoped_ref<FlvTag> cue_point(new FlvTag(*flv_tag, -1, true));
-    if ( FlvCoder::UpdateTimeInCuePoint(
-        &cue_point->mutable_metadata_body(),
-        0,
-        current_ts_ms_,
-        false) ) {
-      callback_->Run(cue_point.get(), timestamp_ms);
-    }
-    return true;
-  }
+  // forward flv_tag
   return false;
 }
 //////////////////////////////////////////////////////////////////////

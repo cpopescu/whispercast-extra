@@ -178,7 +178,7 @@ class Whispercast_Programs extends Whispercast_Base {
    */
   public function getPath($id) {
     $iid = $this->_interface->getElementPrefix().'_'.$id;
-    return '/'.$iid.'_program';
+    return $iid.'_program';
   }
 
   /**

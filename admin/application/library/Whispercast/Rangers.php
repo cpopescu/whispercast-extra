@@ -64,7 +64,7 @@ class Whispercast_Rangers extends Whispercast_Base {
    */
   public function getPath($id) {
     $iid = $this->_interface->getElementPrefix().'_'.$id;
-    return '/'.$iid.'_ranger';
+    return $iid.'_ranger';
   }
 
   /**

@@ -65,7 +65,7 @@ class Whispercast_Switches extends Whispercast_Base {
    */
   public function getPath($id) {
     $iid = $this->_interface->getElementPrefix().'_'.$id;
-    return '/'.$iid.'_switch';
+    return $iid.'_switch';
   }
 
   /**

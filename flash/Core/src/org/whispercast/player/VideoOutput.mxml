@@ -141,14 +141,16 @@
 				restartDelay_ = restartDelay;
 			}
 			
-			private var bufferTime_:Number = 0;
+			private var bufferTime_:Number = 1;
 			[Bindable]
 			public function get bufferTime():Number{
 				return bufferTime_;
 			}
 			public function set bufferTime(bufferTime:Number):void
 			{
-				bufferTime_ = 0;//bufferTime;
+				bufferTime_ = bufferTime;
+				Logger.debug(this, 'Buffer time set to {0}', bufferTime);
+				
 				if (netStream_)
 					netStream_.bufferTime = bufferTime;
 			}
@@ -160,6 +162,8 @@
 			}
 			public function set smoothing(smoothing:Boolean):void{
 				smoothing_ = smoothing;
+				Logger.debug(this, 'Smoothing set to {0}', smoothing);
+				
 				if (video_ && video_ is Video)
 					video_.smoothing = smoothing_;
 			}
@@ -173,6 +177,8 @@
 			public function set deblocking(deblocking:int):void
 			{
 				deblocking_ = deblocking;
+				Logger.debug(this, 'Deblocking set to {0}', deblocking);
+				
 				if (video_ && video_ is Video)
 					video_.deblocking = deblocking_;
 			}
@@ -186,6 +192,8 @@
 			public function set muted(muted:Boolean):void
 			{
 				muted_ = muted;
+				Logger.debug(this, 'Muted set to {0}', muted);
+				
 				if (netStream_)
 				{
 					var transform:SoundTransform = netStream_.soundTransform;
@@ -203,6 +211,8 @@
 			public function set volume(volume:Number):void
 			{
 				volume_ = volume;
+				Logger.debug(this, 'Volume set to {0}', volume);
+				
 				if (netStream_ != null)
 				{
 					var transform:SoundTransform = netStream_.soundTransform;
@@ -249,7 +259,7 @@
 					isBuffering_ = isBuffering;
 					
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isBuffering"));
-					Logger.info(this, 'Buffering {0}', isBuffering);
+					Logger.debug(this, 'Buffering {0}', isBuffering);
 				}
 			}
 			
@@ -266,7 +276,7 @@
 					isPausing_ = isPausing;
 					
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isPausing"));
-					Logger.info(this, 'Pausing {0}', isPausing);
+					Logger.debug(this, 'Pausing {0}', isPausing);
 					
 					if (netStream_)
 						if (isPausing_)
@@ -304,7 +314,7 @@
 						setIsBuffering_(true);
 					
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_isSeeking"));
-					Logger.info(this, 'Seeking {0}', isSeeking);
+					Logger.debug(this, 'Seeking {0}', isSeeking);
 				}
 			}
 			
@@ -333,7 +343,6 @@
 						timeOrigin_ = metadata_.origin;
 					else
 						timeOrigin_ = netStream_ ? netStream_.time : 0;
-					trace("ORIGIN: " + timeOrigin_); 
 					setDuration_(metadata.duration ? metadata.duration : NaN);
 				}
 				else
@@ -343,7 +352,6 @@
 				}
 				
 				updateTime_(NaN);
-				setIsSeeking_(false);
 				
 				var _isPlaying:Boolean = isPlaying;
 				if (_isPlaying != isPlaying)
@@ -372,7 +380,7 @@
 					layout_();
 					
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_videoSize"));
-					Logger.info(this, 'Natural video size is now {0}x{1}', videoWidth, videoHeight);
+					Logger.debug(this, 'Natural video size is now {0}x{1}', videoWidth, videoHeight);
 				}
 			}
 			
@@ -419,7 +427,7 @@
 					}
 					
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_outputPosition"));
-					Logger.info(this, 'Video output repositioned to {0}/{1}-{2}x{3}', outputX_, outputY_, outputWidth_, outputHeight_);
+					Logger.debug(this, 'Video output repositioned to {0}/{1}-{2}x{3}', outputX_, outputY_, outputWidth_, outputHeight_);
 				}
 			}
 				
@@ -438,7 +446,7 @@
 				updateTime_(NaN);
 				
 				dispatchEvent(new FlexEvent("Whispercast_VideoOutput_duration"));
-				Logger.info(this, 'Duration set to {0}', duration);
+				Logger.debug(this, 'Duration set to {0}', duration);
 				
 				setSeekable_(!isNaN(duration_) && (metadata_ != null) && ((metadata_.unseekable == undefined) || !metadata_.unseekable));
 			}
@@ -499,7 +507,7 @@
 					seekable_ = seekable;
 				
 					dispatchEvent(new FlexEvent("Whispercast_VideoOutput_seekable"));
-					Logger.info(this, 'Seekable set to {0}', seekable);
+					Logger.debug(this, 'Seekable set to {0}', seekable);
 				
 					updateTime_(NaN);
 				}
@@ -599,7 +607,6 @@
 			
 			private function net_StatusHandler(event:NetStatusEvent):void
 			{
-				trace(event.info.code);
 				Logger.debug(this, 'Event: {0}', event);
 				switch (event.info.code)
 				{
@@ -625,14 +632,14 @@
 							urlLast_ = urlPlaying_;
 							dispatchEvent(new FlexEvent("Whispercast_VideoOutput_streamChanged"));
 						}
-						Logger.info(this, 'Playing {0}...', stream_);
+						Logger.debug(this, 'Playing {0}...', stream_);
 
 						if (netStream_)
 							netStream_.play(stream_, -2);
 						break;
 					case "NetConnection.Connect.Closed":
 					case "NetConnection.Connect.Failed":
-						Logger.info(this, 'Connection closed ({0})', event.info.code);
+						Logger.debug(this, 'Connection closed ({0})', event.info.code);
 						cleanup_();
 						
 						var this_:VideoOutput = this;
@@ -676,10 +683,10 @@
 						break;
 					case "NetStream.Seek.InvalidTime":
 						{
-						var seekPending:Number = seekPending_;
+						var seekPending:Number = seekPending_; 
 						setIsSeeking_(false);
 						
-						if (isNaN(seekPending_))
+						if (!isNaN(seekPending))
 							play(seekPending);
 						}
 						break;
@@ -827,7 +834,7 @@
 						
 						setIsBuffering_(true);
 						
-						Logger.info(this, 'Connecting to {0}...', host_);
+						Logger.debug(this, 'Connecting to {0}...', host_);
 						netConnection_.connect(host_);
 						
 						return;
@@ -864,7 +871,7 @@
 							onBWDone: this.net_BWDoneHandler
 						};
 						
-						Logger.info(this, 'Connecting to {0}...', host_);
+						Logger.debug(this, 'Connecting to {0}...', host_);
 						netConnection_.connect(host_);
 						
 						return true;

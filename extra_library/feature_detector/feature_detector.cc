@@ -215,9 +215,8 @@ void FeatureDetectorElement::ProcessTag(const Tag* tag, int64 timestamp_ms) {
 
     crt_callback_ = callback;
     crt_callback_->Run(scoped_ref<Tag>(new SourceStartedTag(
-        0,
-        kDefaultFlavourMask,
-        name(), name())).get(), timestamp_ms);
+        0, kDefaultFlavourMask, name(), name(), false, timestamp_ms)).get(),
+        timestamp_ms);
 
     if ( crt_callback_ != NULL ) {
       distributor_.add_callback(req, callback);

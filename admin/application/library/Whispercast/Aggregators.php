@@ -95,7 +95,7 @@ class Whispercast_Aggregators extends Whispercast_Base {
    */
   public function getPath($id) {
     $iid = $this->_interface->getElementPrefix().'_'.$id;
-    return '/'.$iid.'_aggregator';
+    return $iid.'_aggregator';
   }
 
   /**

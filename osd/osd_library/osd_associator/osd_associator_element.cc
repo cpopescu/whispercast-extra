@@ -401,9 +401,16 @@ void OsdAssociatorElement::DeleteCallbackData(FilteringCallbackData* data) {
 
 //////////////////////////////////////////////////////////////////////
 
+// TODO(cosmin): an error in the interface sends media path like this:
+//               "s3_2_ts//s3_2_files/a.flv".
+//               In a quick fix attempt media path is normalized.
+//               This fix must be removed once the interface behaves correctly.
 void OsdAssociatorElement::SetAssociatedOsds(
-    const AssociatedOsds& osds) {
-  const string& media(osds.media);
+    const AssociatedOsds& osds_with_double_slash) {
+  AssociatedOsds osds(osds_with_double_slash);
+  osds.media = strutil::NormalizePath(osds.media);
+
+  const string& media = osds.media;
   OsdMap::iterator it = associated_osds_.find(media);
   ClipOsds* new_osd = new ClipOsds(osds);
   ClipOsds* old_osd = NULL;

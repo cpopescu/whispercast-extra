@@ -30,7 +30,7 @@ class Model_Server extends App_Model_Record {
         $this->id.'_runner',
         array(
           'kind'=>'runner',
-          'host'=>'localhost',
+          'host'=>$this->host,
           'port'=>$this->runner_port,
           'user'=>$this->runner_user,
           'password'=>$this->runner_password,

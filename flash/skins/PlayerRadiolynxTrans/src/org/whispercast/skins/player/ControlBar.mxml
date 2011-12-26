@@ -29,10 +29,8 @@
 		@namespace whispercast_skins "org.whispercast.skins.player.*";
 		
 		* {
-			backgroundAlpha: 1;
-			
 			foreColorLow: #a62b54;
-			foreColorHigh: #e93c76;
+			foreColorHigh: #d1366a;
 			
 			backColorLow: #000000;
 			backColorHigh: #353535;
@@ -45,9 +43,6 @@
 			
 			textColorLow: #909090;
 			textColorHigh: #c0c0c0;
-			
-			foreColorLowLow: #741e3b;
-			foreColorHighHigh: #e93c76;
 		}
 	</fx:Style>
 	
@@ -80,18 +75,11 @@
 				time = Math.floor(1000*(time-s));
 				return h+":"+(m<10 ? "0":"")+m+":"+(s<10 ? "0":"")+s+"."+(time<10 ? "00":(time<100 ? "0" : ""))+time ;
 			}
-			protected function formatVolumeVolumeBar(volume:Number):String
-			{
-				return Math.round(100*volume)+'';
-			}
 			
 			protected function onCreationComplete(event:FlexEvent):void
 			{
-				hostComponent.setStyle('backgroundAlpha', scrubBar.getStyle('backgroundAlpha'));
-				hostComponent.setStyle('foreColorLowLow', scrubBar.getStyle('foreColorLowLow'));
 				hostComponent.setStyle('foreColorLow', scrubBar.getStyle('foreColorLow'));
 				hostComponent.setStyle('foreColorHigh', scrubBar.getStyle('foreColorHigh'));
-				hostComponent.setStyle('foreColorHighHigh', scrubBar.getStyle('foreColorHighHigh'));
 				hostComponent.setStyle('backColorLow', scrubBar.getStyle('backColorLow'));
 				hostComponent.setStyle('backColorHigh', scrubBar.getStyle('backColorHigh'));
 				hostComponent.setStyle('selectedColorLow', scrubBar.getStyle('selectedColorLow'));
@@ -100,7 +88,6 @@
 				hostComponent.setStyle('textColorHigh', scrubBar.getStyle('textColorHigh'));
 				
 				scrubBar.dataTipFormatFunction = formatTimeScrubBar;
-				volumeBar.dataTipFormatFunction = formatVolumeVolumeBar;
 			}
 		]]>
 	</fx:Script>
@@ -117,28 +104,19 @@
 	</s:transitions>
 	
 	<s:Group id="controlBar" width="100%">
-		<s:Rect id="background" left="0" top="0" right="0" bottom="0">
+		<s:Rect left="0" top="0" right="0" bottom="0">
 			<s:fill>
 				<s:LinearGradient rotation="90">
-					<s:GradientEntry color="{getStyle('backColorHigh')}" alpha="{getStyle('backgroundAlpha')}"/>
-					<s:GradientEntry color="{getStyle('backColorLow')}" alpha="{getStyle('backgroundAlpha')}"/>
+					<s:GradientEntry color="0x252525" alpha="0.7"/>
+					<s:GradientEntry color="0x000000" alpha="0.5"/>
 				</s:LinearGradient>
 			</s:fill>
 		</s:Rect>
 		<s:HGroup width="100%" verticalAlign="middle" paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5" gap="10">
 			<!-- Play/Stop  button -->
-			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="24" height="24" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
+			<s:ToggleButton id="playAndStop" enabled="{hostComponent.output.url != null}" label="{hostComponent.output.isPlaying ? 'Stop' : 'Play'}" width="32" height="32" skinClass="org.whispercast.skins.player.PlayButton" buttonMode="true" selected="{hostComponent.output.isPlaying &amp;&amp; !hostComponent.output.isPausing}"/>
 			<s:HGroup width="100%">
 				<s:Group id="progressBarGroup" width="100%" height="20" visible.noProgressGroup="false">
-					<!-- Progress bar border -->
-					<s:Rect width="100%" height="100%">
-						<s:stroke>
-							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
-								<s:GradientEntry color="{getStyle('backColorLow')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
-								<s:GradientEntry color="{getStyle('backColorHigh')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
-							</s:LinearGradientStroke>
-						</s:stroke>
-					</s:Rect>
 					<!-- Progress bar -->
 					<s:Group width="100%" height="100%">
 						<s:Group left="1" top="1" bottom="1" right="1">
@@ -147,16 +125,16 @@
 								<s:Rect left="0" top="0" right="0" bottom="8">
 									<s:fill>
 										<s:LinearGradient rotation="90">
-											<s:GradientEntry color="{getStyle('foreColorHigh')}" alpha="1"/>
-											<s:GradientEntry color="{getStyle('foreColorHighHigh')}" alpha="1"/>
+											<s:GradientEntry color="0xe93c76"/>
+											<s:GradientEntry color="0xa62b54"/>
 										</s:LinearGradient>
 									</s:fill>
 								</s:Rect>
 								<s:Rect left="0" top="8" right="0" bottom="0">
 									<s:fill>
 										<s:LinearGradient rotation="90">
-											<s:GradientEntry color="{getStyle('foreColorLow')}" alpha="1"/>
-											<s:GradientEntry color="{getStyle('foreColorLowLow')}" alpha="1"/>
+											<s:GradientEntry color="0x8e2548" alpha="1"/>
+											<s:GradientEntry color="0x7d213f" alpha="1"/>
 										</s:LinearGradient>
 									</s:fill>
 								</s:Rect>
@@ -164,6 +142,15 @@
 						</s:Group>
 						<whispercast:HSliderBar id="scrubBar" width="100%" height="100%" minimum="0" maximum="{hostComponent.output.duration}" snapInterval="0" liveDragging="false" slideDuration="0" visible="{hostComponent.output.seekable}" enabled="{hostComponent.output.isPlaying &amp;&amp; hostComponent.output.seekable}" skinClass="org.whispercast.skins.player.ScrubBar"/>
 					</s:Group>
+					<!-- Progress bar border -->
+					<s:Rect width="100%" height="100%" alpha="0.5">
+						<s:stroke>
+							<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
+								<s:GradientEntry color="{getStyle('backColorLow')}"/>
+								<s:GradientEntry color="{getStyle('backColorHigh')}"/>
+							</s:LinearGradientStroke>
+						</s:stroke>
+					</s:Rect>
 				</s:Group>
 				<!-- Controls -->
 				<s:HGroup>
@@ -175,11 +162,11 @@
 							<s:Label id="duration" text="-:--:--" lineBreak="explicit" width="43" textAlign="left" fontSize="11" color="{getStyle('textColorHigh')}"/>
 						</s:HGroup>
 						<!-- Time border -->
-						<s:Rect width="100%" height="100%" alpha="{0.5*getStyle('backgroundAlpha')}">
+						<s:Rect width="100%" height="100%" alpha="0.5">
 							<s:stroke>
 								<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
-									<s:GradientEntry color="{getStyle('backColorLow')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
-									<s:GradientEntry color="{getStyle('backColorHigh')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
+									<s:GradientEntry color="{getStyle('backColorLow')}"/>
+									<s:GradientEntry color="{getStyle('backColorHigh')}"/>
 								</s:LinearGradientStroke>
 							</s:stroke>
 						</s:Rect>
@@ -196,11 +183,11 @@
 				</s:HGroup>
 			</s:HGroup>
 		</s:HGroup>
-		<s:Rect id="border" width="100%" height="100%">
+		<s:Rect width="100%" height="100%">
 			<s:stroke>
 				<s:LinearGradientStroke rotation="90" weight="1" pixelHinting="true">
-					<s:GradientEntry color="{getStyle('backColorLow')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
-					<s:GradientEntry color="{getStyle('backColorHight')}" alpha="{0.5*getStyle('backgroundAlpha')}"/>
+					<s:GradientEntry color="0x151515"/>
+					<s:GradientEntry color="0x252525"/>
 				</s:LinearGradientStroke>
 			</s:stroke>
 		</s:Rect>

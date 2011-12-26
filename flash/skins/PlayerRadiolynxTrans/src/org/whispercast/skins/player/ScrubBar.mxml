@@ -17,5 +17,5 @@
 	</s:states>
 	
 	<s:Button id="track" width="100%" top="2" bottom="2" tabEnabled="false" buttonMode="true" buttonMode.disabled="false" skinClass="org.whispercast.skins.player.ScrubBarTrack"/>
-	<s:Button id="thumb" width="5" top="-2" bottom="-2" tabEnabled="false" buttonMode="true" skinClass="org.whispercast.skins.player.ScrubBarThumb" visible.normal="true" visible.disabled="false"/>
+	<s:Button id="thumb" width="5" height="100%" tabEnabled="false" buttonMode="true" skinClass="org.whispercast.skins.player.ScrubBarThumb" visible.normal="true" visible.disabled="false"/>
 </s:Skin>
