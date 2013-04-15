@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# install sendmail MSP/MTA and mail utilities goodness
+apt-get install sendmail mailutils sasl2-bin
+ 
+# setup local self-signed SSL certificate
+mkdir /etc/mail/certs
+chmod 700 /etc/mail/certs
+cd /etc/mail/certs
+openssl dsaparam 1024 -out dsa1024 -out dsa1024.pem
+openssl req -x509 -nodes -days 3650 -newkey dsa:dsa1024.pem -out /etc/mail/certs/mycert.pem -keyout /etc/mail/certs/mykey.pem
+openssl req -x509 -new -days 3650 -key /etc/mail/certs/mykey.pem -out /etc/mail/certs/mycert.pem
+ln -s /etc/mail/certs/mycert.pem /etc/mail/certs/CAcert.pem
+chmod 600 /etc/mail/certs/*
+cd ..
+ 
+# configure smtp authentication information
+#vi /etc/mail/authinfo
+echo AuthInfo:smtp.gmail.com \"U:root\" \"I:@@@user@@@@gmail.com\" \"P:@@@password@@@\" >> /etc/mail/authinfo 
+echo AuthInfo: \"U:root\" \"I:@@@user@@@@gmail.com\" \"P:@@@password@@@\" >> /etc/mail/authinfo
+
+makemap hash -o /etc/mail/authinfo < /etc/mail/authinfo
+
+# add the configurations at the bottom
+echo dnl # >> /etc/mail/sendmail.mc
+echo dnl # SSL Settings >> /etc/mail/sendmail.mc
+echo define\(\`CERT_DIR\', \`MAIL_SETTINGS_DIR\`\'certs\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confCACERT_PATH\', \`CERT_DIR\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confCACERT\', \`CERT_DIR/CAcert.pem\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confSERVER_CERT\', \`CERT_DIR/mycert.pem\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confSERVER_KEY\', \`CERT_DIR/mykey.pem\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confCLIENT_CERT\', \`CERT_DIR/mycert.pem\'\) >> /etc/mail/sendmail.mc
+echo define\(\`confCLIENT_KEY\', \`CERT_DIR/mykey.pem\'\) >> /etc/mail/sendmail.mc
+echo dnl # >> /etc/mail/sendmail.mc
+echo dnl # GMAIL FORWARDING >> /etc/mail/sendmail.mc
+echo define\(\`SMART_HOST\',\`smtp.gmail.com\'\)dnl >> /etc/mail/sendmail.mc
+echo define\(\`RELAY_MAILER_ARGS\', \`TCP \$h 587\'\)dnl >> /etc/mail/sendmail.mc
+echo define\(\`ESMTP_MAILER_ARGS\', \`TCP \$h 587\'\)dnl >> /etc/mail/sendmail.mc
+echo define\(\`confAUTH_OPTIONS\', \`A p\'\)dnl >> /etc/mail/sendmail.mc
+echo TRUST_AUTH_MECH\(\`EXTERNAL DIGEST-MD5 CRAM-MD5 LOGIN PLAIN\'\)dnl >> /etc/mail/sendmail.mc
+echo define\(\`confAUTH_MECHANISMS\', \`EXTERNAL GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN PLAIN\'\)dnl >> /etc/mail/sendmail.mc
+echo FEATURE\(\`authinfo\',\`hash -o /etc/mail/authinfo.db\'\)dnl >> /etc/mail/sendmail.mc
+echo include\(\`/etc/mail/sasl/sasl.m4\'\)dnl
+ 
+# rebuild sendmail config and fire it up!
+make -C /etc/mail
+service sendmail restart

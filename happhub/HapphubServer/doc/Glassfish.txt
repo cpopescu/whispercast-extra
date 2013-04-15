@@ -1,0 +1,153 @@
+############## Glassfish installation from scratch
+
+# Install JDK 1.7, if it's the case
+mkdir /tmp/hhj
+cd /tmp/hhj
+wget -c --no-cookies --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F" "http://download.oracle.com/otn-pub/java/jdk/7u10-b18/jdk-7u10-linux-i586.tar.gz"
+tar -xvf ./jdk-7u10-linux-i586.tar.gz
+sudo mkdir -p /usr/lib/jvm/jdk1.7.0/
+sudo mv jdk1.7.0_10/* /usr/lib/jvm/jdk1.7.0/
+sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.7.0/bin/java" 1
+sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.7.0/bin/javac" 1
+sudo update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/lib/jvm/jdk1.7.0/bin/javaws" 1
+cd ~/
+rm -rf /tmp/hhj
+
+
+# Create the glassfish user
+sudo useradd -m -s /bin/bash glassfish
+sudo passwd glassfish
+
+sudo echo "JAVA_HOME=/usr/lib/jvm/jdk1.7.0/" >> /home/glassfish/.profile
+
+# Log in as glassfish
+sudo su glassfish
+cd ~/
+
+# Install glassfish
+mkdir /tmp/hhgf
+cd /tmp/hhgf
+wget "http://download.java.net/glassfish/3.1.2.2/release/glassfish-3.1.2.2-unix.sh"
+chmod +x ./glassfish-3.1.2.2-unix.sh
+./glassfish-3.1.2.2-unix.sh -s
+cd ~/
+rm -rf /tmp/hhgf
+echo "PATH=\$PATH:\$HOME/glassfish3/bin" >> ~/.profile
+
+# Change the master password, default is "changeit"
+asadmin change-master-password
+
+# Delete the default domain "domain1"
+asadmin delete-domain domain1
+
+# Create the Happhub domain
+asadmin create-domain --keytooloptions cname="cn=Happhub" Happhub
+
+# Change the admin password, default is empty
+asadmin change-admin-password
+
+# Enable secure administration (required for remote administration)
+asadmin -I false -s start-domain
+asadmin enable-secure-admin
+asadmin stop-domain
+
+# Add the MySQL driver
+mkdir /tmp/hhmsq
+cd /tmp/hhmsq
+wget http://cdn.mysql.com/Downloads/Connector-J/mysql-connector-java-5.1.22.tar.gz
+tar -xvf mysql-connector-java-5.1.22.tar.gz
+mv ./mysql-connector-java-5.1.22/mysql-connector-java-5.1.22-bin.jar ~/glassfish3/glassfish/domains/Happhub/lib/ext/
+cd ~/
+rm -rf /tmp/hhmsq
+
+# Update EclipseLink  (do this ONLY if distributing EclipseLink fails)
+mkdir /tmp/hhel
+cd /tmp/hhel
+wget "http://download.eclipse.org/rt/eclipselink/releases/2.4.1/eclipselink-plugins-2.4.1.v20121003-ad44345.zip" -O eclipselink.zip
+unzip eclipselink
+
+rm ~/glassfish3/glassfish/modules/org.eclipse.persistence.*
+
+mv org.eclipse.persistence.antlr_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.asm_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.core_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.dbws.builder_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.dbws_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa.equinox.weaving_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa.equinox_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa.jpql_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa.modelgen_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa.osgi_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpars_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.jpa_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.moxy_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.nosql_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.oracle.nosql_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.oracleddlparser_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.oracle_*.jar ~/glassfish3/glassfish/modules/
+mv org.eclipse.persistence.sdo_*.jar ~/glassfish3/glassfish/modules/
+
+rm -rf ~/glassfish3/glassfish/domains/Happhub/osgi-cache/felix/*
+
+cd ~/
+rm -rf /tmp/hhel
+
+############## Glassfish commands
+
+asadmin -I false -s start-domain
+asadmin stop-domain
+
+############## Setting up sendmail
+
+# Execute the Sendmail.txt script:
+sed s/@@@user@@@/<Gmail user>/ < Sendmail.txt | sed s/@@@password@@@/<Gmail password>/ > /tmp/hhsm
+chmod +x /tmp/hhsm
+sudo /tmp/hhsm
+rm /tmp/hhsm
+
+# 1. Open the admin interface at https://<host>:4848
+# 2. Go to Resources/JavaMail Sessions
+# 3. Press "New"
+# 4. Enter:
+#      JNDI Name: mail/Happhub
+#      Mail Host: localhost
+#      Default User: <E-mail Address>
+#      Default Sender: <E-mail Address>
+#    ..press "OK"
+
+############## Setting up Happhub
+
+# MySQL
+
+# Execute the Happhub.sql script:
+sed s/@@@password@@@/<Happhub MySQL password>/ < Happhub.sql > /tmp/hhsql
+mysql --user=root --password=<root MySQL password> < /tmp/hhsql
+rm /tmp/hhsql
+
+# 1. Open the admin interface at https://<host>:4848
+# 2. Go to Resources/JDBC/JDBC Connection Pools
+# 3. Press "New"
+# 4. Enter:
+#      Pool Name: Happhub
+#      Resource Type: javax.sql.Driver
+#      Database Driver Vendor: MySQL
+#    ..press "Next"
+# 5. Enter:
+#      serverName: localhost  
+#      databaseName: happhub
+#      user: happhub
+#      password: <DB password>
+#    ..press "Finish"
+#
+# 6. Check if ok using "Ping" in the Resources/JDBC/JDBC Connection Pools/Happhub properties.
+# 7. Go to Resources/JDBC/JDBC Resources
+# 8. Enter:
+#      JNDI Name: jdbc/Happhub
+#      Pool Name: Happhub
+#    ..press "OK"
+
+# Authentication
+
+
+
+

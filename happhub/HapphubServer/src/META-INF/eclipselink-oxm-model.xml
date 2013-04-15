@@ -1,0 +1,62 @@
+<xml-bindings
+  xmlns="http://www.eclipse.org/eclipselink/xsds/persistence/oxm"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.eclipse.org/eclipselink/xsds/persistence/oxm http://www.eclipse.org/eclipselink/xsds/eclipselink_oxm_2_3.xsd"
+  version="2.3"
+  package-name="com.happhub.Model">
+    <xml-schema namespace="Model" element-form-default="QUALIFIED"/>
+    <java-types>
+        <java-type name="Root">
+            <xml-root-element/>
+            <java-attributes>
+            </java-attributes>
+        </java-type>
+        <java-type name="Account">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-element java-attribute="id" xml-id="true" />
+                <xml-transient java-attribute="sessions"/>
+            </java-attributes>
+        </java-type>
+        <java-type name="Camera">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-element java-attribute="id" xml-id="true" />
+                <xml-transient java-attribute="session"/>
+            </java-attributes>
+        </java-type>
+        <java-type name="Role">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-transient java-attribute="id"/>
+                <xml-transient java-attribute="account"/>
+                <xml-transient java-attribute="user"/>
+            </java-attributes>
+        </java-type>
+        <java-type name="Signup">
+            <xml-root-element/>
+            <java-attributes>
+            </java-attributes>
+        </java-type>
+        <java-type name="Server">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-element java-attribute="id" xml-id="true" />
+                <xml-transient java-attribute="sessions"/>
+            </java-attributes>
+        </java-type>
+        <java-type name="Session">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-transient java-attribute="account"/>
+            </java-attributes>
+        </java-type>
+        <java-type name="User">
+            <xml-root-element/>
+            <java-attributes>
+                <xml-element java-attribute="id" xml-id="true" />
+                <xml-transient java-attribute="password"/>
+            </java-attributes>
+       </java-type>
+    </java-types>
+</xml-bindings>

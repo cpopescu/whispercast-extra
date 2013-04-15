@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="Capture">
+
+        <ListPreference
+            android:title="Camera"
+            android:summary="The camera to be used by the publisher"
+            android:key="publisher_camera"
+            android:defaultValue="0" />
+        
+        <ListPreference
+            android:title="Capture Mode"
+            android:summary="How is the video captured"
+            android:key="publisher_capture_mode"
+            android:entries="@array/publisher_capture_mode_values"
+            android:entryValues="@array/publisher_capture_mode_keys"
+            android:defaultValue="HARDWARE" />
+        
+        <CheckBoxPreference
+            android:title="Enforce audio/video synchronization"
+            android:summary="Enforces audio/video synchronization at the expense of the framerate"
+            android:key="publisher_enforce_audio_video_sync"
+            android:defaultValue="false" />
+        
+      </PreferenceCategory>
+
+</PreferenceScreen>

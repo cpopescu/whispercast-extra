@@ -1,0 +1,46 @@
+<resources>
+
+    <!-- Strings related to the application -->
+    <string name="app_name">Happhub</string>
+    
+    <!-- Strings related to menus -->
+    <string name="menu_search">Search</string>
+    <string name="menu_refresh">Refresh</string>
+    <string name="menu_record">Record</string>
+    <string name="menu_stop">Stop</string>
+    <string name="menu_preferences">Preferences</string>
+    <string name="menu_focus_mode_fixed">Fixed</string>
+    <string name="menu_focus_mode_continuous">Continuous</string>
+    <string name="menu_focus_mode_macro">Macro</string>
+    
+    <!-- Descriptions -->
+    <string name="description_record_button">Starts or stops recording.</string>
+    <string name="description_flash_button">Enables or disables the flash.</string>
+    <string name="description_focus_mode_button">Allows selection of the focus mode.</string>
+    <string name="description_publishing_marker">Blinks while recording.</string>
+    
+    <!-- Generic strings -->
+    <string name="no_items">No items</string>
+    <string name="focus_mode">Focus Mode</string>
+    <string name="connection_error">Connecting to the <b>Happhub</b> service failed.</string>
+    <string name="publisher_running">Publishing is in progress&#8230;</string>
+    <string name="publisher_error">Publishing error %1$d.</string>
+    <string name="publisher_go_back">Press BACK again to stop publishing and return to the previous screen.</string>
+    <string name="publisher_settings_not_applied">The new settings will be applied when publishing is restarted.</string>
+    
+    <!-- Strings related to PeferencesActivity -->
+    <string name="camera_back">Back facing</string>
+    <string name="camera_front">Front facing</string>
+    
+    <!-- Strings related to LoginFragment -->
+    <string name="login_text_register"><a href="http://www.happhub.com/register">Register with <b>Happhub</b></a></string>
+    <string name="login_prompt_email">Email</string>
+    <string name="login_prompt_password">Password</string>
+    <string name="login_action_sign_in"><b>Sign In</b></string>
+    <string name="login_progress_signing_in">Signing in&#8230;</string>
+    <string name="login_error_email_required">Please enter your email address.</string>
+    <string name="login_error_password_required">Please enter your <b>Happhub</b> password.</string>
+    <string name="login_error_invalid_email">The email address is invalid.</string>
+    <string name="login_error_failed">Cannot sign in to <b>Happhub</b>, please check if the the email and password you entered are corrrect.</string>
+    
+</resources>

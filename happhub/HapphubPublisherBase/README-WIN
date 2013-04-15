@@ -1,0 +1,10 @@
+Cross compilation of the publisher library w/ ffmpeg and other dependencies on Linux and targeting Windows:
+
+sudo apt-get install mingw64
+sudo apt-get install gcc-mingw-w64
+sudo apt-get install g++-mingw-w64
+sudo apt-get install gdb-mingw-w64 
+sudo apt-get install yasm
+
+Compile options:
+--prefix="/home/miancule/ffmpeg-mingw/install" --extra-cflags="-I/home/miancule/ffmpeg-mingw/install/include -DFF_API_AV_GETTIME=0" --extra-ldflags="-L/home/miancule/ffmpeg-mingw/install/lib" --arch=x86 --target-os=mingw32 --enable-cross-compile --cross-prefix=i686-w64-mingw32- --enable-memalign-hack --disable-yasm --enable-shared --disable-static --disable-programs --disable-avdevice --disable-avfilter --disable-everything --enable-decoder=aac --enable-decoder=flv --enable-decoder=h264 --enable-encoder=aac --enable-encoder=flv --enable-muxer=mpegts --enable-muxer=flv --enable-demuxer=mpegts --enable-demuxer=mpegtsraw --enable-demuxer=flv --enable-protocol=file --enable-protocol=http --extra-version=android --disable-stripping --disable-optimizations

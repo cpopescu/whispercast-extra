@@ -1,0 +1,94 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/publish_activity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    style="@style/Activity">
+
+    <ImageView
+        android:id="@+id/publishing_marker"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="8dp"
+        android:layout_marginRight="12dp"
+        android:layout_marginTop="12dp"
+        android:contentDescription="@string/description_publishing_marker"
+        android:scaleType="fitXY"
+        android:src="@drawable/publisher_publishing_marker"
+        android:visibility="gone" />
+
+    <RelativeLayout
+        android:id="@+id/publishing_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="@color/translucent_dark" >
+
+        <TextView
+            android:id="@+id/publishing_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginTop="12dp"
+            android:gravity="top"
+            android:shadowColor="@android:color/black"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="4"
+            android:textColor="@android:color/white" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_below="@id/publishing_info"
+            android:background="@drawable/border" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/publishing_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@color/translucent_dark"
+        android:paddingBottom="8dp" >
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@drawable/border" />
+
+        <ImageButton
+            android:id="@+id/record_button"
+            style="@style/PublisherButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/description_record_button"
+            android:src="@drawable/ic_publisher_publish" />
+
+        <ImageButton
+            android:id="@+id/flash_button"
+            style="@style/PublisherButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/description_flash_button"
+            android:src="@drawable/ic_publisher_flash" />
+
+        <ImageButton
+            android:id="@+id/focus_mode_button"
+            style="@style/PublisherButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_marginTop="12dp"
+            android:layout_toRightOf="@id/flash_button"
+            android:contentDescription="@string/description_focus_mode_button"
+            android:src="@drawable/ic_publisher_focus_mode" />
+    </RelativeLayout>
+
+</RelativeLayout>

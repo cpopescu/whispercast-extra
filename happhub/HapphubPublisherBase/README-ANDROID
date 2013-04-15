@@ -1,0 +1,10 @@
+Just include the Android.mk here from the Android.mk of the native code your compiling.
+
+The generated modules, to be consumed by the library's client:
+
+LOCAL_STATIC_LIBRARIES := libpublisherBase
+LOCAL_SHARED_LIBRARIES := libavutil libavcodec libavformat libswresample libswscale
+
+.. and don't forget to include the Android logging library:
+
+LOCAL_LDLIBS += -llog 

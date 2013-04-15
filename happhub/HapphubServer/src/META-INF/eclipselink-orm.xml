@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<entity-mappings xmlns="http://www.eclipse.org/eclipselink/xsds/persistence/orm"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.eclipse.org/eclipselink/xsds/persistence/orm http://www.eclipse.org/eclipselink/xsds/eclipselink_orm_2_4.xsd"
+    version="2.4">
+    <package>com.happhub.Model</package>
+    <entity name="Account" class="com.happhub.Model.Account">
+        <table name="accounts"/>
+        <attributes>
+            <id name="id">
+                <generated-value strategy="IDENTITY"/>
+            </id>
+            <one-to-many name="roles" mapped-by="account" orphan-removal="true">
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </one-to-many>
+            <one-to-many name="sessions" mapped-by="account" orphan-removal="true">
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </one-to-many>
+        </attributes>
+    </entity>
+    <entity name="Camera" class="com.happhub.Model.Camera">
+        <table name="cameras"/>
+        <attributes>
+            <id name="id">
+                <generated-value strategy="IDENTITY"/>
+            </id>
+            <many-to-one name="session" fetch="LAZY">
+              <join-column name="sessions_id"/>
+            </many-to-one>
+        </attributes>
+    </entity>
+    <entity name="Signup" class="com.happhub.Model.Signup">
+        <table name="signups"/>
+        <attributes>
+            <id name="hash"/>
+            <basic name="accountsId">
+                <column nullable="false" name="accounts_id"/>
+            </basic>
+        </attributes>
+    </entity>
+    <entity name="Role" class="com.happhub.Model.Role">
+        <table name="roles"/>
+        <attributes>
+            <embedded-id name="id">
+                <attribute-override name="accountsId">
+                    <column name="accounts_id"/>
+                </attribute-override>
+                <attribute-override name="usersId">
+                    <column name="users_id"/>
+                </attribute-override>
+            </embedded-id>
+            <many-to-one name="account" fetch="LAZY">
+                <join-column name="accounts_id" insertable="false" updatable="false" nullable="false"/>
+            </many-to-one>
+            <many-to-one name="user" fetch="LAZY">
+                <join-column name="users_id" insertable="false" updatable="false" nullable="false"/>
+            </many-to-one>
+        </attributes>
+    </entity>
+    <entity name="Server" class="com.happhub.Model.Server">
+        <table name="servers"/>
+        <attributes>
+            <id name="id">
+                <generated-value strategy="IDENTITY"/>
+            </id>
+            <one-to-many name="sessions" mapped-by="server" orphan-removal="true">
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </one-to-many>
+        </attributes>
+    </entity>
+    <entity name="Session" class="com.happhub.Model.Session">
+        <table name="sessions"/>
+        <attributes>
+            <id name="id">
+                <generated-value strategy="IDENTITY"/>
+            </id>
+            <many-to-one name="account" fetch="LAZY">
+                <join-column name="accounts_id"/>
+            </many-to-one>
+            <many-to-one name="server" fetch="LAZY">
+                <join-column name="servers_id"/>
+            </many-to-one>
+            <one-to-many name="cameras" mapped-by="session" orphan-removal="true">
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </one-to-many>
+        </attributes>
+    </entity>
+    <entity name="User" class="com.happhub.Model.User">
+        <table name="users"/>
+        <attributes>
+            <id name="id">
+                <generated-value strategy="IDENTITY"/>
+            </id>
+            <one-to-many name="roles" mapped-by="user" orphan-removal="true">
+                <cascade>
+                    <cascade-all/>
+                </cascade>
+            </one-to-many>
+        </attributes>
+    </entity>
+    <embeddable class="com.happhub.Model.RolePK">
+        <attributes>
+            <basic name="accountsId"/>
+            <basic name="usersId"/>
+        </attributes>
+    </embeddable>
+</entity-mappings>

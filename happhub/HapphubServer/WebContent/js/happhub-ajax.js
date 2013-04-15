@@ -1,0 +1,2 @@
+!(function (happhub) {
+})(window.happhub);

@@ -1,0 +1,16 @@
+<xml-bindings
+  xmlns="http://www.eclipse.org/eclipselink/xsds/persistence/oxm"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.eclipse.org/eclipselink/xsds/persistence/oxm http://www.eclipse.org/eclipselink/xsds/eclipselink_oxm_2_3.xsd"
+  version="2.3"
+  package-name="com.happhub.Api.Accounts">
+    <xml-schema namespace="Api.Accounts" element-form-default="QUALIFIED"/>
+    <java-types>
+        <java-type name="CreateParams">
+            <xml-root-element/>
+        </java-type>
+        <java-type name="UpdateParams">
+            <xml-root-element/>
+        </java-type>
+    </java-types>
+</xml-bindings>

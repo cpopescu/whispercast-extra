@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+  <group android:checkableBehavior="single">
+    <item android:id="@+id/menu_focus_mode_fixed"
+          android:title="@string/menu_focus_mode_fixed"
+          android:showAsAction="never"/>
+    <item android:id="@+id/menu_focus_mode_continuous"
+          android:title="@string/menu_focus_mode_continuous"
+          android:showAsAction="never"/>
+    <item android:id="@+id/menu_focus_mode_macro"
+          android:title="@string/menu_focus_mode_macro"
+          android:showAsAction="never"/>
+  </group>
+</menu>

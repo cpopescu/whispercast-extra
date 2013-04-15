@@ -1,0 +1,56 @@
+#!/bin/bash
+BASE_DIR=`readlink -f "$0"`
+BASE_DIR=`dirname "$BASE_DIR"`
+
+PLATFORM=win
+ARCH=x86
+
+function fail() {
+  echo "$PLATFORM-$ARCH: $1"
+  exit 1
+}
+
+INSTALL_DIR="$BASE_DIR/install/$PLATFORM/$ARCH"
+mkdir -p "$INSTALL_DIR" || fail "Cannot create the install dir"
+
+X264_VERSION=0.129.x
+X264_BUILD_DIR="$BASE_DIR/build/$PLATFORM/$ARCH/x264"
+
+mkdir -p "$X264_BUILD_DIR" || fail "Cannot create the x264 build dir"
+cd "$X264_BUILD_DIR" || fail "Cannot move into the x264 build dir"
+
+X264_CONFIGURATION="--prefix=\"$INSTALL_DIR\" --host=i686-mingw32 --cross-prefix=i686-w64-mingw32- --disable-cli --enable-shared"
+
+FFMPEG_CONFIGURATION_OLD=`cat "$X264_BUILD_DIR/.configuration" 2>&1 > /dev/null`
+if [ "$X264_CONFIGURATION" != "$X264_CONFIGURATION_OLD" ];
+then
+echo "$PLATFORM-$ARCH: Configuring x264 with:"
+echo $X264_CONFIGURATION
+eval "$BASE_DIR/libs/x264/x264-$X264_VERSION/configure" "$X264_CONFIGURATION" || fail "Cannot configure x264"
+echo "$X264_CONFIGURATION" > "$X264_BUILD_DIR/.configuration"
+fi
+
+echo "$PLATFORM-$ARCH: Building x264..."
+make install
+
+# FFMPEG
+
+FFMPEG_VERSION=1.1.1
+FFMPEG_BUILD_DIR="$BASE_DIR/build/$PLATFORM/$ARCH/ffmpeg"
+
+mkdir -p "$FFMPEG_BUILD_DIR" || fail "Cannot create the ffmpeg build dir"
+cd "$FFMPEG_BUILD_DIR" || fail "Cannot move into the ffmpeg build dir"
+
+FFMPEG_CONFIGURATION="--prefix=\"$INSTALL_DIR\" --extra-cflags=\"-I$INSTALL_DIR/include -DFF_API_AV_GETTIME=0\" --extra-ldflags=\"-L$INSTALL_DIR/lib\" --arch=x86 --target-os=mingw32 --enable-cross-compile --cross-prefix=i686-w64-mingw32- --enable-memalign-hack --disable-yasm --enable-shared --disable-static --disable-programs --disable-avdevice --disable-avfilter --disable-everything --enable-decoder=aac --enable-decoder=flv --enable-decoder=h264 --enable-encoder=aac --enable-encoder=flv --enable-muxer=mpegts --enable-muxer=flv --enable-demuxer=mpegts --enable-demuxer=mpegtsraw --enable-demuxer=flv --enable-protocol=file --enable-protocol=http --extra-version=$PLATFORM-$ARCH --enable-gpl --enable-libx264 --enable-encoder=libx264"
+
+FFMPEG_CONFIGURATION_OLD=`cat "$FFMPEG_BUILD_DIR/.configuration" 2>&1 > /dev/null`
+if [ "$FFMPEG_CONFIGURATION" != "$FFMPEG_CONFIGURATION_OLD" ];
+then
+echo "$PLATFORM-$ARCH: Configuring ffmpeg with:"
+echo $FFMPEG_CONFIGURATION
+eval "$BASE_DIR/libs/ffmpeg/ffmpeg-$FFMPEG_VERSION/configure" "$FFMPEG_CONFIGURATION" || fail "Cannot configure ffmpeg"
+echo "$FFMPEG_CONFIGURATION" > "$FFMPEG_BUILD_DIR/.configuration"
+fi
+
+echo "$PLATFORM-$ARCH: Building ffmpeg..."
+make install

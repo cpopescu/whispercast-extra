@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+    
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sessions_fragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+    
+    <GridView
+        android:id="@+id/sessions_fragment_sessions"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layoutAnimation="@anim/group_layout_animation"
+        android:numColumns="auto_fit"
+        android:columnWidth="224dp"
+        android:overScrollMode="always"
+        android:stretchMode="columnWidth" />
+
+    <TextView
+        android:id="@+id/sessions_fragment_sessions_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/no_items"
+        android:visibility="gone" />
+
+    <include layout="@layout/progress" />
+</FrameLayout>

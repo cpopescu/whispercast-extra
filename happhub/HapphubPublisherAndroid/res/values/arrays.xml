@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <string-array name="publisher_capture_mode_keys">
+        <item>SOFTWARE</item>
+        <item>HARDWARE</item>
+        </string-array>
+    <string-array name="publisher_capture_mode_values">
+        <item>Software</item>
+        <item>Hardware</item>
+    </string-array>
+    
+    <string-array name="publisher_focus_mode_keys">
+        <item>FIXED</item>
+        <item>CONTINUOUS</item>
+        <item>MACRO</item>
+    </string-array>
+    <string-array name="publisher_focus_mode_values">
+        <item>Infinity</item>
+        <item>Auto-focus</item>
+        <item>Macro</item>
+    </string-array>
+    
+</resources>
