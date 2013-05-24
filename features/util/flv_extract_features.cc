@@ -62,7 +62,9 @@ int main(int argc, char* argv[]) {
   CHECK(!FLAGS_flv_file.empty()) << " Please specify a flv file !";
 
   /* libavcodec */
+#if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(53,34,0)
   avcodec_init();
+#endif
   avcodec_register_all();
 
   feature::FlvFeatureExtractor extractor(

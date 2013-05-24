@@ -97,7 +97,7 @@ class Whispercast_Playlists extends Whispercast_Base {
 
     $playlist = array();
     foreach ($cs->result_->playlist_ as $p) {
-      $playlist[] = '/'.$p;
+      $playlist[] = $p;
     }
 
     $config = array (

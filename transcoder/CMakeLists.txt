@@ -56,30 +56,15 @@ ADD_LIBRARY(media_manager_common STATIC
   directory_active_monitor.cc
   constants.cc
   common.cc
-  multi_process.cc
 )
 
 TARGET_LINK_LIBRARIES(media_manager_common
-  ${whisperlib_LIBRARY})
+  whisper_lib)
 
 
 ADD_SUBDIRECTORY (test)
 ADD_SUBDIRECTORY (master)
 ADD_SUBDIRECTORY (slave)
-if (WITH_GSTREAMER)
-  ADD_SUBDIRECTORY (transcoder)
-endif (WITH_GSTREAMER)
 
-FILE(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX_SCRIPTS}/php/rpc/auto/private/transcoder)
-install(FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/auto/server_invokers.php
-  ${CMAKE_CURRENT_SOURCE_DIR}/auto/types.php
-  DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS}/php/rpc/auto/private/transcoder)
-
-if (WITH_ADMIN)
-  FILE(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX_ADMIN}/rpc/auto/private/transcoder)
-  install(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/auto/server_invokers.php
-    ${CMAKE_CURRENT_SOURCE_DIR}/auto/types.php
-    DESTINATION ${CMAKE_INSTALL_PREFIX_ADMIN}/rpc/auto/private/transcoder)
-endif (WITH_ADMIN)
+INSTALL (PROGRAMS tools/transcoder.py
+         DESTINATION bin)

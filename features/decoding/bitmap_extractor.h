@@ -13,6 +13,10 @@
 #define UINT64_C(value) value ## ULL
 #endif
 
+#ifndef INT64_C
+#define INT64_C(value) value ## LL
+#endif
+
 extern "C" {
 #pragma GCC diagnostic ignored "-Wall"
 #include __AV_CODEC_INCLUDE_FILE
@@ -21,7 +25,10 @@ extern "C" {
 //#include "/usr/include/libswscale/swscale.h"
 #pragma GCC diagnostic warning "-Wall"
 }
+
 #include <whisperstreamlib/flv/flv_tag.h>
+#include <whisperstreamlib/f4v/f4v_tag.h>
+#include <whisperstreamlib/f4v/atoms/movie/moov_atom.h>
 
 #ifndef __FEATURE_BITMAP_EXTRACTOR_H__
 #define __FEATURE_BITMAP_EXTRACTOR_H__
@@ -42,8 +49,7 @@ class BitmapExtractor {
     int64 timestamp_;
     bool is_transposed_;
     PictureStruct()
-        : RefCounted(NULL),
-          frame_allocated_(false),
+        : frame_allocated_(false),
           width_(-1),
           height_(-1),
           pix_format_(-1),
@@ -51,8 +57,7 @@ class BitmapExtractor {
           is_transposed_(false) {
     }
     PictureStruct(const PictureStruct& other)
-        : RefCounted(NULL),
-          frame_allocated_(true),
+        : frame_allocated_(true),
           width_(other.width_),
           height_(other.height_),
           pix_format_(other.pix_format_),
@@ -86,13 +91,22 @@ class BitmapExtractor {
   // Extract 0 or more pictures from the given tag.
   // If tag is FlvTag, then 0 or 1 picture is extracted.
   // If tag is ComposedTag, then multiple pictures are extracted.
-  void GetNextPictures(const streaming::Tag* tag,
+  void GetNextPictures(const streaming::Tag* tag, int64 tag_ts,
                        vector< scoped_ref<const PictureStruct> >* out);
  private:
   void ClearCodec();
-  void ProcessFlvTag(const streaming::FlvTag* flv_tag, int64 timestamp_base_ms,
+  void ProcessFlvTag(const streaming::FlvTag* flv_tag, int64 tag_ts,
                      vector< scoped_ref<const PictureStruct> >* out);
+  void ProcessF4vTag(const streaming::F4vTag* f4v_tag, int64 tag_ts,
+                     vector< scoped_ref<const PictureStruct> >* out);
+
+  // out: If not null, it receives the decoded frames.
+  //      If null, data is fed to avcodec and the resulted frames are lost.
+  void ProcessFrame(int frame_buf_size, int64 frame_ts, const string& codec_name,
+                    vector< scoped_ref<const PictureStruct> >* out);
   bool InitializeCodec(const streaming::FlvTag* flv_tag);
+  bool InitializeCodec(const streaming::f4v::MoovAtom& moov);
+  bool InitializeCodecInternal(const io::MemoryStream* extra_data);
 
   const int width_;
   const int height_;
@@ -103,14 +117,17 @@ class BitmapExtractor {
   int32 skip_size_;
   AVCodec* codec_;
   AVCodecContext* codec_ctx_;
+#if LIBAVCODEC_VERSION_MAJOR >= 53
+  AVDictionary* dictionary_;
+#endif
   AVFrame* frame_;
   PictureStruct crt_picture_;
   SwsContext* sws_ctx_rescale_;
   SwsContext* sws_ctx_convert_;
 
   uint8* frame_buf_;
-  static const int kFrameBufAllign = 64;
-  static const int kMaxFrameSize = 1<<20;
+  static const uint32 kFrameBufAllign = 64;
+  static const uint32 kMaxFrameSize = 1<<20;
 
   DISALLOW_EVIL_CONSTRUCTORS(BitmapExtractor);
 };

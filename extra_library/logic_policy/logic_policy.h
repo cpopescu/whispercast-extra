@@ -23,7 +23,7 @@ class LogicPlaylistPolicy
     : public Policy,
       public ServiceInvokerLogicPlaylistPolicyService {
  public:
-  LogicPlaylistPolicy(const char* name,
+  LogicPlaylistPolicy(const string& name,
                       PolicyDrivenElement* element,
                       ElementMapper* mapper,
                       net::Selector* selector,
@@ -58,7 +58,7 @@ class LogicPlaylistPolicy
   void ClearState();
 
   virtual void GetPlaylist(rpc::CallContext<LogicPlaylistSpec>* call);
-  virtual void SetPlaylist(rpc::CallContext<MediaOperationErrorData>* call,
+  virtual void SetPlaylist(rpc::CallContext<MediaOpResult>* call,
                            const LogicPlaylistSpec& spec);
   virtual void GetCurrentState(rpc::CallContext<string>* call);
   virtual void SetCurrentState(rpc::CallContext<bool>* call,

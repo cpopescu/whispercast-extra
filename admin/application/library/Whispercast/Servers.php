@@ -31,7 +31,8 @@ class Whispercast_Servers extends Whispercast_Base {
 
     try {
       // The flow control stuff
-      $f = $config['flow_control'];
+      $fc_video = 0+$config['flow_control']['video'];
+      $fc_total = 0+$config['flow_control']['total'];
        
       // We're creating one instance of OSD encoder and one instance of OSD associator per setup.
       $cs = $osd_library_service->AddOsdAssociatorElementSpec($iid.'_osda', true, false, new OsdAssociatorElementSpec());
@@ -103,8 +104,8 @@ class Whispercast_Servers extends Whispercast_Base {
         null,
         null,
         $iid.'_authorizer_preview',
-        $f['video'],
-        $f['total']
+        $fc_video,
+        $fc_audio
       ));
       $cs = $media_element_service->StartExportElement(new ElementExportSpec(
         $this->_interface->getExportPrefix().'/'.$iid.'_files',
@@ -113,12 +114,12 @@ class Whispercast_Servers extends Whispercast_Base {
         null,
         null,
         $iid.'_authorizer_preview',
-        $f['video'],
-        $f['total']
+        $fc_video,
+        $fc_audio
       ));
       // Export the private files for download.
       $cs = $media_element_service->StartExportElement(new ElementExportSpec(
-        $this->_interface->getExportPrefix(true).'/'.$iid.'_files',
+        $this->_interface->getExportPrefix().'/'.$iid.'_files',
         'http',
         $this->_interface->export.'/download/files',
         null,
@@ -153,8 +154,8 @@ class Whispercast_Servers extends Whispercast_Base {
         null,
         null,
         null,
-        $f['video'],
-        $f['total']
+        $fc_video,
+        $fc_audio
       ));
       if (!$cs->success_) {
         throw new Exception($cs->error_);
@@ -166,8 +167,8 @@ class Whispercast_Servers extends Whispercast_Base {
         null,
         null,
         null,
-        $f['video'],
-        $f['total']
+        $fc_video,
+        $fc_audio
       ));
       if (!$cs->success_) {
         throw new Exception($cs->error_);
@@ -195,8 +196,8 @@ class Whispercast_Servers extends Whispercast_Base {
         null,
         null,
         null,
-        $f['video'],
-        $f['total']
+        $fc_video,
+        $fc_audio
       ));
       if (!$cs->success_) {
         throw new Exception($cs->error_);

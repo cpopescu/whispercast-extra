@@ -56,7 +56,7 @@ bool FeatureData::Initialize(int x0, int x1, int y0, int y1,
 void FeatureData::Clear() {
   x0_ = x1_ = y0_ = y1_ = 0;
   feature_type_ = FEATURE_RAW;
-  for ( int i = 0; i < features_.size(); ++i ) {
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     delete features_[i];
   }
   features_.clear();
@@ -217,7 +217,7 @@ string FeatureData::ToString() const {
       "Use YUV: %d, Feature Type: %d, X0: %d, X1: %d, "
       "Y0: %d, Y1: %d, Channels: %zd",
       use_yuv_, feature_type_, x0_, x1_, y0_, y1_, features_.size());
-  for ( int i = 0; i < features_.size(); ++i ) {
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     double* p = features_[i];
     s += strutil::StringPrintf(
         "\n====================== CHANNEL %d ==================\n", i);
@@ -240,7 +240,7 @@ bool FeatureData::EuclidianDistance(
   for ( int c = 0; c < kNumFeatureChannels; ++c ) {
     distance[c] = 0.0;
   }
-  for ( int c = 0; c < features_.size(); ++c ) {
+  for ( uint32 c = 0; c < features_.size(); ++c ) {
     double dist = 0;
     const double* p1 = features_[c];
     const double* p2 = d->features_[c];
@@ -269,7 +269,7 @@ bool FeatureData::ShortestPathDistance(
   }
   const int size = (feature_size_ + 1) * (feature_size_ + 1);
   double* coef = new double[size];
-  for ( int c = 0; c < features_.size(); ++c ) {
+  for ( uint32 c = 0; c < features_.size(); ++c ) {
     double* d = coef;
     const double* p1 = features_[c];
     const double* p2 = dest->features_[c];
@@ -402,7 +402,7 @@ void FeatureData::Save(io::MemoryStream* ms) const {
   io::NumStreamer::WriteInt32(ms, static_cast<int32>(feature_type_),
                               common::BIGENDIAN);
   io::NumStreamer::WriteInt32(ms, feature_size_, common::BIGENDIAN);
-  for ( int i = 0; i < features_.size(); ++i ) {
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     const double* crt = features_[i];
 
     int s = feature_size_;
@@ -423,7 +423,7 @@ FeatureSet::FeatureSet()
 }
 
 FeatureSet::~FeatureSet() {
-  for ( int i = 0; i < features_.size(); ++i ) {
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     delete features_[i].second;
   }
   features_.clear();
@@ -435,7 +435,7 @@ MatchResult FeatureSet::MatchNext(int64 timestamp, const FeatureData* data,
   if ( features_.empty() ) {
     return MATCH_NO_DATA;
   }
-  if ( last_match_ >= features_.size() - 1 ) {
+  if ( last_match_ >= (int)features_.size() - 1 ) {
     ResetMatch();
   }
   if (last_match_ >= 0 && last_match_timestamp_ > timestamp) {
@@ -456,12 +456,12 @@ MatchResult FeatureSet::MatchNext(int64 timestamp, const FeatureData* data,
             ? MATCH_COMPLETED : MATCH_BEGIN);
   }
   int crt_check = last_match_ + 1;
-  while ( crt_check < features_.size() &&
+  while ( crt_check < (int)features_.size() &&
           features_[crt_check].first - features_[last_match_].first <
           timestamp - last_match_timestamp_ ) {
     ++crt_check;
   }
-  if ( crt_check >= features_.size() ) {
+  if ( crt_check >= (int)features_.size() ) {
     last_match_ = crt_check;
     return MATCH_OVER_TIME;
   }
@@ -472,7 +472,7 @@ MatchResult FeatureSet::MatchNext(int64 timestamp, const FeatureData* data,
   }
   last_match_ = crt_check;
   last_match_timestamp_ = timestamp;
-  return ((crt_check == features_.size() - 1)
+  return ((crt_check == (int)features_.size() - 1)
           ? MATCH_COMPLETED : MATCH_CONT);
 }
 
@@ -480,7 +480,7 @@ ReadStatus FeatureSet::Load(io::MemoryStream* ms) {
   if ( ms->Size() < sizeof(int32) ) {
     return READ_NO_DATA;
   }
-  const int32 total_size = io::NumStreamer::ReadInt32(ms, common::BIGENDIAN);
+  const uint32 total_size = io::NumStreamer::ReadUInt32(ms, common::BIGENDIAN);
   ms->MarkerSet();
   if ( ms->Size() < total_size ) {
     ms->MarkerRestore();
@@ -488,8 +488,8 @@ ReadStatus FeatureSet::Load(io::MemoryStream* ms) {
   }
   feature_width_ = io::NumStreamer::ReadInt32(ms, common::BIGENDIAN);
   feature_height_ = io::NumStreamer::ReadInt32(ms, common::BIGENDIAN);
-  const int num_features = io::NumStreamer::ReadInt32(ms, common::BIGENDIAN);
-  for ( int i = 0; i < num_features; ++i ) {
+  const uint32 num_features = io::NumStreamer::ReadUInt32(ms, common::BIGENDIAN);
+  for ( uint32 i = 0; i < num_features; ++i ) {
     const int64 timestamp = io::NumStreamer::ReadInt64(ms, common::BIGENDIAN);
     FeatureData* data = new FeatureData();
     const ReadStatus stat = data->Load(ms);
@@ -506,19 +506,19 @@ void FeatureSet::Save(io::MemoryStream* ms) const {
   io::MemoryStream tmp;
   io::NumStreamer::WriteInt32(&tmp, feature_width_, common::BIGENDIAN);
   io::NumStreamer::WriteInt32(&tmp, feature_height_, common::BIGENDIAN);
-  io::NumStreamer::WriteInt32(&tmp, features_.size(), common::BIGENDIAN);
-  for ( int i = 0; i < features_.size(); ++i ) {
+  io::NumStreamer::WriteUInt32(&tmp, features_.size(), common::BIGENDIAN);
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     io::NumStreamer::WriteInt64(&tmp, features_[i].first, common::BIGENDIAN);
     features_[i].second->Save(&tmp);
   }
-  io::NumStreamer::WriteInt32(ms, tmp.Size(), common::BIGENDIAN);
+  io::NumStreamer::WriteUInt32(ms, tmp.Size(), common::BIGENDIAN);
   ms->AppendStream(&tmp);
 }
 
 string FeatureSet::ToString() const {
   string s = strutil::StringPrintf("Feature width: %d / height: %d",
                                    feature_width_, feature_height_);
-  for ( int i = 0; i < features_.size(); ++i ) {
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     s += strutil::StringPrintf("\n @%"PRId64"\n",
                                (features_[i].first));
     s += features_[i].second->ToString();

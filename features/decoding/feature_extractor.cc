@@ -99,7 +99,7 @@ bool FlvFeatureExtractor::ProcessFile(
     LOG_ERROR << "Cannot open for thumbnailing: " << flv_file_;
     return false;
   }
-  if ( reader.splitter()->type() != streaming::TagSplitter::TS_FLV ) {
+  if ( reader.splitter()->media_format() != streaming::MFORMAT_FLV ) {
     LOG_ERROR << "Not a FLV file: " << flv_file_;
     return false;
   }
@@ -121,7 +121,7 @@ bool FlvFeatureExtractor::ProcessFile(
     }
 
     vector<scoped_ref<const BitmapExtractor::PictureStruct> > pictures;
-    extractor_->GetNextPictures(tag.get(), &pictures);
+    extractor_->GetNextPictures(tag.get(), timestamp_ms, &pictures);
     for ( uint32 i = 0; i < pictures.size(); i++ ) {
       ProcessImage(pictures[i].get());
     }

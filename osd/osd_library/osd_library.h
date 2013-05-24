@@ -60,6 +60,7 @@ class OsdElementLibrary : public ElementLibrary {
       const string& element_params,
       const streaming::Request* req,
       const CreationObjectParams& params,
+      bool is_temporary_template,
       // Output:
       vector<string>* needed_policies,
       string* error_description);
@@ -92,6 +93,7 @@ class OsdElementLibrary : public ElementLibrary {
                           const streaming::Request* req,
                           const CreationObjectParams& params,
                           vector<string>* needed_policies,
+                          bool is_temporary_template,
                           string* error);
   streaming::Element*
   CreateOsdEncoderElement(const string& name,
@@ -99,6 +101,7 @@ class OsdElementLibrary : public ElementLibrary {
                           const streaming::Request* req,
                           const CreationObjectParams& params,
                           vector<string>* needed_policies,
+                          bool is_temporary_template,
                           string* error);
   streaming::Element*
   CreateOsdInjectorElement(const string& name,
@@ -106,6 +109,7 @@ class OsdElementLibrary : public ElementLibrary {
                            const streaming::Request* req,
                            const CreationObjectParams& params,
                            vector<string>* needed_policies,
+                           bool is_temporary_template,
                            string* error);
   streaming::Element*
   CreateOsdAssociatorElement(const string& name,
@@ -113,6 +117,7 @@ class OsdElementLibrary : public ElementLibrary {
                              const streaming::Request* req,
                              const CreationObjectParams& params,
                              vector<string>* needed_policies,
+                             bool is_temporary_template,
                              string* error);
   streaming::Element*
   CreateOsdStateKeeperElement(const string& name,
@@ -120,6 +125,7 @@ class OsdElementLibrary : public ElementLibrary {
                               const streaming::Request* req,
                               const CreationObjectParams& params,
                               vector<string>* needed_policies,
+                              bool is_temporary_template,
                               string* error);
   streaming::Element*
   CreateOsdAssociatorClientElement(const string& name,
@@ -127,6 +133,7 @@ class OsdElementLibrary : public ElementLibrary {
                                    const streaming::Request* req,
                                    const CreationObjectParams& params,
                                    vector<string>* needed_policies,
+                                   bool is_temporary_template,
                                    string* error);
 
  private:

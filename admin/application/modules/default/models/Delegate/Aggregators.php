@@ -26,7 +26,8 @@ class Model_Delegate_Aggregators extends Model_Delegate_Streams {
   }
 
   protected function _setupFromElement($data) {
-    $aggregators = new Whispercast_Aggregators(Whispercast::getInterface($data['server_id']));
+    $interface = Whispercast::getInterface($data['server_id']);
+    $aggregators = new Whispercast_Aggregators($interface);
 
     $cs = $aggregators->getConfig($data['id'], $setup);
     if ($cs !== null) {
@@ -37,7 +38,7 @@ class Model_Delegate_Aggregators extends Model_Delegate_Streams {
 
     $flavours = array();
     foreach ($setup['flavours'] as $mask => $path) {
-      $stream = $streams->fetchRow($streams->select()->where('path = ?', $path));
+      $stream = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($path)));
       if ($stream) {
         $pow = 0;
         while ($mask && ($pow < 16)) {

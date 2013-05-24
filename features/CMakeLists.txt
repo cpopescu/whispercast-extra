@@ -16,6 +16,7 @@ find_package(LibAvUtil REQUIRED)
 find_package(LibAvFormat REQUIRED)
 find_package(LibSwScale REQUIRED)
 find_package(LibJpeg REQUIRED)
+find_package(X264 REQUIRED)
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR})
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../../)
@@ -48,7 +49,7 @@ ADD_LIBRARY(whisper_featurelib SHARED
   decoding/feature_extractor.cc
   decoding/feature_data.cc 
   util/jpeg_util.cc
-  util/flv_thumbnailer.cc
+  util/file_thumbnailer.cc
   util/rtmp_thumbnailer.cc)
 
 ADD_DEPENDENCIES(whisper_featurelib
@@ -62,25 +63,9 @@ TARGET_LINK_LIBRARIES(whisper_featurelib
   ${SwScale_LIBRARIES}
   ${LibJpeg_LIBRARIES}
 
-  ${whisperlib_LIBRARY}
-  ${whisperstreamlib_LIBRARY}
+  whisper_lib
+  whisper_streamlib
   ${COMMON_LINK_LIBRARIES})
-
-##########
-
-ADD_EXECUTABLE(flv_thumbnailer
-  util/flv_thumbnailer_app.cc)
-
-ADD_DEPENDENCIES(flv_thumbnailer
-  whisper_lib
-  whisper_streamlib
-  whisper_featurelib)
-
-TARGET_LINK_LIBRARIES(flv_thumbnailer
-  ${AvCodec_LIBRARIES}
-  whisper_lib
-  whisper_streamlib
-  whisper_featurelib)
 
 ##########
 
@@ -116,12 +101,26 @@ TARGET_LINK_LIBRARIES(flv_grep_features
 
 ##########
 
+ADD_EXECUTABLE(libav_converter
+  util/libav_converter.cc)
+ADD_DEPENDENCIES(libav_converter
+  whisper_streamlib
+  whisper_lib)
+TARGET_LINK_LIBRARIES(libav_converter
+  ${AvFormat_LIBRARIES}
+  ${AvCodec_LIBRARIES}
+  ${X264_LIBRARIES}
+  whisper_lib
+  whisper_streamlib)
+
+install(TARGETS libav_converter
+  DESTINATION bin)
+  
+##########
+
 install(TARGETS whisper_featurelib
          DESTINATION lib)
 
-
-INSTALL (TARGETS flv_thumbnailer
-         DESTINATION bin)
 INSTALL (TARGETS flv_extract_features
          DESTINATION bin)
 INSTALL (TARGETS flv_grep_features

@@ -23,19 +23,19 @@ namespace streaming {
 class TimeDelayPolicy : public Policy,
                         public ServiceInvokerTimeDelayPolicyService {
  public:
-  TimeDelayPolicy(const char* name,
+  TimeDelayPolicy(const string& name,
                   PolicyDrivenElement* element,
                   ElementMapper* mapper,
                   net::Selector* selector,
                   bool is_temp_policy,
                   io::StateKeepUser* global_state_keeper,
                   io::StateKeepUser* local_state_keeper,
-                  const char* rpc_path,
-                  const char* local_rpc_path_,
+                  const string& rpc_path,
+                  const string& local_rpc_path_,
                   rpc::HttpServer* rpc_server,
-                  const char* home_dir,
-                  const char* root_media_path,
-                  const char* file_prefix,
+                  const string& home_dir,
+                  const string& root_media_path,
+                  const string& file_prefix,
                   int time_delay_sec);
   virtual ~TimeDelayPolicy();
 

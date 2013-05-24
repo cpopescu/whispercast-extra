@@ -22,26 +22,23 @@
 
 namespace streaming {
 
-class FeatureDetectorElement :
-      public Element {
+class FeatureDetectorElement : public Element {
  public:
-  FeatureDetectorElement(const char* name,
-                         const char* id,
+  FeatureDetectorElement(const string& name,
                          ElementMapper* mapper,
                          net::Selector* selector,
                          const string& media_dir,
                          const FeatureDetectorElementSpec& spec);
-  ~FeatureDetectorElement();
+  virtual ~FeatureDetectorElement();
 
   static const char kElementClassName[];
 
   virtual bool Initialize();
-  virtual bool AddRequest(const char* media,
-                          streaming::Request* req,
-                          streaming::ProcessingCallback* callback);
+  virtual bool AddRequest(const string& media, Request* req,
+                          ProcessingCallback* callback);
   virtual void RemoveRequest(streaming::Request* req);
-  virtual bool HasMedia(const char* media, Capabilities* out);
-  virtual void ListMedia(const char* media_dir, ElementDescriptions* medias);
+  virtual bool HasMedia(const string& media);
+  virtual void ListMedia(const string& media_dir, vector<string>* out);
   virtual bool DescribeMedia(const string& media, MediaInfoCallback* callback);
   virtual void Close(Closure* call_on_close);
 
@@ -114,8 +111,6 @@ class FeatureDetectorElement :
   feature::MatchResult crt_match_;
   int crt_match_id_;
   int64 crt_match_timestamp_;
-
-  const streaming::Capabilities caps_;
 
   // Things we did not bootstrap yet
   map<Request*, ProcessingCallback*> callbacks_to_bootstrap_;

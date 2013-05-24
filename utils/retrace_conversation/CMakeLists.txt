@@ -5,4 +5,4 @@ ADD_EXECUTABLE(retrace_conversation
 ADD_DEPENDENCIES(retrace_conversation
   whisper_lib)
 TARGET_LINK_LIBRARIES(retrace_conversation
-  ${whisperlib_LIBRARY})
+  whisper_lib)

@@ -16,8 +16,7 @@ namespace streaming {
 //
 class OsdDecoderElement : public FilteringElement {
  public:
-  OsdDecoderElement(const char* name,
-                    const char* id,
+  OsdDecoderElement(const string& name,
                     ElementMapper* mapper,
                     net::Selector* selector);
   virtual ~OsdDecoderElement();
@@ -33,7 +32,7 @@ class OsdDecoderElement : public FilteringElement {
   //
   // FilteringElement methods
   //
-  virtual FilteringCallbackData* CreateCallbackData(const char* media_name,
+  virtual FilteringCallbackData* CreateCallbackData(const string& media_name,
                                                     Request* req);
 
  private:

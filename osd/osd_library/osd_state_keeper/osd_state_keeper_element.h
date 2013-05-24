@@ -35,13 +35,12 @@ namespace streaming {
 class OsdStateKeeperElement
   : public FilteringElement, public ServiceInvokerOsdInspector {
  public:
-  OsdStateKeeperElement(const char* name,
-                        const char* id,
+  OsdStateKeeperElement(const string& name,
                         ElementMapper* mapper,
                         net::Selector* selector,
                         io::StateKeepUser* state_keeper,   // becomes ours
-                        const char* media_name,
-                        const char* rpc_path,
+                        const string& media_name,
+                        const string& rpc_path,
                         rpc::HttpServer* rpc_server);
   virtual ~OsdStateKeeperElement();
   static const char kElementClassName[];
@@ -94,7 +93,7 @@ class OsdStateKeeperElement
   // FilteringElement methods
   //
   virtual FilteringCallbackData* CreateCallbackData(
-      const char* media_name, streaming::Request* req);
+      const string& media_name, streaming::Request* req);
 
   //////////////////////////////////////////////////////////////////
   //

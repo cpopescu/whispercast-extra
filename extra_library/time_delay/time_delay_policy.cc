@@ -12,19 +12,19 @@ namespace streaming {
 const char TimeDelayPolicy::kPolicyClassName[] = "time_delay_policy";
 static const int64 kDefaultWaitOnError = 30000;
 
-TimeDelayPolicy::TimeDelayPolicy(const char* name,
+TimeDelayPolicy::TimeDelayPolicy(const string& name,
                                  PolicyDrivenElement* element,
                                  ElementMapper* mapper,
                                  net::Selector* selector,
                                  bool is_temp_policy,
                                  io::StateKeepUser* global_state_keeper,
                                  io::StateKeepUser* local_state_keeper,
-                                 const char* rpc_path,
-                                 const char* local_rpc_path,
+                                 const string& rpc_path,
+                                 const string& local_rpc_path,
                                  rpc::HttpServer* rpc_server,
-                                 const char* home_dir,
-                                 const char* root_media_path,
-                                 const char* file_prefix,
+                                 const string& home_dir,
+                                 const string& root_media_path,
+                                 const string& file_prefix,
                                  int time_delay_sec)
     : Policy(kPolicyClassName, name, element),
       ServiceInvokerTimeDelayPolicyService(
@@ -153,8 +153,7 @@ void TimeDelayPolicy::PlayNext() {
     }
     LOG_INFO << name() << " Switching to: " << crt_media_
               << " @" << begin_file_timestamp_;
-    Capabilities caps;
-    if ( !mapper_->HasMedia(crt_media_.c_str(), &caps) ) {
+    if ( !mapper_->HasMedia(crt_media_) ) {
       selector_->RegisterAlarm(play_next_callback_, kDefaultWaitOnError);
       LOG_ERROR << "Unknown media: " << crt_media_;
       delete req_info;
@@ -172,6 +171,9 @@ void TimeDelayPolicy::PlayNext() {
     delete req_info;
     return;
   }
+  LOG_FATAL << "Not implemented";
+  //TODO(cosmin): Rework using streaming::GetTimeRangeMediaIndex()
+  /*
   timer::Date play_time(timer::Date::Now() - time_delay_ms_, true);   // UTC always
   int64 duration = 0;
   vector<string> files;
@@ -191,6 +193,7 @@ void TimeDelayPolicy::PlayNext() {
   } else {
     selector_->RegisterAlarm(play_next_callback_, delay);
   }
+  */
 }
 
 }

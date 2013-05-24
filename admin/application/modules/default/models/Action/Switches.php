@@ -21,18 +21,16 @@ class Model_Action_Switches extends Model_Action_Streams {
 
     $error = $switches->getMedia($this->_output->model['record']->id, $media);
     if ($error === null) {
-      $prefix = $interface->getStreamPrefix();
-
       $this->_output->model['media'] = array(
       );
 
       $streams = new Model_DbTable_Streams();
 
-      $this->_output->model['media']['current'] = $streams->fetchRow($streams->select()->where('path = ?', substr($media['current'], strlen($prefix))));
+      $this->_output->model['media']['current'] = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($media['current'])));
       if ($this->_output->model['media']['current']) {
         $this->_output->model['media']['current'] = $this->_output->model['media']['current']->toArray();
       }
-      $this->_output->model['media']['next'] = $streams->fetchRow($streams->select()->where('path = ?', substr($media['next'], strlen($prefix))));
+      $this->_output->model['media']['next'] = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($media['next'])));
       if ($this->_output->model['media']['next']) {
         $this->_output->model['media']['next'] = $this->_output->model['media']['next']->toArray();
       }
@@ -65,10 +63,8 @@ class Model_Action_Switches extends Model_Action_Streams {
     if ($source) {
       $interface = Whispercast::getInterface($server->id);
       $switches = new Whispercast_Switches($interface);
-
-      $prefix = $interface->getStreamPrefix();
-
-      $error = $switches->setMedia($this->_output->model['record']->id, $prefix.$source->path, (bool)$this->_input['set_as_default'], (bool)$this->_input['switch_now']); 
+      
+      $error = $switches->setMedia($this->_output->model['record']->id, $interface->getStreamPath($source->path), (bool)$this->_input['set_as_default'], (bool)$this->_input['switch_now']); 
       if ($error === null) {
         $this->_output->result = 1;
       } else {

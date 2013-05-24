@@ -131,13 +131,13 @@ OsdAssociatorClientElement::OsdServer::OsdServer(
     int num_retries,
     int32 request_timeout_ms,
     int32 reopen_connection_interval_ms,
-    rpc::CODEC_ID rpc_codec_id,
+    rpc::CodecId codec,
     const string& http_request_path,
     const string& auth_user,
     const string& auth_pass,
     const string& service_name)
   : net_factory_(selector),
-    rpc_connection_(selector, rpc::CID_JSON,
+    rpc_connection_(selector, codec,
         new http::FailSafeClient(selector, http_params, servers,
             NewPermanentCallback(&OsdServer::CreateHttpConnection,
                                  selector, &net_factory_,
@@ -182,21 +182,20 @@ const OsdAssociatorCompleteOsd OsdAssociatorClientElement::kEmptyCompleteOsd =
     MakeEmptyCompleteOsd();
 
 OsdAssociatorClientElement::OsdAssociatorClientElement(
-    const char* name,
-    const char* id,
+    const string& name,
     ElementMapper* mapper,
     net::Selector* selector,
     io::StateKeepUser* state_keeper, // becomes ours
-    const char* rpc_path,
+    const string& rpc_path,
     rpc::HttpServer* rpc_server)
-  : FilteringElement(kElementClassName, name, id, mapper, selector),
+  : FilteringElement(kElementClassName, name, mapper, selector),
     ServiceInvokerOsdAssociatorClient(GetClassName()),
     rpc_path_(rpc_path),
     rpc_server_(rpc_server),
     state_keeper_(state_keeper),
     http_params_(),
     cache_(util::CacheBase::LRU, kCacheMaxSize, kCacheExpirationMs,
-        &util::DefaultValueDestructor, NULL),
+        &util::DefaultValueDestructor, NULL, false),
     clients_() {
 }
 OsdAssociatorClientElement::~OsdAssociatorClientElement() {
@@ -272,7 +271,7 @@ OsdAssociatorClientElement::CreateOsdServerFromSpec(
       kHttpNumRetries,
       kHttpRequestTimeoutMs,
       kHttpReopenConnectionIntervalMs,
-      rpc::CID_JSON,
+      rpc::kCodecIdJson,
       spec.http_path,
       spec.http_auth_user,
       spec.http_auth_pswd,
@@ -449,7 +448,7 @@ bool OsdAssociatorClientElement::Initialize() {
   return true;
 }
 FilteringCallbackData* OsdAssociatorClientElement::CreateCallbackData(
-    const char* media_name, streaming::Request* req) {
+    const string& media_name, streaming::Request* req) {
   ClientCallbackData* client = new ClientCallbackData(media_name);
   clients_.insert(client);
 

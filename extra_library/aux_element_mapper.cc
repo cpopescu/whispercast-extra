@@ -29,7 +29,7 @@ AuxElementMapper::AuxElementMapper(
     ElementFactory* factory,
     ElementMapper* master,
     rpc::HttpServer* rpc_server,
-    const char* config_file)
+    const string& config_file)
     : ElementMapper(selector),
       factory_(factory),
       factory_mapper_(NULL),
@@ -42,7 +42,8 @@ AuxElementMapper::AuxElementMapper(
                           kServingInfoCacheSize,
                           kCacheExpirationTimeMs,
                           &util::DefaultValueDestructor,
-                          NULL) {  // TODO- parametrize
+                          NULL,
+                          false) {  // TODO- parametrize
   master_mapper_ = master;
   connection_factory_ = NewPermanentCallback(&CreateConnection,
                                              selector, &net_factory_,
@@ -94,7 +95,7 @@ AuxElementMapper::AuxElementMapper(
             selector,
             crt.lookup_json_encoding_.is_set()
             && crt.lookup_json_encoding_.get()
-            ? rpc::CID_JSON : rpc::CID_BINARY,
+            ? rpc::kCodecIdJson : rpc::kCodecIdBinary,
             failsafe_client,
             crt.lookup_path_,
             crt.auth_user_,
@@ -150,15 +151,14 @@ void AuxElementMapper::GetMediaDetails(
     const string& path,
     streaming::Request* req,
     Callback1<bool>* completion_callback) {
-  string normal_path = strutil::NormalizeUrlPath("/" + path);
   const ElementExportSpec* spec = serving_info_cache_.Get(
-      protocol + ":" + normal_path);
+      protocol + ":" + path);
   if ( spec != NULL ) {
-    SetDataFromServingInfo(normal_path, req, spec);
+    SetDataFromServingInfo(path, req, spec);
     completion_callback->Run(true);
     return;
   }
-  string key = normal_path;
+  string key = path;
   ServiceWrapperElementConfigService* service =
       io::FindPathBased(&media_detail_services_, key);
   if ( service == NULL ) {
@@ -166,9 +166,7 @@ void AuxElementMapper::GetMediaDetails(
     return;
   }
   MediaLookupStruct* const ls = new MediaLookupStruct(
-      protocol, normal_path,
-      req,
-      completion_callback);
+      protocol, key, req, completion_callback);
   LOG_INFO << "START =============> Remote GetMediaDetails start: "
            << ls->protocol_ << " / " << ls->path_;
   ls->rpc_id_ = service->GetMediaDetails(
@@ -201,43 +199,38 @@ void AuxElementMapper::SetDataFromServingInfo(const string& norm_path,
   req->mutable_serving_info()->FromElementExportSpec(*spec);
   req->mutable_info()->write_ahead_ms_ =
       (spec->flow_control_total_ms_ > 1) ? spec->flow_control_total_ms_/2 : 0;
-  const string returned_key = strutil::NormalizeUrlPath(
-      "/" + spec->path_.get());
+  const string returned_key = spec->path_.get();
   const string element_path = norm_path.substr(returned_key.size());
-  if ( !element_path.empty() && element_path[0] != '/' ) {
-    req->mutable_serving_info()->media_name_ =
-        strutil::NormalizeUrlPath(spec->media_name_.get() +
-                                  "/" + element_path);
-  } else {
-    req->mutable_serving_info()->media_name_ = (
-        spec->media_name_.get() + element_path);
-  }
+  req->mutable_serving_info()->media_name_ =
+      strutil::JoinMedia(spec->media_name_.get(), element_path);
 }
 
 bool AuxElementMapper::AddRequest(
-    const char* media_name,
+    const string& m,
     streaming::Request* req,
     streaming::ProcessingCallback* callback,
     bool do_lookup) {
-  if ( *media_name == '\0' ) {
+  const char* media = m.c_str();
+  if ( media[0] == '\0' ) {
     return false;
   }
-  if ( *media_name == '/' ) {
-    ++media_name;
+  if ( media[0] == '/' ) {
+    LOG_ERROR << "Invalid media: [" << media << "], should not start with '/'";
+    media++;
   }
-  pair<string, string> media_pair = strutil::SplitFirst(media_name, '/');
+  pair<string, string> media_pair = strutil::SplitFirst(media, '/');
   if ( extra_element_spec_map_.find(media_pair.first) !=
        extra_element_spec_map_.end() ) {
-    return fallback_mapper_->AddRequest(media_name, req, callback);
+    return fallback_mapper_->AddRequest(media, req, callback);
   }
   if ( !IsAuxiliaryKnownElement(media_pair.first) ) {
     return false;
   }
-  if ( !AddRequestWithPerRequestElements(media_name, req, callback) ) {
+  if ( !AddRequestWithPerRequestElements(media, req, callback) ) {
     if ( do_lookup ) {
       // Proceed to a lookup..
       return StartLookupStruct(media_pair.first.c_str(),
-                               media_name, req, callback);
+                               media, req, callback);
     }
     return false;
   }
@@ -245,10 +238,10 @@ bool AuxElementMapper::AddRequest(
 }
 
 bool AuxElementMapper::AddRequest(
-    const char* media_name,
+    const string& media,
     streaming::Request* req,
     streaming::ProcessingCallback* callback) {
-  return AddRequest(media_name, req, callback, true);
+  return AddRequest(media, req, callback, true);
 }
 
 void AuxElementMapper::RemoveRequest(streaming::Request* req,
@@ -286,26 +279,27 @@ void AuxElementMapper::RemoveRequest(streaming::Request* req,
   fallback_mapper_->RemoveRequest(req, callback);
 }
 
-bool AuxElementMapper::HasMedia(const char* media, Capabilities* out) {
-  if ( *media == '\0' ) {
+bool AuxElementMapper::HasMedia(const string& m) {
+  const char* media = m.c_str();
+  if ( media[0] == '\0' ) {
     return false;
   }
-  if ( *media == '/' ) {
-    ++media;
+  if ( media[0] == '/' ) {
+    LOG_ERROR << "Invalid media: [" << media << "], should not start by '/'";
+    media++;
   }
-  if ( fallback_mapper_->HasMedia(media, out) ) {
+  if ( fallback_mapper_->HasMedia(media) ) {
     return true;
   }
   pair<string, string> media_pair = strutil::SplitFirst(media, '/');
   if ( !IsAuxiliaryKnownElement(media_pair.first) ) {
     return false;
   }
-  *out = Capabilities();
   return true;
 }
 
-void AuxElementMapper::ListMedia(const char* media_dir,
-               streaming::ElementDescriptions* medias) {
+void AuxElementMapper::ListMedia(const string& media_dir,
+               vector<string>* medias) {
   fallback_mapper_->ListMedia(media_dir, medias);
 }
 
@@ -315,11 +309,14 @@ bool AuxElementMapper::GetElementByName(
     vector<streaming::Policy*>** policies) {
   return fallback_mapper_->GetElementByName(name, element, policies);
 }
+void AuxElementMapper::GetAllElements(vector<string>* out_elements) const {
+  return fallback_mapper_->GetAllElements(out_elements);
+}
 
 //////////////////////////////////////////////////////////////////////
 
 bool AuxElementMapper::AddRequestWithPerRequestElements(
-    const char* media_name,
+    const string& m,
     streaming::Request* req,
     streaming::ProcessingCallback* callback) {
   ReqElementSpecMap::iterator
@@ -328,11 +325,13 @@ bool AuxElementMapper::AddRequestWithPerRequestElements(
     return false;
   }
 
-  DCHECK_NE(*media_name, '\0');
-  if ( *media_name == '/' ) {
-    ++media_name;
+  const char* media = m.c_str();
+  DCHECK_NE(media[0], '\0');
+  if ( media[0] == '/' ) {
+    LOG_ERROR << "Invalid media: [" << media << "], should not start with '/'";
+    media++;
   }
-  pair<string, string> media_pair = strutil::SplitFirst(media_name, '/');
+  pair<string, string> media_pair = strutil::SplitFirst(media, '/');
 
   ElementSpecMap* element_spec_map = itreq_elem->second;
   PolicySpecMap* policy_spec_map = NULL;
@@ -345,12 +344,10 @@ bool AuxElementMapper::AddRequestWithPerRequestElements(
   Element* const element = factory_->CreateElement(
       media_pair.first,
       element_spec_map, policy_spec_map,
-      req,  &req->mutable_temp_struct()->policies_);
+      req, false, &req->mutable_temp_struct()->policies_);
   if ( element == NULL ) {
     return false;
   }
-  ElementMap::const_iterator
-      root_it = req->temp_struct().elements_.find(media_pair.first);
   if ( !element->Initialize() ) {
     delete element;
     return false;
@@ -371,24 +368,23 @@ bool AuxElementMapper::AddRequestWithPerRequestElements(
 }
 
 bool AuxElementMapper::StartLookupStruct(
-    const char* element_name,
-    const char* media_name,
+    const string& element_name,
+    const string& media,
     streaming::Request* req,
     streaming::ProcessingCallback* callback) {
-  string key = strutil::NormalizeUrlPath(strutil::StringPrintf(
-                                             "/%s", media_name));
+  string key = media;
   ServiceWrapperElementConfigService* service =
       io::FindPathBased(&element_config_services_, key);
   if ( service == NULL ) {
     return false;
   }
-  LookupReqStruct* lr = new LookupReqStruct(media_name, req, callback);
+  LookupReqStruct* lr = new LookupReqStruct(key, req, callback);
 
   MediaRequestInfoSpec spec;
   req->info().ToSpec(&spec, false);   // TODO : do we want auth data
   lookup_ops_.insert(make_pair(req, lr));
 
-  DLOG_DEBUG << "Media Element start lookup " << media_name;
+  DLOG_DEBUG << "Media Element start lookup " << media;
 
   lr->rpc_id_ = service->GetElementConfig(
       NewCallback(this, &AuxElementMapper::RpcLookupCompleted, lr),

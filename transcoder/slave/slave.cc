@@ -1,10 +1,6 @@
 // Copyright 2009 WhisperSoft s.r.l.
 // Author: Cosmin Tudorache
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
 #include <whisperlib/common/app/app.h>
 
 #include <whisperlib/common/base/types.h>
@@ -15,13 +11,10 @@
 #include <whisperlib/common/base/strutil.h>
 #include <whisperlib/common/sync/process.h>
 #include <whisperlib/common/sync/mutex.h>
-
 #include <whisperlib/common/io/ioutil.h>
 
 #include <whisperlib/net/base/selector.h>
-
 #include <whisperlib/net/http/http_server_protocol.h>
-
 #include <whisperlib/net/rpc/lib/server/rpc_http_server.h>
 
 #include "../constants.h"
@@ -36,27 +29,9 @@ DEFINE_int32(http_port,
 
 //////////////////////////////////////////////////////////////////////
 
-DEFINE_string(media_download_dir,
+DEFINE_string(media_output_dir,
               "",
-              "Directory where to download media files.");
-DEFINE_string(media_transcoder_input_dir,
-              "",
-              "Directory where the transcoder is listening for input files.");
-DEFINE_string(media_transcoder_output_dir,
-              "",
-              "Directory where the transcoder puts result files.");
-DEFINE_string(media_postprocessor_input_dir,
-              "",
-              "Directory where the postprocessor is listening"
-              " for input files.");
-DEFINE_string(media_postprocessor_output_dir,
-              "",
-              "Directory where the postprocessor puts result files.");
-DEFINE_string(media_output_dirs,
-              "",
-              "Comma separated list of directories where to "
-              "output transcoded files\n"
-              " e.g. \"/tmp/output1,/tmp/output2,/tmp/output/3\"");
+              "Directory where to put result files.");
 DEFINE_string(scp_username,
               "",
               "The username for scp transfers.");
@@ -67,9 +42,6 @@ DEFINE_string(external_ip,
 DEFINE_string(state_dir,
               "",
               "Directory where to save state.");
-DEFINE_string(state_name,
-              "",
-              "A unique name for state saving.");
 
 DEFINE_string(http_auth_user,
               "",
@@ -80,6 +52,15 @@ DEFINE_string(http_auth_pswd,
 DEFINE_string(http_auth_realm,
               "",
               "If you set a user/pswd, you also need this.");
+
+DEFINE_string(processor,
+              "",
+              "The processor executable."
+              " It will be run: processor <input-file> <output-dir>");
+
+DEFINE_int32(parallel_processing,
+             1,
+             "The number of media files that can be processed in parallel.");
 
 //////////////////////////////////////////////////////////////////////
 
@@ -125,23 +106,10 @@ protected:
   }
   int Initialize() {
     common::Init(argc_, argv_);
-    CHECK(io::IsDir(FLAGS_media_download_dir));
-    CHECK(io::IsDir(FLAGS_media_transcoder_input_dir));
-    CHECK(io::IsDir(FLAGS_media_transcoder_output_dir));
-    CHECK_NE(FLAGS_media_transcoder_input_dir,
-             FLAGS_media_transcoder_output_dir);
-
-    CHECK(io::IsDir(FLAGS_media_postprocessor_input_dir));
-    CHECK(io::IsDir(FLAGS_media_postprocessor_output_dir));
-    CHECK_NE(FLAGS_media_postprocessor_input_dir,
-             FLAGS_media_postprocessor_output_dir);
-
-    //////////////////////////////////////////////////////////////////////
-    //
-    // Split the list of output directories
-    //
-    vector<string> media_output_dirs;
-    strutil::SplitString(FLAGS_media_output_dirs, ",", &media_output_dirs);
+    if ( !io::IsDir(FLAGS_media_output_dir) ) {
+      LOG_ERROR << "Output directory not found: [" << FLAGS_media_output_dir << "]";
+      return 1;
+    }
 
     //////////////////////////////////////////////////////////////////////
     //
@@ -188,19 +156,8 @@ protected:
         *net_factory_,
         FLAGS_scp_username,
         external_ip,
-        FLAGS_media_download_dir,
-        FLAGS_media_transcoder_input_dir,
-        FLAGS_media_transcoder_output_dir,
-        FLAGS_media_postprocessor_input_dir,
-        FLAGS_media_postprocessor_output_dir,
-        media_output_dirs,
-        FLAGS_state_dir,
-        FLAGS_state_name);
-    bool success = slave_manager_->Start();
-    if (!success) {
-      LOG_ERROR << "Failed to start slave_manager_";
-      return -1;
-    }
+        FLAGS_media_output_dir,
+        FLAGS_state_dir);
 
     rpc_http_processor_ = new rpc::HttpServer(selector_,
         http_server_,
@@ -222,6 +179,10 @@ protected:
   }
 
   void Run() {
+    if ( !slave_manager_->Start() ) {
+      LOG_ERROR << "Failed to start slave_manager_";
+      return;
+    }
     selector_->Loop();
   }
   void StopInSelectorThread() {

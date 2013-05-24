@@ -8,11 +8,11 @@
 #ifndef MASTER_WRAPPER_H_
 #define MASTER_WRAPPER_H_
 
+#include <set>
 #include <whisperlib/net/base/connection.h>
 #include <whisperlib/net/rpc/lib/rpc_util.h>
 #include "../auto/client_wrappers.h"
 #include "../constants.h"
-#include "media_file.h"
 
 namespace manager { namespace slave {
 
@@ -29,7 +29,7 @@ public:
                 const std::string& rpc_http_user,
                 const std::string& rpc_http_pswd,
                 rpc::CONNECTION_TYPE rpc_connection_type,
-                rpc::CODEC_ID rpc_codec_id);
+                rpc::CodecId rpc_codec_id);
   virtual ~MasterWrapper();
 
   bool Start();
@@ -43,9 +43,9 @@ public:
 
   // Counts active RPC calls through RPCWrapper.
   // Helps on deleting the wrapper when there are no more RPCs active.
-  void RPCPin();
-  void RPCUnpin();
-  uint32 RPCPinCount() const;
+  void Pin();
+  void Unpin();
+  uint32 PinCount() const;
 
   const std::string& uri() const;
 
@@ -66,7 +66,7 @@ private:
   const std::string rpc_http_user_; // useful for HTTP only: authorization user
   const std::string rpc_http_pswd_; // useful for HTTP only: authorization pswd
   const rpc::CONNECTION_TYPE rpc_connection_type_;
-  const rpc::CODEC_ID rpc_codec_id_;
+  const rpc::CodecId rpc_codec_id_;
   rpc::IClientConnection* rpc_connection_;
   ServiceWrapperMasterManager* rpc_client_wrapper_;
 
@@ -74,10 +74,8 @@ private:
   std::set<MediaFile*> files_;
 
   // counts active rpc calls
-  uint32 rpc_pin_count_;
+  uint32 pin_count_;
 };
-
-std::ostream& operator<<(std::ostream& os, const MasterWrapper& master);
 
 }  // namespace slave
 }  // namespace manager

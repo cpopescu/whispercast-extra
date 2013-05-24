@@ -1,8 +1,8 @@
-#include "common/io/ioutil.h"
-#include "net/rpc/lib/types/rpc_all_types.h"
-#include "net/rpc/lib/codec/json/rpc_json_encoder.h"
-#include "net/rpc/lib/codec/json/rpc_json_decoder.h"
-#include "net/rpc/lib/rpc_util.h"
+#include <whisperlib/common/io/ioutil.h>
+#include <whisperlib/net/rpc/lib/types/rpc_all_types.h>
+#include <whisperlib/net/rpc/lib/codec/json/rpc_json_encoder.h>
+#include <whisperlib/net/rpc/lib/codec/json/rpc_json_decoder.h>
+#include <whisperlib/net/rpc/lib/rpc_util.h>
 #include "slave_controller.h"
 #include "../common.h"
 
@@ -18,7 +18,7 @@ SlaveController::SlaveController(net::Selector& selector,
                                  const string& rpc_http_auth_user,
                                  const string& rpc_http_auth_pswd,
                                  rpc::CONNECTION_TYPE rpc_connection_type,
-                                 rpc::CODEC_ID rpc_codec_id,
+                                 rpc::CodecId rpc_codec_id,
                                  uint32 max_paralel_processing_file_count,
                                  io::StateKeeper& state_keeper)
   : selector_(selector),
@@ -43,28 +43,16 @@ SlaveController::SlaveController(net::Selector& selector,
                                     "",
                                     "",
                                     rpc_connection_type,
-                                    rpc_codec_id).c_str(),
+                                    rpc_codec_id),
                      0) {
   maybe_grab_media_file_alarm_.Set(NewPermanentCallback(this,
       &SlaveController::MaybeGrabMediaFile), true, 3000, true, false);
 }
 SlaveController::~SlaveController() {
-  Stop();
   CHECK_NULL(rpc_connection_);
   CHECK_NULL(rpc_client_wrapper_);
-  for ( CMediaFileMap::iterator it = files_.begin();
-        it != files_.end(); ++it ) {
-    CMediaFile* cfile = it->second;
-    delete cfile->file_;
-    delete cfile;
-  }
-  files_.clear();
-  for ( PendingFileMap::iterator it = pending_files_.begin();
-        it != pending_files_.end(); ++it ) {
-    MediaFile* file = it->second;
-    delete file;
-  }
-  pending_files_.clear();
+  CHECK(files_.empty());
+  CHECK(pending_files_.empty());
 }
 const string& SlaveController::name() const {
   return name_;
@@ -99,10 +87,25 @@ void SlaveController::Stop() {
   rpc_client_wrapper_ = NULL;
   delete rpc_connection_;
   rpc_connection_ = NULL;
+
   Save();
+
+  for ( CMediaFileMap::iterator it = files_.begin();
+        it != files_.end(); ++it ) {
+    CMediaFile* cfile = it->second;
+    delete cfile->file_;
+    delete cfile;
+  }
+  files_.clear();
+  for ( PendingFileMap::iterator it = pending_files_.begin();
+        it != pending_files_.end(); ++it ) {
+    MediaFile* file = it->second;
+    delete file;
+  }
+  pending_files_.clear();
 }
 
-const MediaFile* SlaveController::GetMediaFile(int64 file_id) const {
+const MediaFile* SlaveController::GetMediaFile(const string& file_id) const {
   PendingFileMap::const_iterator pit = pending_files_.find(file_id);
   if ( pit != pending_files_.end() ) {
     const MediaFile* file = pit->second;
@@ -116,18 +119,18 @@ const MediaFile* SlaveController::GetMediaFile(int64 file_id) const {
   }
   return NULL;
 }
-void SlaveController::GetMediaFiles(vector<const MediaFile*>& out) const {
-  out.reserve(out.size() + pending_files_.size() + files_.size());
+void SlaveController::GetMediaFiles(vector<const MediaFile*>* out) const {
+  out->reserve(out->size() + pending_files_.size() + files_.size());
   for ( PendingFileMap::const_iterator it = pending_files_.begin();
         it != pending_files_.end(); ++it ) {
     const MediaFile* file = it->second;
-    out.push_back(file);
+    out->push_back(file);
   }
   for ( CMediaFileMap::const_iterator it = files_.begin();
         it != files_.end(); ++it ) {
     const CMediaFile* cfile = it->second;
     const MediaFile* file = cfile->file_;
-    out.push_back(file);
+    out->push_back(file);
   }
 }
 void SlaveController::QueueMediaFile(MediaFile* file) {
@@ -146,11 +149,10 @@ void SlaveController::QueueMediaFile(MediaFile* file) {
 void SlaveController::NotifyMediaFileStateChange(
     const FileState& rpc_file_state) {
   LOG_DEBUG << "NotifyMediaFileStateChange rpc_file_state: " << rpc_file_state;
-  const int64 file_id = rpc_file_state.id_.get();
+  const string& file_id = rpc_file_state.id_.get();
   const FState state = DecodeFState(rpc_file_state.state_.get());
   const string& error = rpc_file_state.error_.get();
-  const FileSlaveOutput& output = rpc_file_state.output_.get();
-  const FileTranscodingStatus& transcoding_status =
+  const TranscodingStatus& transcoding_status =
       rpc_file_state.transcoding_status_.get();
 
   // look only in processing files
@@ -162,15 +164,13 @@ void SlaveController::NotifyMediaFileStateChange(
   CMediaFile& cfile = *it->second;
   cfile.file_->set_transcoding_status(transcoding_status);
   if ( cfile.file_->state() == state &&
-       cfile.file_->error() == error &&
-       cfile.file_->output() == output ) {
+       cfile.file_->error() == error ) {
     LOG_DEBUG << "No significant changes to MediaFile, skip ChangeFileState";
     return;
   }
-  cfile.file_->set_output(output);
   ChangeFileState(cfile, state, error);
 }
-void SlaveController::NotifyMediaFileError(int64 file_id,
+void SlaveController::NotifyMediaFileError(const string& file_id,
                                            const string & error) {
   LOG_DEBUG << "NotifyMediaFileError file_id: " << file_id
             << " error: [" << error << "]";
@@ -183,11 +183,11 @@ void SlaveController::NotifyMediaFileError(int64 file_id,
   CMediaFile& cfile = *it->second;
   ChangeFileState(cfile, cfile.file_->state(), error);
 }
-void SlaveController::NotifyMediaFileError(int64 file_id,
+void SlaveController::NotifyMediaFileError(const string& file_id,
                                            FState state,
                                            const string& error) {
   LOG_DEBUG << "NotifyMediaFileError file_id: " << file_id
-            << " state: " << state << "(" << FStateName2(state) << ")"
+            << " state: " << state << "(" << FStateName(state) << ")"
                " error: [" << error << "]";
   // look only in processing files
   CMediaFileMap::iterator it = files_.find(file_id);
@@ -199,8 +199,7 @@ void SlaveController::NotifyMediaFileError(int64 file_id,
   ChangeFileState(cfile, state, error);
 }
 
-MediaFile* SlaveController::DeleteMediaFile(int64 file_id,
-                                            bool erase_slave_output) {
+MediaFile* SlaveController::DeleteMediaFile(const string& file_id) {
   LOG_DEBUG << "DeleteMediaFile file_id: " << file_id;
   PendingFileMap::iterator pit = pending_files_.find(file_id);
   if ( pit != pending_files_.end() ) {
@@ -217,37 +216,10 @@ MediaFile* SlaveController::DeleteMediaFile(int64 file_id,
   MediaFile* file = cfile->file_;
   RemFile(cfile);
   cfile = NULL;
-  rpc_client_wrapper_->Delete(
-      NewCallback(this, &SlaveController::HandleDeleteResult, file->id()),
-      file->id(),
-      erase_slave_output);
+  rpc_client_wrapper_->DelFile(
+      NewCallback(this, &SlaveController::HandleDelFileResult, file->id()),
+      file->id());
   return file;
-}
-
-FState SlaveController::RetryMediaFile(int64 file_id) {
-  LOG_DEBUG << "RetryMediaFile file_id: " << file_id;
-  // look only in processing files
-  CMediaFileMap::iterator it = files_.find(file_id);
-  if(it == files_.end()) {
-    LOG_ERROR << "No such file_id: " << file_id;
-    return FSTATE_NOT_FOUND;
-  }
-  CMediaFile* cfile = it->second;
-  MediaFile* file = cfile->file_;
-  if ( file->state() == FSTATE_IDLE ||
-       file->state() == FSTATE_TRANSFERRING ||
-       file->state() == FSTATE_TRANSFERRED ||
-       file->state() == FSTATE_TRANSCODING ||
-       file->state() == FSTATE_POST_PROCESSING ||
-       file->state() == FSTATE_OUTPUTTING ||
-       file->state() == FSTATE_READY ) {
-    LOG_ERROR << "Retry: file in good state: " << *file << ", refusing retry.";
-    return file->state();
-  }
-  LOG_INFO << "Retry: switching to FSTATE_IDLE, file: " << *file;
-  ChangeFileState(*cfile, FSTATE_IDLE, "");
-  cfile->complete_reported_ = false;
-  return file->state();
 }
 
 SlaveController::CMediaFile* SlaveController::AddFile(MediaFile* file) {
@@ -281,21 +253,12 @@ void SlaveController::RemFile(CMediaFile* file) {
 //static
 int64 SlaveController::DelayProcessFile(FState state) {
   switch(state) {
-    case FSTATE_TRANSFERRING:       return 10000;
-    case FSTATE_TRANSFERRED:        return 5000;
-    case FSTATE_TRANSCODING:        return 10000;
-    case FSTATE_POST_PROCESSING:    return 10000;
-    case FSTATE_OUTPUTTING:         return 10000;
-    case FSTATE_READY:              return 60000;
-    case FSTATE_TRANSFER_ERROR:     return 5000;
-    case FSTATE_TRANSCODE_ERROR:    return 5000;
-    case FSTATE_POST_PROCESS_ERROR: return 5000;
-    case FSTATE_NOT_FOUND:          return 5000;
-    case FSTATE_DUPLICATE:          return 5000;
-    case FSTATE_INVALID_PARAMETER:  return 5000;
-    case FSTATE_DISK_ERROR:         return 5000;
-    case FSTATE_IDLE:               return 5000;
-    case FSTATE_BAD_SLAVE_STATE:   return 10000;
+    case FSTATE_PENDING:           return 5000;
+    case FSTATE_PROCESSING:        return 5000;
+    case FSTATE_SLAVE_READY:       return 5000;
+    case FSTATE_DISTRIBUTING:      return 5000;
+    case FSTATE_DONE:              return 60000;
+    case FSTATE_ERROR:             return 60000;
     default:
       LOG_FATAL << "Invalid file state: " << state;
       return 0;
@@ -313,7 +276,7 @@ void SlaveController::ChangeFileState(CMediaFile& cfile,
 void SlaveController::ScheduleProcessFile(CMediaFile& cfile) {
   cfile.alarm_.ResetTimeout(DelayProcessFile(cfile.file_->state()));
 }
-void SlaveController::ProcessFile(int64 file_id) {
+void SlaveController::ProcessFile(string file_id) {
   CMediaFileMap::iterator it = files_.find(file_id);
   if(it == files_.end()) {
     LOG_FATAL << "No such file_id: " << file_id;
@@ -327,80 +290,40 @@ void SlaveController::ProcessFile(int64 file_id) {
   CHECK_NOT_NULL(rpc_client_wrapper_);
 
   switch(file->state()) {
-    case FSTATE_IDLE:
+    case FSTATE_PENDING:
       {
-        rpc_client_wrapper_->Copy(
-            NewCallback(this, &SlaveController::HandleCopyResult, file->id()),
+        rpc_client_wrapper_->AddFile(
+            NewCallback(this, &SlaveController::HandleAddFileResult, file->id()),
             IsScpPath(file->path()) ?
                 file->path() :
                 MakeScpPath(master_.scp_username(),
                             master_.external_ip(), file->path()),
             file->id(),
-            EncodeProcessCmd(file->process_cmd()),
             file->process_params(),
             master_.master_uri(),
             name_);
         // RPC call pending. File state will be changed on RPC reponse.
         return;
       }
-    case FSTATE_TRANSFERRED:
-      {
-        rpc_client_wrapper_->Process(
-            NewCallback(this, &SlaveController::HandleProcessResult, file->id()),
-            file->id());
-        // RPC call pending. File state will be changed on RPC reponse.
-        return;
-      }
-    case FSTATE_TRANSFERRING:
-      // transfer in progress, keep checking file state
-    case FSTATE_TRANSCODING:
+    case FSTATE_PROCESSING:
       // transcode in progress, keep checking file state
-    case FSTATE_POST_PROCESSING:
-      // post process in progress, keep checking file state
-    case FSTATE_OUTPUTTING:
-      // duplicate between multiple output dirs in progress, keep checking
-      // file state
-    case FSTATE_BAD_SLAVE_STATE:
-      // unknown state reported by slave.. keep checking
+      return;
+    case FSTATE_SLAVE_READY:
+      // transcode done. The slave finished it's job; time to distribute
+      {
+        LOG_FATAL << "TODO(cosmin): implement file distribution";
+        return;
+      }
     case FSTATE_DISTRIBUTING:
-      // result is duplicated between slaves
-      {
-        rpc_client_wrapper_->GetFileState(
-            NewCallback(this, &SlaveController::HandleGetFileStateResult,
-                        file->id()),
-            file->id());
-        // RPC call pending. File state will be changed on RPC reponse.
-        return;
-      }
-    case FSTATE_READY:            // file done
-    case FSTATE_DUPLICATE:        // file already exists
-    case FSTATE_INVALID_PARAMETER:// RPC uri error, version mismatch
-    case FSTATE_NOT_FOUND:        // the slave doesn't have this file
-    case FSTATE_TRANSFER_ERROR:   // error transferring file from master to slave
-    case FSTATE_TRANSCODE_ERROR:  // error transcoding file
-    case FSTATE_POST_PROCESS_ERROR: // error post processing file
-    case FSTATE_DISK_ERROR:       // mv, mkdir, cp failed
-      {
-        // Do nothing, the file would stay in this state forever.
-        // Or until the user calls CompleteMediaFile or RetryMediaFile
-        // through the MasterControl service.
-        if ( !cfile->complete_reported_ ) {
-          master_.CompleteMediaFile(this, file);
-          cfile->complete_reported_ = true;
-        }
-        return;
-      }
-      //NOTE(cosmin): removed auto-retry for failed files.
-      ////fatal errors, restart whole process
-      //{
-      //  LOG_WARNING << "File in fatal error state: "
-      //              << *file << " switching to IDLE.";
-      //  ChangeFileState(*cfile, IDLE, "");
-      //  return;
-      //}
-
-      // NOTE: Do NOT use "default" so that the compiler will generate a warning
-      //       if you miss an enum case.
+      // result is duplicated between output dirs
+      return;
+    case FSTATE_DONE:        // file done
+      return;
+    case FSTATE_ERROR:       // something failed: scp, transcoding, ...
+      // Do nothing, the file would stay in this state forever.
+      // Or until the user calls CompleteMediaFile or RetryMediaFile
+      // through the MasterControl service.
+      return;
   }
   LOG_FATAL << "Invalid file state: " << *file;
   return;
@@ -409,13 +332,10 @@ void SlaveController::ProcessFile(int64 file_id) {
 void SlaveController::MaybeGrabMediaFile() {
   // count processing files
   uint32 processing_file_count = 0;
-  for(CMediaFileMap::iterator it = files_.begin(); it != files_.end(); ++it) {
+  for ( CMediaFileMap::iterator it = files_.begin(); it != files_.end(); ++it ) {
     CMediaFile& cfile = *it->second;
     MediaFile& file = *cfile.file_;
-    if(file.state() == FSTATE_IDLE ||
-       file.state() == FSTATE_TRANSFERRING ||
-       file.state() == FSTATE_TRANSCODING ||
-       file.state() == FSTATE_BAD_SLAVE_STATE) {
+    if ( file.state() == FSTATE_PROCESSING ) {
       // count only working files. Exclude files in final state (good or error).
       processing_file_count++;
     }
@@ -439,12 +359,7 @@ void SlaveController::MaybeGrabMediaFile() {
     LOG_DEBUG << "MaybeGrabMediaFile => NULL";
     return;
   }
-  file->set_slave(rpc::CreateUri(host_port_,
-                                 rpc_http_path_,
-                                 rpc_http_auth_user_,
-                                 rpc_http_auth_pswd_,
-                                 rpc_connection_type_,
-                                 rpc_codec_id_));
+  file->set_slave(SlaveURI());
   LOG_INFO << "MaybeGrabMediaFile => " << *file;
 
   // add the new file
@@ -452,39 +367,32 @@ void SlaveController::MaybeGrabMediaFile() {
   CHECK_NOT_NULL(cfile) << "Failed to AddFile: " << *file;
 }
 
-void SlaveController::HandleCopyResult(
-    int64 file_id, const rpc::CallResult<FileState>& result) {
-  if(!result.success_) {
-    LOG_ERROR << "Failed RPC Copy: " << result.error_;
-    NotifyMediaFileError(file_id, "Failed RPC Copy: " + result.error_);
+void SlaveController::HandleAddFileResult(
+    string file_id, const rpc::CallResult<string>& result) {
+  if ( !result.success_ ) {
+    LOG_ERROR << "Failed RPC AddFile: " << result.error_;
+    NotifyMediaFileError(file_id, "Failed RPC AddFile: " + result.error_);
     return;
   }
-  NotifyMediaFileStateChange(result.result_);
+  if ( result.result_ != "" ) {
+    NotifyMediaFileError(file_id, result.result_);
+  }
 }
-void SlaveController::HandleProcessResult(
-    int64 file_id, const rpc::CallResult<FileState>& result) {
-  if(!result.success_) {
-    LOG_ERROR << "Failed RPC Process: " << result.error_;
-    NotifyMediaFileError(file_id, "Failed RPC Process: " + result.error_);
+void SlaveController::HandleDelFileResult(
+    string file_id, const rpc::CallResult<rpc::Void>& result) {
+  if ( !result.success_ ) {
+    LOG_ERROR << "Failed RPC DelFile: " << result.error_;
     return;
   }
-  NotifyMediaFileStateChange(result.result_);
 }
 void SlaveController::HandleGetFileStateResult(
-    int64 file_id, const rpc::CallResult<FileState>& result) {
-  if(!result.success_) {
+    string file_id, const rpc::CallResult<FileState>& result) {
+  if ( !result.success_ ) {
     LOG_ERROR << "Failed RPC GetFileState: " << result.error_;
     NotifyMediaFileError(file_id, "Failed RPC GetFileState: " + result.error_);
     return;
   }
   NotifyMediaFileStateChange(result.result_);
-}
-void SlaveController::HandleDeleteResult(
-    int64 file_id, const rpc::CallResult<rpc::Void>& result) {
-  if(!result.success_) {
-    LOG_ERROR << "Failed RPC Delete: " << result.error_;
-    return;
-  }
 }
 
 void SlaveController::Save() {
@@ -496,14 +404,9 @@ void SlaveController::Save() {
     const MediaFile& file = *cfile.file_;
     rpc_files[i] = StateMediaFile(file.id(),
                                   file.path(),
-                                  EncodeProcessCmd(file.process_cmd()),
                                   file.process_params(),
                                   EncodeFState(file.state()),
-                                  file.error(),
-                                  file.ts_state_change(),
-                                  file.output(),
-                                  file.transcoding_status(),
-                                  cfile.complete_reported_);
+                                  file.error());
   }
   state_keep_user_.SetValue(kStateFiles,
                             rpc::JsonEncoder::EncodeObject(rpc_files));
@@ -516,12 +419,8 @@ bool SlaveController::Load() {
     LOG_ERROR << "Load: key not found: " << kStateFiles;
     return false;
   }
-  io::MemoryStream ms;
-  ms.Write(str_encoded_files);
-  rpc::JsonDecoder decoder(ms);
   vector<StateMediaFile> rpc_files;
-  const rpc::DECODE_RESULT result = decoder.Decode(rpc_files);
-  if(result != rpc::DECODE_RESULT_SUCCESS) {
+  if ( !rpc::JsonDecoder::DecodeObject(str_encoded_files, &rpc_files) ) {
     LOG_ERROR << "Load: failed to decode str_encoded_files: ["
               << str_encoded_files << "]";
     return false;
@@ -534,26 +433,18 @@ bool SlaveController::Load() {
     MediaFile* file = new MediaFile(
         rpc_file.id_.get(),
         rpc_file.path_.get(),
-        DecodeProcessCmd(rpc_file.process_cmd_.get()),
         rpc_file.process_params_.get(),
         DecodeFState(rpc_file.state_.get()),
         rpc_file.error_.get(),
-        rpc_file.ts_state_change_.get(),
-        rpc::CreateUri(host_port_,
-                       rpc_http_path_,
-                       rpc_http_auth_user_,
-                       rpc_http_auth_pswd_,
-                       rpc_connection_type_,
-                       rpc_codec_id_),
-        rpc_file.output_.get(),
-        rpc_file.transcoding_status_.get());
+        0,
+        SlaveURI(),
+        kEmptyTranscodingStatus);
     CMediaFile* cfile = AddFile(file);
-    if(!cfile) {
+    if ( cfile == NULL ) {
       LOG_ERROR << "Load: Ignoring duplicate file: " << *file;
       delete file;
       file = NULL;
     }
-    cfile->complete_reported_ = rpc_file.complete_reported_.get();
   }
   return true;
 }

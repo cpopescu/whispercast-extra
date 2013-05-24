@@ -13,11 +13,10 @@
 
 #include "extra_library/auto/extra_library_invokers.h"
 
-#ifndef __DISABLE_FEATURES__
 #include "extra_library/feature_detector/feature_detector.h"
-#endif
 
 #include "extra_library/time_range/time_range_element.h"
+#include "extra_library/time_shift/time_shift_element.h"
 #include "extra_library/time_delay/time_delay_policy.h"
 #include "extra_library/schedule/schedule_policy.h"
 #include "extra_library/logic_policy/logic_policy.h"
@@ -57,11 +56,11 @@ namespace streaming {
 ExtraElementLibrary::ExtraElementLibrary()
     : ElementLibrary("extra_library"),
       rpc_impl_(NULL) {
-#ifndef __DISABLE_FEATURES__
   /* libavcodec */
-  avcodec_init();
+  #if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(53,34,0)
+    avcodec_init();
+  #endif
   avcodec_register_all();
-#endif
 }
 
 ExtraElementLibrary::~ExtraElementLibrary() {
@@ -70,10 +69,9 @@ ExtraElementLibrary::~ExtraElementLibrary() {
 }
 
 void ExtraElementLibrary::GetExportedElementTypes(vector<string>* element_types) {
-#ifndef __DISABLE_FEATURES__
   element_types->push_back(FeatureDetectorElement::kElementClassName);
-#endif
   element_types->push_back(TimeRangeElement::kElementClassName);
+  element_types->push_back(TimeShiftElement::kElementClassName);
   element_types->push_back(FlavouringElement::kElementClassName);
 }
 
@@ -92,17 +90,20 @@ int64 ExtraElementLibrary::GetElementNeeds(const string& element_type) {
             NEED_MEDIA_DIR |
             NEED_STATE_KEEPER |
             NEED_RPC_SERVER);
+  }
+  if ( element_type == TimeShiftElement::kElementClassName ) {
+    return (NEED_SELECTOR |
+            NEED_MEDIA_DIR |
+            NEED_STATE_KEEPER);
   } else if ( element_type == FlavouringElement::kElementClassName ) {
     return (NEED_SELECTOR |
             NEED_STATE_KEEPER |
             NEED_RPC_SERVER);
   }
-#ifndef __DISABLE_FEATURES__
   else if ( element_type == FeatureDetectorElement::kElementClassName ) {
     return (NEED_MEDIA_DIR |
             NEED_SELECTOR);
   }
-#endif
   return 0;
 }
 
@@ -138,6 +139,7 @@ streaming::Element* ExtraElementLibrary::CreateElement(
     const string& element_params,
     const streaming::Request* req,
     const CreationObjectParams& params,
+    bool is_temporary_template,
     // Output:
     vector<string>* needed_policies,
     string* error_description) {
@@ -145,16 +147,18 @@ streaming::Element* ExtraElementLibrary::CreateElement(
   if ( element_type == TimeRangeElement::kElementClassName ) {
     CREATE_ELEMENT_HELPER(TimeRange);
     return ret;
+  }
+  if ( element_type == TimeShiftElement::kElementClassName ) {
+    CREATE_ELEMENT_HELPER(TimeShift);
+    return ret;
   } else if ( element_type == FlavouringElement::kElementClassName ) {
     CREATE_ELEMENT_HELPER(Flavouring);
     return ret;
   }
-#ifndef __DISABLE_FEATURES__
   else if ( element_type == FeatureDetectorElement::kElementClassName ) {
     CREATE_ELEMENT_HELPER(FeatureDetector);
     return ret;
   }
-#endif
   LOG_ERROR << "Dunno to create element of type: '" << element_type << "'";
   return NULL;
 }
@@ -207,21 +211,17 @@ ExtraElementLibrary::CreateFeatureDetectorElement(const string& element_name,
                                                   const streaming::Request* req,
                                                   const CreationObjectParams& params,
                                                   vector<string>* needed_policies,
+                                                  bool is_temporary_template,
                                                   string* error) {
   if ( req != NULL ) {
     LOG_ERROR << " Cannot create temp feature detector - these things consume a lot of CPU";
     return NULL;
   }
-#ifdef __DISABLE_FEATURES__
-  return NULL;
-#else
-  return new FeatureDetectorElement(element_name.c_str(),
-                                    element_name.c_str(),
+  return new FeatureDetectorElement(element_name,
                                     mapper_,
                                     params.selector_,
                                     params.media_dir_,
                                     spec);
-#endif
 }
 
 
@@ -233,40 +233,41 @@ streaming::Element* ExtraElementLibrary::CreateTimeRangeElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
-  const string home_dir(spec.home_dir_.c_str());
-  const string full_home_dir(params.media_dir_ + "/" + home_dir);
-  // We disable this check ...
-  //
-  // if ( !io::IsDir(full_home_dir.c_str()) ) {
-  //   LOG_ERROR << "Cannot create media element under directory : ["
-  //             << home_dir << "] (looking under: ["
-  //             << full_home_dir << "]";
-  //   return NULL;
-  // }
-  const bool utc_requests =
-      spec.utc_requests_.is_set()
-      ? spec.utc_requests_.get() : false;
-
-  string rpc_path(name() + "/" + element_name + "/");
+  string rpc_path = strutil::JoinPaths(name(), element_name);
   rpc::HttpServer* rpc_server = params.rpc_server_;
 
-
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
   return new streaming::TimeRangeElement(
-      element_name.c_str(),
-      id.c_str(),
+      element_name,
       mapper_,
       params.selector_,
       params.state_keeper_,
       params.local_state_keeper_,
-      rpc_path.c_str(),
+      rpc_path,
       rpc_server,
-      full_home_dir.c_str(),
-      spec.root_media_path_.c_str(),
-      spec.file_prefix_.c_str(),
-      utc_requests);
+      spec.internal_media_path_,
+      spec.update_media_interval_sec_);
+}
+
+/////// TimeShift
+
+streaming::Element* ExtraElementLibrary::CreateTimeShiftElement(
+    const string& element_name,
+    const TimeShiftElementSpec& spec,
+    const streaming::Request* req,
+    const CreationObjectParams& params,
+    vector<string>* needed_policies,
+    bool is_temporary_template,
+    string* error) {
+  return new streaming::TimeShiftElement(
+      element_name,
+      mapper_,
+      params.selector_,
+      spec.media_path_,
+      strutil::JoinPaths(params.media_dir_, spec.save_dir_),
+      spec.time_range_element_on_save_dir_,
+      spec.buffer_size_ms_);
 }
 
 /////// Flavouring
@@ -277,14 +278,13 @@ streaming::Element* ExtraElementLibrary::CreateFlavouringElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
-  string rpc_path(name() + "/" + element_name + "/");
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
+  string rpc_path = strutil::JoinPaths(name(), element_name);
 
   // sanity check
   uint32 all_flav = 0;
-  for ( int i = 0; i < spec.flavours_.size(); ++i ) {
+  for ( uint32 i = 0; i < spec.flavours_.size(); ++i ) {
     if ( (all_flav & spec.flavours_[i].flavour_mask_.get()) != 0 ) {
       *error = "Overlapping flavours";
       return NULL;
@@ -293,14 +293,13 @@ streaming::Element* ExtraElementLibrary::CreateFlavouringElement(
   }
 
   vector< pair<string, uint32> > flavours;
-  for ( int i = 0; i < spec.flavours_.size(); ++i ) {
+  for ( uint32 i = 0; i < spec.flavours_.size(); ++i ) {
     flavours.push_back(
         make_pair(spec.flavours_[i].media_prefix_.get(),
                   spec.flavours_[i].flavour_mask_.get()));
   }
 
   return new streaming::FlavouringElement(element_name,
-                                          id,
                                           mapper_,
                                           params.selector_,
                                           rpc_path,
@@ -318,9 +317,9 @@ streaming::Policy* ExtraElementLibrary::CreateTimeDelayPolicy(
     const streaming::Request* req,
     const CreationObjectParams& params,
     string* error) {
-  const string home_dir(spec.home_dir_.c_str());
+  const string& home_dir = spec.home_dir_;
   const string full_home_dir(params.media_dir_ + "/" + home_dir);
-  if ( !io::IsDir(full_home_dir.c_str()) ) {
+  if ( !io::IsDir(full_home_dir) ) {
     LOG_ERROR << "Cannot create media element under directory : ["
               << home_dir << "] (looking under: ["
               << full_home_dir << "]";
@@ -339,19 +338,19 @@ streaming::Policy* ExtraElementLibrary::CreateTimeDelayPolicy(
     rpc_server = NULL;
   }
   return new TimeDelayPolicy(
-      policy_name.c_str(),
+      policy_name,
       element,
       mapper_,
       params.selector_,
       req != NULL,
       params.state_keeper_,
       params.local_state_keeper_,
-      rpc_path.c_str(),
-      local_rpc_path.c_str(),
+      rpc_path,
+      local_rpc_path,
       rpc_server,
-      full_home_dir.c_str(),
-      spec.root_media_path_.c_str(),
-      spec.file_prefix_.c_str(),
+      full_home_dir,
+      spec.root_media_path_,
+      spec.file_prefix_,
       spec.time_delay_sec_);
 }
 
@@ -374,7 +373,7 @@ streaming::Policy* ExtraElementLibrary::CreateSchedulePlaylistPolicy(
   const vector<SchedulePlaylistItemSpec>& rpc_playlist =
       spec.playlist_.get();
   vector<const SchedulePlaylistItemSpec*> playlist;
-  for ( int i = 0; i < rpc_playlist.size(); ++i ) {
+  for ( uint32 i = 0; i < rpc_playlist.size(); ++i ) {
     playlist.push_back(&rpc_playlist[i]);
   }
   rpc::HttpServer* rpc_server = params.rpc_server_;
@@ -384,7 +383,7 @@ streaming::Policy* ExtraElementLibrary::CreateSchedulePlaylistPolicy(
   const int32 min_switch_delta_ms =
       spec.min_switch_delta_ms_.is_set()
       ? spec.min_switch_delta_ms_.get() : 2000;
-  return new SchedulePlaylistPolicy(policy_name.c_str(),
+  return new SchedulePlaylistPolicy(policy_name,
                                     element,
                                     params.selector_,
                                     req != NULL,
@@ -415,7 +414,7 @@ streaming::Policy* ExtraElementLibrary::CreateLogicPlaylistPolicy(
   }
   rpc::HttpServer* rpc_server = params.rpc_server_;
 
-  return new LogicPlaylistPolicy(policy_name.c_str(),
+  return new LogicPlaylistPolicy(policy_name,
                                  element,
                                  mapper_,
                                  params.selector_,
@@ -474,29 +473,27 @@ streaming::Authorizer* ExtraElementLibrary::CreateHttpAuthorizer(
     return NULL;
   }
   vector<net::HostPort> servers;
-  for ( int i = 0; i < spec.servers_.size(); ++i ) {
-    net::HostPort hp(spec.servers_[i].c_str());
-    if ( !hp.IsInvalid() ) {
-      servers.push_back(hp);
-    }
+  for ( uint32 i = 0; i < spec.servers_.size(); ++i ) {
+    servers.push_back(net::HostPort(spec.servers_[i]));
   }
   if ( servers.empty() ) {
-    *error = "No valid servers_ host-port found";
+    *error = "No valid authorization servers found";
     return NULL;
   }
   vector< pair<string, string> > http_headers;
-  for ( int i = 0; i < spec.http_headers_.size(); ++i ) {
+  for ( uint32 i = 0; i < spec.http_headers_.size(); ++i ) {
     http_headers.push_back(
         make_pair(spec.http_headers_[i].name_.get(),
                   spec.http_headers_[i].value_.get()));
   }
   vector<string> body_lines;
-  for ( int i = 0; i < spec.body_lines_.size(); ++i ) {
+  for ( uint32 i = 0; i < spec.body_lines_.size(); ++i ) {
     body_lines.push_back(spec.body_lines_[i]);
   }
-  return new HttpAuthorizer(auth_name.c_str(),
+  return new HttpAuthorizer(auth_name,
                             params.selector_,
                             servers,
+                            spec.use_https_.get(),
                             spec.query_path_format_,
                             http_headers,
                             body_lines,
@@ -536,25 +533,31 @@ class ServiceInvokerExtraLibraryServiceImpl
   }
 
   virtual void AddFeatureDetectorElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
       const FeatureDetectorElementSpec& spec) {
-#ifndef __DISABLE_FEATURES__
     STANDARD_RPC_ELEMENT_ADD(FeatureDetector);
-#endif
   }
   virtual void AddTimeRangeElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
       const TimeRangeElementSpec& spec) {
     STANDARD_RPC_ELEMENT_ADD(TimeRange);
   }
+  virtual void AddTimeShiftElementSpec(
+      rpc::CallContext< MediaOpResult >* call,
+      const string& name,
+      bool is_global,
+      bool disable_rpc,
+      const TimeShiftElementSpec& spec) {
+    STANDARD_RPC_ELEMENT_ADD(TimeShift);
+  }
   virtual void AddFlavouringElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -562,26 +565,26 @@ class ServiceInvokerExtraLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(Flavouring);
   }
   virtual void AddSchedulePlaylistPolicySpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       const SchedulePlaylistPolicySpec& spec) {
     STANDARD_RPC_POLICY_ADD(SchedulePlaylist);
   }
   virtual void AddLogicPlaylistPolicySpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       const LogicPlaylistPolicySpec& spec) {
     STANDARD_RPC_POLICY_ADD(LogicPlaylist);
   }
   virtual void AddTimeDelayPolicySpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       const TimeDelayPolicySpec& spec) {
     STANDARD_RPC_POLICY_ADD(TimeDelay);
   }
 
   virtual void AddHttpAuthorizerSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       const HttpAuthorizerSpec& spec) {
     STANDARD_RPC_AUTHORIZER_ADD(Http);

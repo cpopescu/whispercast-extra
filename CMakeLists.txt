@@ -46,11 +46,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/../)
 include_directories(${whisperlib_INCLUDE_DIR})
 include_directories(${whisperstreamlib_INCLUDE_DIR})
 
-if (WITH_GSTREAMER)
-find_package(WhisperMediaLib REQUIRED)
-include_directories(${whispermedialib_INCLUDE_DIR})
-endif (WITH_GSTREAMER)
-
 ######################################################################
 
 include(../cmake/common.cmake)
@@ -61,14 +56,15 @@ ADD_SUBDIRECTORY (osd)
 ADD_SUBDIRECTORY (utils)
 ADD_SUBDIRECTORY (extra_library)
 ADD_SUBDIRECTORY (whispercmd)
-ADD_SUBDIRECTORY (whisperproc)
+ADD_SUBDIRECTORY (whisperproc2)
 if (NOT APPLE)
-  if (WITH_GSTREAMER)
-    ADD_SUBDIRECTORY (features)
-  endif (WITH_GSTREAMER)
+  ADD_SUBDIRECTORY (features)
   ADD_SUBDIRECTORY (stats)
 endif (NOT APPLE)
 ADD_SUBDIRECTORY (transcoder)
+IF ( EXISTS test )
+  ADD_SUBDIRECTORY (test)
+ENDIF ( EXISTS test )
 
 ######################################################################
 

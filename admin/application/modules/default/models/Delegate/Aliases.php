@@ -14,7 +14,8 @@ class Model_Delegate_Aliases extends Model_Delegate_Streams {
   }
 
   protected function _setupFromElement($data) {
-    $aliases = new Whispercast_Aliases(Whispercast::getInterface($this->_model->server_id));
+    $interface = Whispercast::getInterface($this->_model->server_id);
+    $aliases = new Whispercast_Aliases($interface);
 
     $cs = $aliases->getConfig($this->_model->id, $setup);
     if ($cs !== null) {
@@ -22,7 +23,7 @@ class Model_Delegate_Aliases extends Model_Delegate_Streams {
     }
 
     $streams = new Model_DbTable_Streams();
-    $stream = $streams->fetchRow($streams->select()->where('path = ?', $setup['stream']));
+    $stream = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($setup['stream'])));
     if ($stream) {
       return array('stream'=>$stream->toArray(), 'export_as'=>$data['export_as'], 'duration'=>$stream->duration);
     }

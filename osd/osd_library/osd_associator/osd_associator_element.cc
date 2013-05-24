@@ -38,10 +38,11 @@ struct ClipOsds {
                        const CrawlerMap& crawler_types,
                        vector< scoped_ref<streaming::OsdTag> >*
                          begin_tags) const;
+  // ignore_eos_clear: if true, send destroyX tags regardless of eos_clear_X_
   void GetEndOsdTags(const OverlayMap& overlay_types,
                      const CrawlerMap& crawler_types,
-                     vector< scoped_ref<streaming::OsdTag> >*
-                       end_tags) const;
+                     bool ignore_eos_clear,
+                     vector< scoped_ref<streaming::OsdTag> >* end_tags) const;
 
   string ToString() const {
     ostringstream oss;
@@ -141,6 +142,7 @@ void OsdAssocCallbackData::ChangeOsds(const string& media, ClipOsds* new_osd) {
   if ( old_osd != NULL && old_osd != new_osd ) {
     old_osd->GetEndOsdTags(overlay_types_,
                            crawler_types_,
+                           true,
                            &pending_osd_tags_);
     LOG_DEBUG << media_name_ << ": Removing old OSDs: "
              << pending_osd_tags_.size();
@@ -188,7 +190,8 @@ void OsdAssocCallbackData::FilterTag(
           it != assoc_paths_.end(); ++it ) {
       ClipOsds* clip = it->second;
       if ( clip != NULL ) {
-        clip->GetEndOsdTags(overlay_types_, crawler_types_, &eos_osd_tags);
+        clip->GetEndOsdTags(overlay_types_, crawler_types_, false,
+                            &eos_osd_tags);
       }
       master_->DelUserFromMedia(it->first, this);
     }
@@ -237,14 +240,13 @@ namespace streaming {
 
 const char OsdAssociatorElement::kElementClassName[] = "osd_associator";
 
-OsdAssociatorElement::OsdAssociatorElement(const char* name,
-                                           const char* id,
+OsdAssociatorElement::OsdAssociatorElement(const string& name,
                                            ElementMapper* mapper,
                                            net::Selector* selector,
                                            io::StateKeepUser* state_keeper,
-                                           const char* rpc_path,
+                                           const string& rpc_path,
                                            rpc::HttpServer* rpc_server)
-    : FilteringElement(kElementClassName, name, id, mapper, selector),
+    : FilteringElement(kElementClassName, name, mapper, selector),
       ServiceInvokerOsdAssociator(ServiceInvokerOsdAssociator::GetClassName()),
       state_keeper_(state_keeper),
       rpc_path_(rpc_path),
@@ -288,66 +290,68 @@ bool OsdAssociatorElement::LoadState() {
   if ( !state_keeper_ ) {
     return false;
   }
-  map<string, string>::const_iterator begin, end;
-  state_keeper_->GetBounds("o-", &begin, &end);
 
-  bool ret = true;
+  map<string, string> keys;
+  bool success = true;
   ///// Overlays
 
-  for ( map<string, string>::const_iterator it = begin; it != end; ++it ) {
+  keys.clear();
+  state_keeper_->GetKeyValues("o-", &keys);
+  for ( map<string, string>::const_iterator it = keys.begin();
+        it != keys.end(); ++it ) {
     CreateOverlayParams* params = new CreateOverlayParams();
     if ( !rpc::JsonDecoder::DecodeObject(it->second, params) ) {
       LOG_ERROR << "Error decoding overlays:\n" << it->second;
       delete params;
-      ret = false;
+      success = false;
     } else {
       LOG_DEBUG << name() << ": Adding overlay Type: " << params->ToString();
-      overlay_types_.insert(make_pair(params->id,
-                                      params));
+      overlay_types_.insert(make_pair(params->id, params));
     }
   }
 
   ///// Crawlers
 
-  state_keeper_->GetBounds("c-", &begin, &end);
-  for ( map<string, string>::const_iterator it = begin; it != end; ++it ) {
+  keys.clear();
+  state_keeper_->GetKeyValues("c-", &keys);
+  for ( map<string, string>::const_iterator it = keys.begin();
+        it != keys.end(); ++it ) {
     CreateCrawlerParams* params = new CreateCrawlerParams();
     if ( !rpc::JsonDecoder::DecodeObject(it->second, params) ) {
       LOG_ERROR << "Error decoding crawler:\n" << it->second;
       delete params;
-      ret = false;
+      success = false;
     } else {
       LOG_DEBUG << name() << ": Adding crawler Type: " << params->ToString();
-      crawler_types_.insert(make_pair(params->id,
-                                      params));
+      crawler_types_.insert(make_pair(params->id, params));
     }
   }
 
   ///// Clip data
 
-  state_keeper_->GetBounds("a-", &begin, &end);
-  for ( map<string, string>::const_iterator it = begin; it != end; ++it ) {
+  keys.clear();
+  state_keeper_->GetKeyValues("a-", &keys);
+  for ( map<string, string>::const_iterator it = keys.begin();
+        it != keys.end(); ++it ) {
     AssociatedOsds params;
     if ( !rpc::JsonDecoder::DecodeObject(it->second, &params) ) {
       LOG_ERROR << "Error decoding associated data:\n" << it->second;
-      ret = false;
+      success = false;
     } else {
+      const string media = it->first.substr(2);
       LOG_DEBUG << name() << ": Adding associated OSD: "
-               << it->first.substr(state_keeper_->prefix().size() + 2) << " : "
-               << params.ToString();
-      associated_osds_.insert(
-          make_pair(it->first.substr(state_keeper_->prefix().size() + 2),
-                    new ClipOsds(params)));
+                << media << " : " << params.ToString();
+      associated_osds_.insert(make_pair(media, new ClipOsds(params)));
     }
   }
 
-  return ret;
+  return success;
 }
 
 //////////////////////////////////////////////////////////////////////
 
 FilteringCallbackData* OsdAssociatorElement::CreateCallbackData(
-    const char* media_name,
+    const string& media_name,
     streaming::Request* req) {
   OsdAssocCallbackData* ret = new OsdAssocCallbackData(this,
                                                        overlay_types_,
@@ -450,6 +454,10 @@ void OsdAssociatorElement::DeleteAssociatedOsds(const string& media) {
             data_it != assoc_it->second->end(); ++data_it ) {
         (*data_it)->ChangeOsds(media, NULL);
       }
+    }
+    if ( state_keeper_ ) {
+      state_keeper_->DeleteValue(
+          strutil::StringPrintf("a-%s", media.c_str()));
     }
     delete it->second;
     associated_osds_.erase(it);
@@ -1102,9 +1110,10 @@ void ClipOsds::GetBeginOsdTags(
 void ClipOsds::GetEndOsdTags(
     const OverlayMap& overlay_types,
     const CrawlerMap& crawler_types,
+    bool ignore_eos_clear,
     vector< scoped_ref<streaming::OsdTag> >* end_tags) const {
   // TODO:: do we support something like this ?
-  if ( eos_clear_overlays_ ) {
+  if ( eos_clear_overlays_ || ignore_eos_clear ) {
     for ( map<string, string>::const_iterator it = overlays_.begin();
           it != overlays_.end(); ++it ) {
       OverlayMap::const_iterator ito = overlay_types.find(it->first);
@@ -1122,7 +1131,7 @@ void ClipOsds::GetEndOsdTags(
         it != crawlers_.end(); ++it ) {
     CrawlerMap::const_iterator itc = crawler_types.find(it->first);
     if ( itc != crawler_types.end() ) {
-      if ( eos_clear_crawl_items_ ) {
+      if ( eos_clear_crawl_items_ || ignore_eos_clear ) {
         for ( ItemMap::const_iterator item_it = it->second->begin();
               item_it != it->second->end(); ++item_it ) {
           LOG_DEBUG << media_ << ": Remove crawler item: " << it->first
@@ -1132,7 +1141,7 @@ void ClipOsds::GetEndOsdTags(
               RemoveCrawlerItemParams(it->first, item_it->first)));
         }
       }
-      if ( eos_clear_crawlers_ ) {
+      if ( eos_clear_crawlers_ || ignore_eos_clear ) {
         LOG_DEBUG << media_ << ": Destroy crawler item: " << it->first;
         end_tags->push_back(new streaming::OsdTag(
             0, streaming::kDefaultFlavourMask, 0,
@@ -1140,12 +1149,12 @@ void ClipOsds::GetEndOsdTags(
       }
     }
   }
-  if ( pip_ != NULL && eos_clear_pip_ ) {
+  if ( pip_ != NULL && (eos_clear_pip_ || ignore_eos_clear) ) {
     end_tags->push_back(new streaming::OsdTag(
         0, streaming::kDefaultFlavourMask, 0,
         SetPictureInPictureParams("", 0, 0, 0, 0, false)));
   }
-  if ( click_url_ != NULL && eos_clear_click_url_ ) {
+  if ( click_url_ != NULL && (eos_clear_click_url_ || ignore_eos_clear) ) {
     end_tags->push_back(new streaming::OsdTag(
         0, streaming::kDefaultFlavourMask, 0,
         SetClickUrlParams("")));

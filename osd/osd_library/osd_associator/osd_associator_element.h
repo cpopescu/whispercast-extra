@@ -28,12 +28,11 @@ struct ClipOsds;
 class OsdAssociatorElement : public FilteringElement,
                              public ServiceInvokerOsdAssociator {
  public:
-  OsdAssociatorElement(const char* name,
-                       const char* id,
+  OsdAssociatorElement(const string& name,
                        ElementMapper* mapper,
                        net::Selector* selector,
                        io::StateKeepUser* state_keeper,   // becomes ours
-                       const char* rpc_path,
+                       const string& rpc_path,
                        rpc::HttpServer* rpc_server);
   virtual ~OsdAssociatorElement();
 
@@ -108,7 +107,7 @@ class OsdAssociatorElement : public FilteringElement,
 
   // FilteringElement methods
 
-  virtual FilteringCallbackData* CreateCallbackData(const char* media_name,
+  virtual FilteringCallbackData* CreateCallbackData(const string& media_name,
                                                     streaming::Request* req);
   virtual void DeleteCallbackData(FilteringCallbackData* data);
 

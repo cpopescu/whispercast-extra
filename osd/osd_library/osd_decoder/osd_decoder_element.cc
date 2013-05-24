@@ -69,17 +69,16 @@ namespace streaming {
 
 const char OsdDecoderElement::kElementClassName[] = "osd_decoder";
 
-OsdDecoderElement::OsdDecoderElement(const char* name,
-                                     const char* id,
+OsdDecoderElement::OsdDecoderElement(const string& name,
                                      ElementMapper* mapper,
                                      net::Selector* selector)
-    : FilteringElement(kElementClassName, name, id, mapper, selector) {
+    : FilteringElement(kElementClassName, name, mapper, selector) {
 }
 OsdDecoderElement::~OsdDecoderElement() {
 }
 
 FilteringCallbackData* OsdDecoderElement::CreateCallbackData(
-    const char* media_name,
+    const string& media_name,
     streaming::Request* req) {
   return new OsdCallbackData();
 }

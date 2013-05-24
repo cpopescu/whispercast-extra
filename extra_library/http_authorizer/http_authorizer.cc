@@ -21,9 +21,10 @@ namespace streaming {
 const char HttpAuthorizer::kAuthorizerClassName[] = "http_authorizer";
 
 HttpAuthorizer::HttpAuthorizer(
-    const char* name,
+    const string& name,
     net::Selector* selector,
     const vector<net::HostPort>& servers,
+    bool use_https,
     const string& query_path_format,
     const vector< pair<string, string> >& http_headers,
     const vector<string>& body_format_lines,
@@ -37,7 +38,7 @@ HttpAuthorizer::HttpAuthorizer(
     int num_retries,
     int max_concurrent_requests,
     int req_timeout_ms)
-    : Authorizer(HttpAuthorizer::kAuthorizerClassName, name),
+    : Authorizer(name),
       selector_(selector),
       net_factory_(selector_),
       failsafe_client_(NULL),
@@ -75,14 +76,17 @@ HttpAuthorizer::~HttpAuthorizer()  {
 bool HttpAuthorizer::Initialize() {
   return true;
 }
+
 void HttpAuthorizer::Authorize(const AuthorizerRequest& areq,
-                               AuthorizerReply* reply,
-                               Closure* completion) {
-  ReqStruct* const req = PrepareRequest(areq, reply, completion);
-  failsafe_client_->StartRequest(req->http_request_,
-                                 NewCallback(this,
-                                             &HttpAuthorizer::RequestCallback,
-                                             req));
+                               CompletionCallback* completion) {
+  http::ClientRequest* http_request = PrepareRequest(areq);
+  active_.insert(completion);
+  failsafe_client_->StartRequest(http_request,
+      NewCallback(this, &HttpAuthorizer::RequestCallback,
+          http_request, completion));
+}
+void HttpAuthorizer::Cancel(CompletionCallback* completion) {
+  active_.erase(completion);
 }
 
 void HttpAuthorizer::EscapeMap(const map<string, string>& in,
@@ -119,14 +123,7 @@ void HttpAuthorizer::EscapeMap(const map<string, string>& in,
   }
 }
 
-HttpAuthorizer::ReqStruct*
-HttpAuthorizer::PrepareRequest(const AuthorizerRequest& areq,
-                               AuthorizerReply* reply,
-                               Closure* completion) {
-  ReqStruct* req = new ReqStruct();
-  req->reply_ = reply;
-  req->completion_ = completion;
-
+http::ClientRequest* HttpAuthorizer::PrepareRequest(const AuthorizerRequest& areq) {
   const http::HttpMethod http_method = body_format_lines_.empty()
                                        ? http::METHOD_GET : http::METHOD_POST;
   map<string, string> params;
@@ -137,7 +134,7 @@ HttpAuthorizer::PrepareRequest(const AuthorizerRequest& areq,
   params["RES"] = areq.resource_;
   params["ACTION"] = areq.action_;
   params["USAGE_MS"] = strutil::StringPrintf(
-      "%"PRId64"", (areq.action_performed_ms_));
+      "%"PRId64"", areq.action_performed_ms_);
 
   map<string, string> url_esc_params;
   EscapeMap(params, &url_esc_params, ESC_URL);
@@ -178,56 +175,45 @@ HttpAuthorizer::PrepareRequest(const AuthorizerRequest& areq,
   //          << r->request()->client_header()->ToString()
   //          << "\n --- BODY: \n:"
   //          << r->request()->client_data()->ToString();;
-  req->http_request_ = r;
-
-  return req;
+  return r;
 }
 
-void HttpAuthorizer::RequestCallback(ReqStruct* req) {
+void HttpAuthorizer::RequestCallback(http::ClientRequest* http_req,
+                                     CompletionCallback* completion) {
   /*
   LOG_INFO << " Authorization completed:\n "
-           << req->http_request_->request()->server_header()->ToString()
+           << http_req->request()->server_header()->ToString()
            << "\n --- BODY: \n:"
-           << req->http_request_->request()->server_data()->ToString()
+           << http_req->request()->server_data()->ToString()
            << "\n---- REQ:  "
-           << req->http_request_->request()->client_header()->ToString()
+           << http_req->request()->client_header()->ToString()
            << "\n---- BODY: "
-           << req->http_request_->request()->client_data()->ToString();
+           << http_req->request()->client_data()->ToString();
   */
-  if ( req->http_request_->error() != http::CONN_OK ) {
-    if ( default_allowed_ms_ > 0 ) {
-      req->reply_->allowed_ = true;
-      req->reply_->reauthorize_interval_ms_ = default_allowed_ms_ / 2;
-      req->reply_->time_limit_ms_ = default_allowed_ms_;
-    } else {
-      req->reply_->allowed_ = false;
-    }
-  } else if ( req->http_request_->request()->server_header()->status_code() !=
-              http::OK ) {
-    req->reply_->allowed_ = false;
+  if ( active_.erase(completion) == 0 ) {
+    // this authorization request got canceled in the meanwhile
+    return;
+  }
+
+  AuthorizerReply reply(false, 0);
+  if ( http_req->error() != http::CONN_OK && default_allowed_ms_ > 0 ) {
+    reply = AuthorizerReply(true, default_allowed_ms_);
+  } else if ( http_req->request()->server_header()->status_code() !=
+      http::OK ) {
+    // refuse
   } else if ( parse_json_authorizer_reply_ ) {
-    const string body(
-        req->http_request_->request()->server_data()->ToString());
+    const string body = http_req->request()->server_data()->ToString();
     RpcAuthorizerReply auth_reply;
-    if ( !rpc::JsonDecoder::DecodeObject(body, &auth_reply) ) {
-      req->reply_->allowed_ = false;
-      } else {
-      req->reply_->allowed_ = auth_reply.allowed_.get();
-      req->reply_->reauthorize_interval_ms_ =
-          auth_reply.reauthorize_interval_ms_.get();
-      req->reply_->time_limit_ms_ = auth_reply.time_limit_ms_.get();
+    if ( rpc::JsonDecoder::DecodeObject(body, &auth_reply) ) {
+      reply = AuthorizerReply(auth_reply.allowed_.get(),
+                              auth_reply.time_limit_ms_.get());
     }
   } else if ( !success_body_.empty() ) {
-    req->reply_->allowed_ =
-        req->http_request_->request()->server_data()->ToString() ==
-        success_body_;
-  } else {
-
-    req->reply_->allowed_ = true;
+    reply = AuthorizerReply(
+        http_req->request()->server_data()->ToString() == success_body_,
+        default_allowed_ms_);
   }
-  Closure* completion = req->completion_;
-  delete req;
-  completion->Run();
+  completion->Run(reply);
 }
 
 }

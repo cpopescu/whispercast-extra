@@ -96,11 +96,11 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   //
   io::MemoryStream tmp;
   tmp.Write(fparams);
-  rpc::JsonDecoder decoder(tmp);
+  rpc::JsonDecoder decoder;
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::CREATE_OVERLAY) ) {
     CreateOverlayParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode CreateOverlayParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -111,7 +111,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::DESTROY_OVERLAY) ) {
     DestroyOverlayParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode DestroyOverlayParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -122,7 +122,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::SHOW_OVERLAYS) ) {
     ShowOverlaysParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode ShowOverlaysParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -133,7 +133,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::CREATE_CRAWLER) ) {
     CreateCrawlerParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode CreateCrawlerParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -144,7 +144,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::DESTROY_CRAWLER) ) {
     DestroyCrawlerParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode DestroyCrawlerParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -155,7 +155,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::SHOW_CRAWLERS) ) {
     ShowCrawlersParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode ShowCrawlersParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -166,7 +166,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::ADD_CRAWLER_ITEM) ) {
     AddCrawlerItemParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode AddCrawlerItemParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -177,7 +177,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::REMOVE_CRAWLER_ITEM) ) {
     RemoveCrawlerItemParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode RemoveCralerItemParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -188,7 +188,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::SET_PICTURE_IN_PICTURE) ) {
     SetPictureInPictureParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode SetPictureInPicture: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -199,7 +199,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::SET_CLICK_URL) ) {
     SetClickUrlParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS !=  decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode SetClickUrl: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -210,7 +210,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::CREATE_MOVIE) ) {
     CreateMovieParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode CreateMovieParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;
@@ -221,7 +221,7 @@ scoped_ref<OsdTag> FlvToOsdDecoder::Decode(const FlvTag& flv_tag) {
   if ( fname == streaming::OsdTag::FunctionName(
                 streaming::OsdTag::DESTROY_MOVIE) ) {
     DestroyMovieParams params;
-    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(params) ) {
+    if ( rpc::DECODE_RESULT_SUCCESS != decoder.Decode(tmp, &params) ) {
       LOG_ERROR << "Failed to decode DestroyMovieParams: " << params
                 << "from string: [" << fparams << "]";
       return NULL;

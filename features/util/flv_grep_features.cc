@@ -173,7 +173,9 @@ int main(int argc, char* argv[]) {
   glb_min_limit[2] = FLAGS_region_C2;
   glb_min_limit[3] = FLAGS_region_C_all;
   /* libavcodec */
+#if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(53,34,0)
   avcodec_init();
+#endif
   avcodec_register_all();
 
   feature::FeatureSet to_find;

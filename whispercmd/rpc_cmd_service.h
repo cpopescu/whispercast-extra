@@ -25,18 +25,16 @@ private:
   };
 public:
   // selector: selector
-  RpcCmdService(net::Selector& selector,
-                const string& script_dir);
+  RpcCmdService(net::Selector& selector, const string& script_dir);
   virtual ~RpcCmdService();
 
   // Kill all running processes.
   void Cleanup();
 
-  // Called with every terminated process.
+  // [in selector_ thread] Called with every terminated process.
   //  p: the CallProcess object containing the completed process
   //  exit_code: process exit code
-  void ProcessCompleted(CallProcess* p,
-                        int exit_code);
+  void ProcessCompleted(CallProcess* p, int exit_code);
 
   /**********************************************************************/
   /*                     ServiceInvokerCmd methods                      */

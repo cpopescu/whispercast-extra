@@ -294,7 +294,7 @@ class Whispercast_Interface {
         return 's'.$this->_id.'_'.$this->_version;
     }
   }
-  public function getStreamPrefix($normalized = true) {
+  public function getStreamPrefix() {
     if ($this->_kind != 'whispercast') {
       throw new Exception('Stream prefix is exposed only by the streaming server interface');
     }
@@ -306,17 +306,33 @@ class Whispercast_Interface {
         return 's'.$this->_id.'_'.$this->_version.'_ts';
     }
   }
-  public function getExportPrefix($downloadable = false) {
+  public function getStreamPath($path) {
+    if ($this->_kind != 'whispercast') {
+      throw new Exception('Stream path is exposed only by the streaming server interface');
+    }
+    if (substr($path, 0, 1) == '/') {
+      return $this->getStreamPrefix().$path;
+    }
+    return $this->getStreamPrefix().'/'.$path;
+  }
+  public function getExportPrefix() {
     if ($this->_kind != 'whispercast') {
       throw new Exception('Export prefix is exposed only by the streaming server interface');
     }
     switch ($this->_version) {
       case 1:
-        return 's'.$this->_id.'_osde/s'.$this->_id.'_osda/'.$this->getStreamPrefix(!$downloadable);
+        return 's'.$this->_id.'_osde/s'.$this->_id.'_osda/'.$this->getStreamPrefix();
       case 2:
       default:
-        return 's'.$this->_id.'_'.$this->_version.'_osde/s'.$this->_id.'_'.$this->_version.'_osda/'.$this->getStreamPrefix(!$downloadable);
+        return 's'.$this->_id.'_'.$this->_version.'_osde/s'.$this->_id.'_'.$this->_version.'_osda/'.$this->getStreamPrefix();
     }
+  }
+  
+  public function getPathForLike($path) {
+    if ($this->_kind != 'whispercast') {
+      throw new Exception('Path functions are exposed only by the streaming server interface');
+    }
+    return '%'.str_replace(array('%','_'), array('\%', '\_'), substr($path, strlen($this->getStreamPrefix())+1));
   }
 }
 ?>

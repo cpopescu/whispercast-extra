@@ -58,7 +58,7 @@ void RtmpThumbnailer::ReadHandler() {
       break;
     }
     vector<scoped_ref<const feature::BitmapExtractor::PictureStruct> > pics;
-    extractor_.GetNextPictures(tag.get(), &pics);
+    extractor_.GetNextPictures(tag.get(), tag->timestamp_ms(), &pics);
     for ( uint32 i = 0; i < pics.size(); i++ ) {
       const feature::BitmapExtractor::PictureStruct* pic = pics[i].get();
       if ( pic->timestamp_ < next_snapshot_ms_ ) {

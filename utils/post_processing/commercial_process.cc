@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
     LOG_ERROR << "Cannot open input file: [" << FLAGS_infile << "]";
     common::Exit(1);
   }
-  if ( reader.splitter()->type() != streaming::TagSplitter::TS_FLV ) {
+  if ( reader.splitter()->media_format() != streaming::MFORMAT_FLV ) {
     LOG_ERROR << "Input file: [" << FLAGS_infile << "] is not a FLV file"
-                 ", splitter type: " << reader.splitter()->type_name();
+                 ", splitter: " << reader.splitter()->media_format_name();
     common::Exit(1);
   }
   int64 timestamp_ms;

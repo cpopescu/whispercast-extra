@@ -26,7 +26,7 @@ const int64 SchedulePlaylistPolicy::kUndefinedEventDurationSec = 20; // use a
 //////////////////////////////////////////////////////////////////////
 
 SchedulePlaylistPolicy::SchedulePlaylistPolicy(
-    const char* name,
+    const string& name,
     PolicyDrivenElement* element,
     net::Selector* selector,
     bool is_temp_policy,
@@ -150,17 +150,17 @@ void SchedulePlaylistPolicy::GetPlaylist(
 }
 
 void SchedulePlaylistPolicy::SetPlaylist(
-    rpc::CallContext< MediaOperationErrorData >* call,
+    rpc::CallContext< MediaOpResult >* call,
     const SetSchedulePlaylistPolicySpec& playlist) {
   if ( !SetPlaylist(playlist) ) {
-    call->Complete(MediaOperationErrorData(1, "Failed to SetPlaylist"));
+    call->Complete(MediaOpResult(false, "Failed to SetPlaylist"));
     return;
   }
   if ( !SaveState() ) {
-    call->Complete(MediaOperationErrorData(1, "Error saving config.."));
+    call->Complete(MediaOpResult(false, "Error saving config.."));
     return;
   }
-  call->Complete(MediaOperationErrorData(0, ""));
+  call->Complete(MediaOpResult(false, ""));
 }
 
 bool SchedulePlaylistPolicy::SetPlaylist(
@@ -222,7 +222,7 @@ void SchedulePlaylistPolicy::GetProgram(
     int32 num_schedules) {
   ScheduleProgram ret;
   timer::Date query_date;
-  if ( !query_date.SetFromShortString(date, false) ) {
+  if ( !query_date.FromShortString(date, false) ) {
     ret.error_ = 1;
     ret.description_.ref() = "Invalid date format";
     call->Complete(ret);
@@ -386,10 +386,10 @@ void SchedulePlaylistPolicy::GetCurrentItemAtTime(const timer::Date& now,
     }
   }
   LOG_DEBUG << "GetCurrentItemAtTime(" << now << ") \n"
-               "=> id: " << best_id << "\n"
-            << ", begin: " << timer::Date(best_begin) << "\n"
-            << ", switch: " << timer::Date(best_switch) << "\n"
-            << ", end: " << timer::Date(best_end);
+               "    => id: " << best_id << "\n"
+            << "    , begin: " << timer::Date(best_begin) << "\n"
+            << "    , switch: " << timer::Date(best_switch) << "\n"
+            << "    , end: " << timer::Date(best_end);
   *out_item_id = best_id;
   *out_begin_ts = best_begin;
   *out_switch_ts = best_switch;
@@ -434,8 +434,8 @@ void SchedulePlaylistPolicy::GetFutureItemAtTime(const timer::Date& now,
 
   }
   LOG_DEBUG << "GetFutureItemAtTime(" << now << ") \n"
-               "=> id: " << best_id << "\n"
-            << ", begin: " << timer::Date(best_begin);
+               "    => id: " << best_id << "\n"
+            << "    , begin: " << timer::Date(best_begin);
   *out_item_id = best_id;
   *out_begin_ts = best_begin;
 }
@@ -461,10 +461,10 @@ void SchedulePlaylistPolicy::GetItemAtTime(const timer::Date& now,
   }
 
   LOG_DEBUG << "GetItemAtTime(" << now << ") \n"
-               "=> id: " << item_id << "\n"
-            << ", begin on: " << timer::Date(item_begin) << "\n"
-            << ", switch on: " << timer::Date(item_switch) << "\n"
-            << ", end on: " << timer::Date(item_end);
+               "    => id: " << item_id << "\n"
+            << "    , begin: " << timer::Date(item_begin) << "\n"
+            << "    , switch: " << timer::Date(item_switch) << "\n"
+            << "    , end: " << timer::Date(item_end);
 
   *out_item_id = item_id;
   *out_begin_ts = item_begin;
@@ -516,8 +516,8 @@ void SchedulePlaylistPolicy::GoToNext(bool is_eos) {
   }
 
   LOG_INFO << "GoToNext: current_id_=" << current_id_ << "\n"
-           << ", crt_time=" << crt_time << "\n"
-           << ", schedule[0]=" << schedule[0].ToString() << "\n"
+           << "    , crt_time=" << crt_time << "\n"
+           << "    , schedule[0]=" << schedule[0].ToString() << "\n"
       ", schedule[1]=" << schedule[1].ToString();
 
   // We have to play something at this time ..

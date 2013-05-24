@@ -11,13 +11,12 @@ namespace streaming {
 const char FeatureDetectorElement::kElementClassName[] = "feature_detector";
 
 FeatureDetectorElement::FeatureDetectorElement(
-    const char* name,
-    const char* id,
+    const string& name,
     ElementMapper* mapper,
     net::Selector* selector,
     const string& media_dir,
     const FeatureDetectorElementSpec& spec)
-    : Element(kElementClassName, name, id, mapper),
+    : Element(kElementClassName, name, mapper),
       selector_(selector),
       media_dir_(media_dir),
       media_name_(spec.media_name_.get()),
@@ -43,9 +42,8 @@ FeatureDetectorElement::FeatureDetectorElement(
       crt_match_(feature::NO_MATCH),
       crt_match_id_(-1),
       crt_match_timestamp_(-1),
-      caps_(Tag::TYPE_FLV, streaming::kDefaultFlavourMask),
       crt_callback_(NULL) {
-  for ( int i = 0; i < spec.features_.get().size(); ++i ) {
+  for ( uint32 i = 0; i < spec.features_.get().size(); ++i ) {
     features_.push_back(new FeatureStruct(media_dir_,
                                           spec.features_.get()[i]));
   }
@@ -79,8 +77,8 @@ bool FeatureDetectorElement::Initialize() {
       NewCallback(this, &FeatureDetectorElement::ProcessingThread));
   processing_thread_->SetJoinable();
   processing_thread_->Start();
-  int failed_features = 0;
-  for ( int i = 0; i < features_.size(); ++i ) {
+  uint32 failed_features = 0;
+  for ( uint32 i = 0; i < features_.size(); ++i ) {
     if ( !features_[i]->Open() ) {
       ++failed_features;
     } else if ( feature_width_ > 0 ) {
@@ -122,18 +120,12 @@ bool FeatureDetectorElement::Initialize() {
   return true;
 }
 
-bool FeatureDetectorElement::AddRequest(const char* media_name,
-                                        Request* req,
+bool FeatureDetectorElement::AddRequest(const string& media_name, Request* req,
                                         ProcessingCallback* callback) {
-  if ( name() != media_name ) {
+  if ( media_name != "" ) {
     LOG_ERROR << name() << ": Cannot AddRequest media_name=" << media_name;
     return false;
   }
-  if ( !caps_.IsCompatible(req->caps()) ) {
-    LOG_WARNING << name() << " Caps don't match: " << req->caps().ToString();
-    return false;
-  }
-  req->mutable_caps()->IntersectCaps(caps_);
   callbacks_to_bootstrap_[req] = callback;
   return true;
 }
@@ -149,18 +141,16 @@ void FeatureDetectorElement::RemoveRequest(streaming::Request* req) {
   callbacks_to_bootstrap_.erase(req);
 }
 
-bool FeatureDetectorElement::HasMedia(const char* media, Capabilities* out) {
-  if ( name() != media ) {
-    return false;
-  }
-  *out = caps_;
-  return true;
+bool FeatureDetectorElement::HasMedia(const string& media) {
+  return media == "";
 }
 
-void FeatureDetectorElement::ListMedia(const char* media_dir, ElementDescriptions* medias) {
-  medias->push_back(make_pair(name_, caps_));
+void FeatureDetectorElement::ListMedia(const string& media_dir,
+                                       vector<string>* out) {
+  out->push_back(name());
 }
-bool FeatureDetectorElement::DescribeMedia(const string& media, MediaInfoCallback* callback) {
+bool FeatureDetectorElement::DescribeMedia(const string& media,
+                                           MediaInfoCallback* callback) {
   // FeatureDetector does not create any stream
   return false;
 }
@@ -172,8 +162,8 @@ void FeatureDetectorElement::Close(Closure* call_on_close) {
   processing_thread_->Join();
   processing_thread_ = NULL;
 
-  // Essential to do this after the possible scheduled functions in the processing
-  // thread
+  // Essential to do this after the possible scheduled functions in
+  // the processing thread
   selector_->RunInSelectLoop(
       NewCallback(&distributor_, &TagDistributor::CloseAllCallbacks, true));
   selector_->RunInSelectLoop(call_on_close);
@@ -188,7 +178,6 @@ void FeatureDetectorElement::OpenMedia() {
   process_tag_callback_ =
       NewPermanentCallback(this, &FeatureDetectorElement::ProcessTag);
   internal_req_ = new streaming::Request();
-  internal_req_->mutable_info()->internal_id_ = id();
   if ( open_media_callback_ != NULL ) {
     open_media_callback_ = NULL;
   }
@@ -284,7 +273,7 @@ void FeatureDetectorElement::ProcessImage(
     if ( crt_match_id_ < 0 ) {
       crt_match_ = feature::MATCH_NO_DATA;
       crt_match_id_ = -1;
-      for ( int i = 0; i < features_.size(); ++i ) {
+      for ( uint32 i = 0; i < features_.size(); ++i ) {
         feature::MatchResult result = features_[i]->feature_->MatchNext(
             picture->timestamp_,
             feature,
@@ -319,7 +308,7 @@ void FeatureDetectorElement::ProcessingThread() {
     }
 
     vector<scoped_ref<const feature::BitmapExtractor::PictureStruct> > pictures;
-    extractor.GetNextPictures(ptag.tag_.get(), &pictures);
+    extractor.GetNextPictures(ptag.tag_.get(), ptag.timestamp_ms_, &pictures);
     for ( uint32 i = 0; i < pictures.size(); i++ ) {
       ProcessImage(pictures[i].get());
     }

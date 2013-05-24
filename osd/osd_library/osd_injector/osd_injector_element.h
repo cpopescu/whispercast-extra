@@ -23,12 +23,11 @@ class OsdInjectorElement;
 class OsdInjectorElement : public FilteringElement,
                            public ServiceInvokerOsdInjector {
  public:
-  OsdInjectorElement(const char* name,
-                     const char* id,
+  OsdInjectorElement(const string& name,
                      ElementMapper* mapper,
                      net::Selector* selector,
-                     const char* rpc_path,
-                     const char* local_rpc_path,
+                     const string& rpc_path,
+                     const string& local_rpc_path,
                      rpc::HttpServer* rpc_server);
   virtual ~OsdInjectorElement();
 
@@ -49,7 +48,7 @@ class OsdInjectorElement : public FilteringElement,
 
   // FilteringElement methods
 
-  virtual FilteringCallbackData* CreateCallbackData(const char* media_name,
+  virtual FilteringCallbackData* CreateCallbackData(const string& media_name,
                                                     streaming::Request* req);
 
   //////////////////////////////////////////////////////////////////

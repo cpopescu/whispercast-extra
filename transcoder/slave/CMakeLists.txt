@@ -18,7 +18,6 @@ ADD_CUSTOM_COMMAND (
 
 ADD_EXECUTABLE(transslave
   ${RPC_OUTPUT_FILES}
-  media_file.cc
   master_wrapper.cc
   rpc_slave_manager_service.cc
   slave.cc)
@@ -28,7 +27,7 @@ ADD_DEPENDENCIES(transslave
   whisper_lib)
 TARGET_LINK_LIBRARIES(transslave
   media_manager_common
-  ${whisperlib_LIBRARY})
+  whisper_lib)
 
 INSTALL (TARGETS transslave
          DESTINATION bin)

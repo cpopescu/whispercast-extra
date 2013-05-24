@@ -58,10 +58,10 @@ class Model_Action_Sources extends Model_Action_Streams {
     if (count($resource) == 2) {
       $prefix = Whispercast::getInterface($this->getServer()->id)->getElementPrefix();
       if ($resource[0] = $prefix.'_rtmp_source') {
-        $source = $sources->fetchRow($sources->select()->where('protocol = ?', 'rtmp')->where('source = ?', $resource[1]));
+        $source = $sources->fetchRow($sources->select()->where('server_id = ?', 0+$this->getServer()->id)->where('protocol = ?', 'rtmp')->where('source = ?', $resource[1]));
         if ($source) {
           if (($source->password === null) || ($source->password == $this->_input['password'])) {
-            die('{"allowed_": true, "reauthorize_interval_ms_": 0, "time_limit_ms_": 0}');
+            die('{"allowed_": true, "time_limit_ms_": 0}');
           }
         }
       } else
@@ -69,12 +69,12 @@ class Model_Action_Sources extends Model_Action_Streams {
         $source = $sources->fetchRow($sources->select()->where('protocol = ?', 'http')->where('source = ?', $resource[1]));
         if ($source) {
           if (($source->password === null) || ($source->password == $this->_input['password'])) {
-            die('{"allowed_": true, "reauthorize_interval_ms_": 0, "time_limit_ms_": 0}');
+            die('{"allowed_": true, "time_limit_ms_": 0}');
           }
         }
       }
     }
-    die('{"allowed_": false, "reauthorize_interval_ms_": 0, "time_limit_ms_": 0}');
+    die('{"allowed_": false, "time_limit_ms_": 0}');
   }
 
   public static function getSoapClassmap() {

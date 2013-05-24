@@ -30,6 +30,8 @@ public:
 private:
   class Field {
   public:
+    Field() {}
+    virtual ~Field() {}
     virtual mysqlpp::SQLTypeAdapter extract(const string& server_id,
                                             const MediaBegin& media_begin,
                                             const MediaEnd& media_end) = 0;

@@ -29,8 +29,7 @@ namespace streaming {
 //  ${USAGE_MS}- for how long the action is alreadi performed (for
 //               re-authorization)
 //
-class HttpAuthorizer
-    : public Authorizer {
+class HttpAuthorizer : public Authorizer {
  public:
   enum Escapement {
     ESC_NONE   = 0,        // nothing baby
@@ -38,10 +37,12 @@ class HttpAuthorizer
     ESC_JSON   = 2,        // escape as a JSON stream
     ESC_BASE64 = 3,        // do a base64 on strings
   };
+  static const char kAuthorizerClassName[];
 
-  HttpAuthorizer(const char* name,
+  HttpAuthorizer(const string& name,
                  net::Selector* selector,
                  const vector<net::HostPort>& servers,
+                 bool use_https,
                  const string& query_path_format,
                  const vector< pair<string, string> >& http_headers,
                  const vector<string>& body_format_lines,
@@ -57,55 +58,56 @@ class HttpAuthorizer
                  int req_timeout_ms);
   ~HttpAuthorizer();
 
+  ////////////////////////////////////////////////
+  // Authorizer methods
   virtual bool Initialize();
   virtual void Authorize(const AuthorizerRequest& req,
-                         AuthorizerReply* reply,
-                         Closure* completion);
+                         CompletionCallback* completion);
+  virtual void Cancel(CompletionCallback* completion);
 
-  static const char kAuthorizerClassName[];
  private:
-  struct ReqStruct {
-    AuthorizerReply* reply_;
-    Closure* completion_;
-    http::ClientRequest* http_request_;
-  };
-
   void EscapeMap(const map<string, string>& in,
                  map<string, string>* out,
                  Escapement esc_type);
-  ReqStruct* PrepareRequest(const AuthorizerRequest& req,
-                            AuthorizerReply* reply,
-                            Closure* completion);
-  void RequestCallback(ReqStruct* req);
+  http::ClientRequest* PrepareRequest(const AuthorizerRequest& req);
+  void RequestCallback(http::ClientRequest* http_request,
+                       CompletionCallback* completion);
 
   net::Selector* selector_;
   net::NetFactory net_factory_;
   http::FailSafeClient* failsafe_client_;
 
-  const string query_path_format_;     // how to format the path for servers
+  // how to format the path for servers
+  const string query_path_format_;
+  // set this headers for all requests
   vector< pair<string, string> > http_headers_;
-                                       // set this headers for all requests
-  vector<string> body_format_lines_;   // sending these lines
-                                       // if these are specified we use POST
-  const bool include_auth_headers_;    // Include Basic Authentication headers
-                                       // or cookie ?
-  // bool receive_json_encoded_;
-  const string success_body_;          // If not empty, we look for this
-                                       // content in the answer, else we
-                                       // just look at HTTP codes
-  const Escapement header_escapement_; // how to escape the header ?
-  const Escapement body_escapement_;   // how to escape the body ?
-  const int default_allowed_ms_;       // shall we allow operations for this
-                                       // long if we connect to (any) server ?
-                                       // You don't want this normally..
+  // sending these lines. if these are specified we use POST
+  vector<string> body_format_lines_;
+  // Include Basic Authentication headers or cookie ?
+  const bool include_auth_headers_;
+
+  // If not empty, we look for this content in the answer,
+  // else we just look at HTTP codes
+  const string success_body_;
+
+  // how to escape the header ?
+  const Escapement header_escapement_;
+  // how to escape the body ?
+  const Escapement body_escapement_;
+  // shall we allow operations for this long if we connect to (any) server ?
+  // You don't want this normally..
+  const int default_allowed_ms_;
+  // If this is on we try to parse an RpcAuthorizerReply in the reply
   const bool parse_json_authorizer_reply_;
-                                       // If this is on we try to parse
-                                       // an RpcAuthorizerReply in the reply
 
   static const int32 kReopenHttpConnectionIntervalMs = 2000;
 
   http::ClientParams client_params_;
   ResultClosure<http::BaseClientConnection*>* connection_factory_;
+
+  // Active authorization requests (so we can cancel them).
+  // Because FailSafeClient does not support Cancel() we this list.
+  set<CompletionCallback*> active_;
 
   DISALLOW_EVIL_CONSTRUCTORS(HttpAuthorizer);
 };

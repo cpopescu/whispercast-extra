@@ -23,9 +23,10 @@ class Model_Stream extends App_Model_Record {
     try {
       $fc_video = 0+Zend_Registry::get('Whispercast')->flow_control['video'];
       $fc_total = 0+Zend_Registry::get('Whispercast')->flow_control['total'];
+      
       $interface->MediaElementService()->StartExportElement(
         new ElementExportSpec(
-          $interface->getExportPrefix($downloadable).$path,
+          $interface->getExportPrefix().'/'.$path,
           $protocol,
           $interface->export.$export,
           null,
@@ -151,8 +152,10 @@ class Model_Stream extends App_Model_Record {
     if (!$delegate->disableExport) {
       $this->_stopExport('/download'.$this->export, 'http');
       $this->_stopExport('/preview'.$this->export, 'rtmp');
+      $this->_stopExport('/preview'.$this->export, 'http');
       if ($this->public) {
         $this->_stopExport($this->export, 'rtmp');
+        $this->_stopExport($this->export, 'http');
       }
     }
     if (!$delegate->disableSave) {

@@ -47,7 +47,6 @@ ADD_CUSTOM_COMMAND (
 
 ADD_EXECUTABLE(transmaster
   ${RPC_OUTPUT_FILES}
-  media_file.cc
   slave_controller.cc
   rpc_master_manager_service.cc
   rpc_master_control_service.cc
@@ -58,7 +57,7 @@ ADD_DEPENDENCIES(transmaster
   whisper_lib)
 TARGET_LINK_LIBRARIES(transmaster
   media_manager_common
-  ${whisperlib_LIBRARY})
+  whisper_lib)
   
 INSTALL (TARGETS transmaster
          DESTINATION bin)

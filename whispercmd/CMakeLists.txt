@@ -54,7 +54,7 @@ ADD_EXECUTABLE(whispercmd
 ADD_DEPENDENCIES(whispercmd
   whisper_lib)
 TARGET_LINK_LIBRARIES(whispercmd
-  ${whisperlib_LIBRARY})
+  whisper_lib)
   
 INSTALL(TARGETS whispercmd
          DESTINATION bin)

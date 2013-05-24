@@ -24,8 +24,6 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
   // Schedules for injection a copy of the given OSD tag.
   void InjectOsdTag(const streaming::OsdTag& tag) {
     if (here_process_tag_callback_ == NULL) {
-      CHECK(registered_type_ == streaming::Tag::TYPE_OSD);
-
       scoped_ref<streaming::Tag> t(tag.Clone());
       t->set_flavour_mask(flavour_mask());
       DLOG_DEBUG << "Directly injected OSD: " << t->ToString();
@@ -36,23 +34,6 @@ class OsdCallbackData : public streaming::FilteringCallbackData {
     }
     pending_osd_tags_.push_back(scoped_ref<streaming::OsdTag>(
         new streaming::OsdTag(tag)));
-  }
-
-  // Register our processing callback to upstream element
-  virtual bool Register(streaming::Request* req) {
-    if (media_name_.empty()) {
-      req->mutable_caps()->tag_type_ = streaming::Tag::TYPE_OSD;
-      registered_type_ = streaming::Tag::TYPE_OSD;
-      return true;
-    }
-    return streaming::FilteringCallbackData::Register(req);
-  }
-  virtual bool Unregister(streaming::Request* req) {
-    if (media_name_.empty()) {
-      registered_type_ = streaming::Tag::kInvalidType;
-      return true;
-    }
-    return streaming::FilteringCallbackData::Unregister(req);
   }
 
  protected:
@@ -102,14 +83,13 @@ namespace streaming {
 
 const char OsdInjectorElement::kElementClassName[] = "osd_injector";
 
-OsdInjectorElement::OsdInjectorElement(const char* name,
-                                       const char* id,
+OsdInjectorElement::OsdInjectorElement(const string& name,
                                        ElementMapper* mapper,
                                        net::Selector* selector,
-                                       const char* rpc_path,
-                                       const char* local_rpc_path,
+                                       const string& rpc_path,
+                                       const string& local_rpc_path,
                                        rpc::HttpServer* rpc_server)
-    : FilteringElement(kElementClassName, name, id, mapper, selector),
+    : FilteringElement(kElementClassName, name, mapper, selector),
       ServiceInvokerOsdInjector(ServiceInvokerOsdInjector::GetClassName()),
       rpc_path_(rpc_path),
       local_rpc_path_(local_rpc_path),
@@ -145,7 +125,7 @@ void OsdInjectorElement::InjectOsdTag(OsdTag* tag) {
 }
 
 FilteringCallbackData* OsdInjectorElement::CreateCallbackData(
-    const char* media_name,
+    const string& media_name,
     streaming::Request* req) {
   return new OsdCallbackData();
 }

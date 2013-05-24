@@ -6,5 +6,5 @@ ADD_DEPENDENCIES(rtmp_decode_trace
   whisper_streamlib
   whisper_lib)
 TARGET_LINK_LIBRARIES(rtmp_decode_trace
-  ${whisperstreamlib_LIBRARY}
-  ${whisperlib_LIBRARY})
+  whisper_lib
+  whisper_streamlib)

@@ -1,43 +1,19 @@
 //
 // Author: Cosmin Tudorache
 
-// Transcoder file status; per output file.
-Type OutFileTranscodingStatus {
-  // absolute name to output file
-  string filename_out_;
-  
+// File status per input file.
+Type TranscodingStatus {
   // [0..1]
   float progress_;
-  
-  // movie width & height
-  int width_;
-  int height_;
-  
-  // framerate in format: nominator/denominator
-  // e.g. (30000/1001, )
-  int framerate_n_;
-  int framerate_d_;
-  
-  // kbps
-  float bitrate_;
-  
-  // duration in milliseconds
-  bigint duration_;
-  
-  // messages accumulated while transcoding (errors, info, ..)
+  // various messages accumulated while transcoding (errors, info, ..)
   array<string> messages_;
-  
-  // transcoding result
-  // <0 - error
-  //  0 - success
-  // >0 - success with warning
-  int result_;
 }
 
-// File status per input file.
-Type FileTranscodingStatus {
-  // absolute name to input file
-  string filename_in_;
-  // various progress statistics for output files 
-  array<OutFileTranscodingStatus> out_;
-} 
+// This structure is preiodically reported by transcoder.py
+// and accumulate into a TranscodingStatus
+Type TranscodingProgress {
+  // [0..1]
+  optional float progress_;
+  // info message, human readable
+  optional string message_;
+}

@@ -54,24 +54,17 @@ namespace streaming {
 
 const char OsdEncoderElement::kElementClassName[] = "osd_encoder";
 
-OsdEncoderElement::OsdEncoderElement(const char* name,
-                                     const char* id,
+OsdEncoderElement::OsdEncoderElement(const string& name,
                                      ElementMapper* mapper,
                                      net::Selector* selector)
-    : FilteringElement(kElementClassName, name, id, mapper, selector) {
+    : FilteringElement(kElementClassName, name, mapper, selector) {
 }
 OsdEncoderElement::~OsdEncoderElement() {
 }
 
 FilteringCallbackData* OsdEncoderElement::CreateCallbackData(
-    const char* media_name,
+    const string& media_name,
     streaming::Request* req) {
-  // We basically impose FLV
-  if ( req->caps().tag_type_ != Tag::TYPE_FLV ) {
-    LOG_ERROR << "Refusing NON FLV request: " << req->ToString();
-    return NULL;
-  }
-  req->mutable_caps()->tag_type_ = Tag::TYPE_FLV;
   return new OsdCallbackData();
 }
 }

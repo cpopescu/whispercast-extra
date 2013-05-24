@@ -38,4 +38,4 @@ ADD_DEPENDENCIES(flash_policy_server
   whisper_lib)
   
 TARGET_LINK_LIBRARIES(flash_policy_server
-  ${whisperlib_LIBRARY})
+  whisper_lib)

@@ -93,6 +93,7 @@ streaming::Element* OsdElementLibrary::CreateElement(
     const string& element_params,
     const streaming::Request* req,
     const CreationObjectParams& params,
+    bool is_temporary_template,
     // Output:
     vector<string>* needed_policies,
     string* error_description) {
@@ -146,12 +147,10 @@ streaming::Element* OsdElementLibrary::CreateOsdDecoderElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   CHECK(mapper_ != NULL);
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdDecoderElement(element_name.c_str(),
-                               id.c_str(),
+  return new OsdDecoderElement(element_name,
                                mapper_,
                                params.selector_);
 }
@@ -164,12 +163,10 @@ streaming::Element* OsdElementLibrary::CreateOsdEncoderElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   CHECK(mapper_ != NULL);
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdEncoderElement(element_name.c_str(),
-                               id.c_str(),
+  return new OsdEncoderElement(element_name,
                                mapper_,
                                params.selector_);
 }
@@ -181,22 +178,22 @@ streaming::Element* OsdElementLibrary::CreateOsdInjectorElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   CHECK(mapper_ != NULL);
-  string rpc_path(name() + "/osd_injector/");
-  rpc_path += element_name + "/";
+  string rpc_path = strutil::JoinPaths(name(),
+                        strutil::JoinPaths("osd_injector",
+                            element_name));
   string local_rpc_path(rpc_path);
   if ( req != NULL ) {
-    local_rpc_path += req->info().GetPathId() + "/";
+    local_rpc_path = strutil::JoinPaths(local_rpc_path,
+        req->info().GetPathId());
   }
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdInjectorElement(element_name.c_str(),
-                                id.c_str(),
+  return new OsdInjectorElement(element_name,
                                 mapper_,
                                 params.selector_,
-                                rpc_path.c_str(),
-                                local_rpc_path.c_str(),
+                                rpc_path,
+                                local_rpc_path,
                                 params.rpc_server_);
 }
 
@@ -207,6 +204,7 @@ streaming::Element* OsdElementLibrary::CreateOsdAssociatorElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   delete params.local_state_keeper_;
   if ( req != NULL ) {
@@ -215,16 +213,14 @@ streaming::Element* OsdElementLibrary::CreateOsdAssociatorElement(
     return NULL;
   }
   CHECK(mapper_ != NULL);
-  string rpc_path(name() + "/osd_associator/");
-  rpc_path += element_name + "/";
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdAssociatorElement(element_name.c_str(),
-                                  id.c_str(),
+  const string rpc_path = strutil::JoinPaths(name(),
+                              strutil::JoinPaths("osd_associator",
+                                  element_name));
+  return new OsdAssociatorElement(element_name,
                                   mapper_,
                                   params.selector_,
                                   params.state_keeper_,
-                                  rpc_path.c_str(),
+                                  rpc_path,
                                   params.rpc_server_);
 }
 
@@ -236,12 +232,16 @@ streaming::Element* OsdElementLibrary::CreateOsdStateKeeperElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   CHECK(mapper_ != NULL);
-  string rpc_path(name() + "/osd_state_keeper/");
-  rpc_path += element_name + "/";
+  string rpc_path = strutil::JoinPaths(name(),
+                        strutil::JoinPaths("osd_state_keeper",
+                            element_name));
+  string local_rpc_path(rpc_path);
   if ( req != NULL ) {
-    rpc_path += req->info().GetPathId() + "/";
+    local_rpc_path = strutil::JoinPaths(local_rpc_path,
+        req->info().GetPathId());
   }
   io::StateKeepUser* state_keeper = NULL;
   delete params.state_keeper_;
@@ -256,15 +256,12 @@ streaming::Element* OsdElementLibrary::CreateOsdStateKeeperElement(
       state_keeper->set_timeout_ms(to_ms);
     }
   }
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdStateKeeperElement(element_name.c_str(),
-                                   id.c_str(),
+  return new OsdStateKeeperElement(element_name,
                                    mapper_,
                                    params.selector_,
                                    state_keeper,
-                                   spec.media_name_.c_str(),
-                                   rpc_path.c_str(),
+                                   spec.media_name_,
+                                   rpc_path,
                                    params.rpc_server_);
 }
 
@@ -275,6 +272,7 @@ streaming::Element* OsdElementLibrary::CreateOsdAssociatorClientElement(
     const streaming::Request* req,
     const CreationObjectParams& params,
     vector<string>* needed_policies,
+    bool is_temporary_template,
     string* error) {
   delete params.local_state_keeper_;
   if ( req != NULL ) {
@@ -283,16 +281,14 @@ streaming::Element* OsdElementLibrary::CreateOsdAssociatorClientElement(
     return NULL;
   }
   CHECK(mapper_ != NULL);
-  string rpc_path(name() + "/osd_associator_client/");
-  rpc_path += element_name + "/";
-  const string id(req != NULL
-                  ? element_name + "-" + req->GetUrlId(): element_name);
-  return new OsdAssociatorClientElement(element_name.c_str(),
-                                        id.c_str(),
+  string rpc_path = strutil::JoinPaths(name(),
+                        strutil::JoinPaths("osd_associator_client",
+                            element_name));
+  return new OsdAssociatorClientElement(element_name,
                                         mapper_,
                                         params.selector_,
                                         params.state_keeper_,
-                                        rpc_path.c_str(),
+                                        rpc_path,
                                         params.rpc_server_);
 }
 
@@ -315,7 +311,7 @@ class ServiceInvokerOsdLibraryServiceImpl
   }
 
   virtual void AddOsdDecoderElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -323,7 +319,7 @@ class ServiceInvokerOsdLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(OsdDecoder);
   }
   virtual void AddOsdEncoderElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -331,7 +327,7 @@ class ServiceInvokerOsdLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(OsdEncoder);
   }
   virtual void AddOsdInjectorElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -339,7 +335,7 @@ class ServiceInvokerOsdLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(OsdInjector);
   }
   virtual void AddOsdAssociatorElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -347,7 +343,7 @@ class ServiceInvokerOsdLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(OsdAssociator);
   }
   virtual void AddOsdStateKeeperElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,
@@ -355,7 +351,7 @@ class ServiceInvokerOsdLibraryServiceImpl
     STANDARD_RPC_ELEMENT_ADD(OsdStateKeeper);
   }
   virtual void AddOsdAssociatorClientElementSpec(
-      rpc::CallContext< MediaOperationErrorData >* call,
+      rpc::CallContext< MediaOpResult >* call,
       const string& name,
       bool is_global,
       bool disable_rpc,

@@ -6,14 +6,13 @@ class Model_Delegate_Programs extends Model_Delegate_Streams {
     $interface = Whispercast::getInterface($this->_model->server_id);
 
     $programs = new Whispercast_Programs($interface);
-    $prefix = $interface->getStreamPrefix();
 
     $streams = new Model_DbTable_Streams();
     $stream = $streams->fetchRow($streams->select()->where('id = ?', $setup['default_stream']));
 
     $program = array(
       'playlist'=>array(),
-      'default_media'=>$stream ? $prefix.$stream->path : null,
+      'default_media'=>$stream ? $interface->getStreamPath($stream->path) : null,
       'switch_now'=>isset($setup['switch_now']) ? ($setup['switch_now'] ? true : false) : false
     );
 
@@ -25,7 +24,7 @@ class Model_Delegate_Programs extends Model_Delegate_Streams {
         $stream = $streams->fetchRow($streams->select()->where('id = ?', $element['stream']));
         if ($stream) {
           $program['playlist'][] = array(
-            'media'=>$prefix.$stream->path,
+            'media'=>$interface->getStreamPath($stream->path),
             'time'=>$time_f->filter($element['time']),
             'date'=>$date_f->filter($element['date']),
             'weekdays'=>isset($element['weekdays']) ? $element['weekdays'] : null
@@ -40,7 +39,6 @@ class Model_Delegate_Programs extends Model_Delegate_Streams {
     $interface = Whispercast::getInterface($this->_model->server_id);
 
     $programs = new Whispercast_Programs($interface);
-    $prefix = $interface->getStreamPrefix();
 
     $cs = $programs->getConfig($this->_model->id, $setup);
     if ($cs !== null) {
@@ -48,7 +46,7 @@ class Model_Delegate_Programs extends Model_Delegate_Streams {
     }
 
     $streams = new Model_DbTable_Streams();
-    $stream = $streams->fetchRow($streams->select()->where('path = ?', substr($setup['default_media'], strlen($prefix))));
+    $stream = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($setup['default_media'])));
 
     $program = array(
       'program'=>array(),
@@ -60,7 +58,7 @@ class Model_Delegate_Programs extends Model_Delegate_Streams {
 
     if ($setup['playlist']) {
       foreach ($setup['playlist'] as $element) {
-        $stream = $streams->fetchRow($streams->select()->where('path = ?', substr($element['media'], strlen($prefix))));
+        $stream = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($element['media'])));
         $program['program'][] = array(
           'stream' => $stream ? $stream->toArray() : null,
           'time' => $time_f->filter($element['time']),

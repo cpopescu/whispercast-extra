@@ -19,7 +19,6 @@ class Model_Delegate_Remotes extends Model_Delegate_Streams {
     $interface = Whispercast::getInterface($this->_model->server_id);
 
     $remotes = new Whispercast_Remotes($interface);
-    $prefix = $interface->getStreamPrefix();
 
     $cs = $remotes->getConfig($this->_model->id, $setup);
     if ($cs !== null) {

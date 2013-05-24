@@ -37,23 +37,24 @@ class AuxElementMapper
                    ElementFactory* factory,
                    ElementMapper* master,
                    rpc::HttpServer* rpc_server,
-                   const char* config_file);
+                   const string& config_file);
   virtual ~AuxElementMapper();
 
   // ElementMapper interface
-  virtual bool AddRequest(const char* media_name,
+  virtual bool AddRequest(const string& media_name,
                           streaming::Request* req,
                           streaming::ProcessingCallback* callback);
   virtual void RemoveRequest(streaming::Request* req,
                              ProcessingCallback* callback);
 
-  virtual bool HasMedia(const char* media, Capabilities* out);
-  virtual void ListMedia(const char* media_dir,
-                         streaming::ElementDescriptions* medias);
+  virtual bool HasMedia(const string& media);
+  virtual void ListMedia(const string& media_dir,
+                         vector<string>* medias);
 
   virtual bool GetElementByName(const string& name,
                                 streaming::Element** element,
                                 vector<streaming::Policy*>** policies);
+  virtual void GetAllElements(vector<string>* out_elements) const;
   virtual bool IsKnownElementName(const string& name) {
     return (extra_element_spec_data_.find(name) !=
             extra_element_spec_data_.end());
@@ -72,7 +73,7 @@ class AuxElementMapper
                              string* media_name) const {
     return false;
   }
-  virtual string TranslateMedia(const char* media_name) const {
+  virtual string TranslateMedia(const string& media_name) const {
     return media_name;
   }
   virtual bool DescribeMedia(const string& media, MediaInfoCallback* callback) {
@@ -95,7 +96,7 @@ class AuxElementMapper
   }
 
  private:
-  bool AddRequest(const char* media_name,
+  bool AddRequest(const string& media_name,
                   streaming::Request* req,
                   streaming::ProcessingCallback* callback,
                   bool do_lookup);
@@ -155,12 +156,12 @@ class AuxElementMapper
       const rpc::CallResult<ElementExportSpec>& response);
 
   bool AddRequestWithPerRequestElements(
-      const char* media_name,
+      const string& media_name,
       streaming::Request* req,
       streaming::ProcessingCallback* callback);
   bool StartLookupStruct(
-      const char* element_name,
-      const char* media_name,
+      const string& element_name,
+      const string& media_name,
       streaming::Request* req,
       streaming::ProcessingCallback* callback);
   void RpcLookupCompleted(

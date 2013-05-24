@@ -122,7 +122,7 @@ class OsdAssociatorClientElement : public FilteringElement,
               int num_retries,
               int32 request_timeout_ms,
               int32 reopen_connection_interval_ms,
-              rpc::CODEC_ID rpc_codec_id,
+              rpc::CodecId codec,
               const string& http_request_path,
               const string& auth_user,
               const string& auth_pass,
@@ -136,12 +136,11 @@ class OsdAssociatorClientElement : public FilteringElement,
   static const int64 kCacheExpirationMs;
   static const OsdAssociatorCompleteOsd kEmptyCompleteOsd;
 
-  OsdAssociatorClientElement(const char* name,
-                             const char* id,
+  OsdAssociatorClientElement(const string& name,
                              ElementMapper* mapper,
                              net::Selector* selector,
                              io::StateKeepUser* state_keeper, // becomes ours
-                             const char* rpc_path,
+                             const string& rpc_path,
                              rpc::HttpServer* rpc_server);
   virtual ~OsdAssociatorClientElement();
 
@@ -179,7 +178,7 @@ class OsdAssociatorClientElement : public FilteringElement,
   //////////////////////////////////////////////////////////////////
   // FilteringElement methods
   virtual bool Initialize();
-  virtual FilteringCallbackData* CreateCallbackData(const char* media_name,
+  virtual FilteringCallbackData* CreateCallbackData(const string& media_name,
                                                     streaming::Request* req);
   virtual void DeleteCallbackData(FilteringCallbackData* data);
 

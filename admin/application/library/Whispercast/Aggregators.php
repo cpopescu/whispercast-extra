@@ -21,7 +21,7 @@ class Whispercast_Aggregators extends Whispercast_Base {
   private function _configToSpec($config) {
     $flavours = array();
     foreach($config['flavours'] as $mask => $stream) {
-      $flavours[] = new FlavouringSpec((int)$mask, substr($stream, 1));
+      $flavours[] = new FlavouringSpec((int)$mask, $stream);
     }
     return $flavours;
   }
@@ -36,7 +36,7 @@ class Whispercast_Aggregators extends Whispercast_Base {
   private function _specToConfig($param) {
     $config = array();
     foreach($param as $mask=>$spec) {
-      $config['flavours'][$spec->flavour_mask_] = '/'.$spec->media_prefix_;
+      $config['flavours'][$spec->flavour_mask_] = $spec->media_prefix_;
     }
     return $config;
   }

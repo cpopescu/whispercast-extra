@@ -69,7 +69,7 @@ class SchedulePlaylistPolicy
 
  public:
   SchedulePlaylistPolicy(
-      const char* name,
+      const string& name,
       PolicyDrivenElement* element,
       net::Selector* selector,
       bool is_temp_policy,
@@ -195,7 +195,7 @@ class SchedulePlaylistPolicy
   // RPC interface
 
   virtual void GetPlaylist(rpc::CallContext<SchedulePlaylistPolicySpec>* call);
-  virtual void SetPlaylist(rpc::CallContext<MediaOperationErrorData>* call,
+  virtual void SetPlaylist(rpc::CallContext<MediaOpResult>* call,
                            const SetSchedulePlaylistPolicySpec& playlist);
 
   virtual void GetDefaultMedia(rpc::CallContext<string>* call);

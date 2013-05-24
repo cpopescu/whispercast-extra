@@ -64,16 +64,15 @@ map<string, CREATE_X_PARAMS> MakeRPCMap(
 
 const char OsdStateKeeperElement::kElementClassName[] = "osd_state_keeper";
 
-OsdStateKeeperElement::OsdStateKeeperElement(const char* name,
-                                             const char* id,
+OsdStateKeeperElement::OsdStateKeeperElement(const string& name,
                                              ElementMapper* mapper,
                                              net::Selector* selector,
                                              io::StateKeepUser* state_keeper,
-                                             const char* media_name,
-                                             const char* rpc_path,
+                                             const string& media_name,
+                                             const string& rpc_path,
                                              rpc::HttpServer* rpc_server)
 
-    : FilteringElement(kElementClassName, name, id, mapper, selector),
+    : FilteringElement(kElementClassName, name, mapper, selector),
       ServiceInvokerOsdInspector(ServiceInvokerOsdInspector::GetClassName()),
       media_name_(media_name),
       internal_req_(NULL),
@@ -118,11 +117,11 @@ bool OsdStateKeeperElement::Initialize() {
 
     io::MemoryStream iomis;
     iomis.Write(state);
-    rpc::JsonDecoder decoder(iomis);
+    rpc::JsonDecoder decoder;
 
     {
       map<string, CreateOverlayParams> overlays;
-      const rpc::DECODE_RESULT result = decoder.Decode(overlays);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &overlays);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR << "Error decoding the overlays state from the state keeper.";
       } else {
@@ -135,7 +134,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       map<string, CreateCrawlerParams> crawlers;
-      const rpc::DECODE_RESULT result = decoder.Decode(crawlers);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &crawlers);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR << "Error decoding the crawlers state from the state keeper.";
       } else {
@@ -148,7 +147,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       ShowOverlaysParams show_overlays;
-      const rpc::DECODE_RESULT result = decoder.Decode(show_overlays);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &show_overlays);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR <<
             "Error decoding the overlays show state from the state keeper..";
@@ -158,7 +157,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       ShowCrawlersParams show_crawlers;
-      const rpc::DECODE_RESULT result = decoder.Decode(show_crawlers);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &show_crawlers);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR <<
           "Error decoding the crawlers show state from the state keeper..";
@@ -168,7 +167,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       SetPictureInPictureParams pip;
-      const rpc::DECODE_RESULT result = decoder.Decode(pip);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &pip);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR <<
           "Error decoding the PIP state from the state keeper..";
@@ -178,7 +177,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       SetClickUrlParams click_url;
-      const rpc::DECODE_RESULT result = decoder.Decode(click_url);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &click_url);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR <<
           "Error decoding the click URL state from the state keeper..";
@@ -188,7 +187,7 @@ bool OsdStateKeeperElement::Initialize() {
     }
     {
       map<string, CreateMovieParams> movies;
-      const rpc::DECODE_RESULT result = decoder.Decode(movies);
+      const rpc::DECODE_RESULT result = decoder.Decode(iomis, &movies);
       if (result != rpc::DECODE_RESULT_SUCCESS) {
         LOG_ERROR << "Error decoding the movies state from the state keeper.";
       } else {
@@ -217,7 +216,6 @@ void OsdStateKeeperElement::Close(Closure* call_on_close) {
 void OsdStateKeeperElement::OpenMedia() {
   CHECK(internal_req_ == NULL);
   internal_req_ = new streaming::Request();
-  internal_req_->mutable_info()->internal_id_ = id();
   if ( !mapper_->AddRequest(media_name_.c_str(),
                             internal_req_,
                             process_tag_callback_) ) {
@@ -238,13 +236,13 @@ bool OsdStateKeeperElement::SaveState() {
     return true;
   }
   io::MemoryStream mos;
-  rpc::JsonEncoder encoder(mos);
-  encoder.Encode(MakeRPCMap(overlays_));
-  encoder.Encode(MakeRPCMap(crawlers_));
-  encoder.Encode(show_overlays_);
-  encoder.Encode(show_crawlers_);
-  encoder.Encode(pip_);
-  encoder.Encode(MakeRPCMap(movies_));
+  rpc::JsonEncoder encoder;
+  encoder.Encode(MakeRPCMap(overlays_), &mos);
+  encoder.Encode(MakeRPCMap(crawlers_), &mos);
+  encoder.Encode(show_overlays_, &mos);
+  encoder.Encode(show_crawlers_, &mos);
+  encoder.Encode(pip_, &mos);
+  encoder.Encode(MakeRPCMap(movies_), &mos);
 
   string s;
   mos.ReadString(&s);
@@ -587,7 +585,7 @@ void OsdStateKeeperElement::AppendBootstrap(
 }
 
 FilteringCallbackData* OsdStateKeeperElement::CreateCallbackData(
-    const char* media_name, streaming::Request* req) {
+    const string& media_name, streaming::Request* req) {
   return new OsdStateKeeperCallbackData(this);
 }
 

@@ -38,41 +38,31 @@ ADD_CUSTOM_COMMAND (
 
 ####################
 
-if (WITH_GSTREAMER)
-  find_package(LibAvCodec REQUIRED)
-  find_package(LibSwScale REQUIRED)
+find_package(LibAvCodec REQUIRED)
+find_package(LibSwScale REQUIRED)
 
-  include_directories(${AvCodec_INCLUDE_DIR})
-  include_directories(${SwScale_INCLUDE_DIR})
-  # Safeguard for some older ffmpeg versions
-  include_directories(${AvCodec_INCLUDE_DIR}/ffmpeg)
+include_directories(${AvCodec_INCLUDE_DIR})
+include_directories(${SwScale_INCLUDE_DIR})
+# Safeguard for some older ffmpeg versions
+include_directories(${AvCodec_INCLUDE_DIR}/ffmpeg)
 
-  add_definitions(-D __AV_CODEC_INCLUDE_FILE="<${AV_CODEC_INCLUDE_FILE}>")
-  add_definitions(-D __SW_SCALE_INCLUDE_FILE="<${SW_SCALE_INCLUDE_FILE}>")
-endif (WITH_GSTREAMER)
+add_definitions(-D __AV_CODEC_INCLUDE_FILE="<${AV_CODEC_INCLUDE_FILE}>")
+add_definitions(-D __SW_SCALE_INCLUDE_FILE="<${SW_SCALE_INCLUDE_FILE}>")
 
 ####################
 
-if (WITH_GSTREAMER)
-  SET(FEATURE_DETECTOR_SRC "feature_detector/feature_detector.cc")
-  SET(whisperfeature_LIBRARY "whisper_featurelib")
-else (WITH_GSTREAMER)
-  SET(FEATURE_DETECTOR_SRC "")
-  SET(whisperfeature_LIBRARY"")
-  add_definitions(-D__DISABLE_FEATURES__)
-endif (WITH_GSTREAMER)
-
 # to use for your utilities..
-ADD_LIBRARY (extra_streaming_elements MODULE
+ADD_LIBRARY (extra_streaming_elements SHARED
   extra_library.cc
 
-  ${FEATURE_DETECTOR_SRC}
+  feature_detector/feature_detector.cc
   flavouring/flavouring_element.cc
   http_authorizer/http_authorizer.cc
   schedule/schedule_policy.cc
   logic_policy/logic_policy.cc
   time_delay/time_delay_policy.cc
   time_range/time_range_element.cc
+  time_shift/time_shift_element.cc
   aux_element_mapper.cc
 
   ${EXTRA_LIB_RPC_OUTPUT_FILES}
@@ -87,9 +77,9 @@ ADD_DEPENDENCIES (extra_streaming_elements
 TARGET_LINK_LIBRARIES(
   extra_streaming_elements
   ${AvCodec_LIBRARIES}
-  ${whisperfeature_LIBRARY}
-  ${whisperlib_LIBRARY}
-  ${whisperstreamlib_LIBRARY})
+  whisper_featurelib
+  whisper_lib
+  whisper_streamlib)
 
 
 INSTALL(TARGETS extra_streaming_elements

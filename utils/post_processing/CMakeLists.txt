@@ -8,5 +8,5 @@ ADD_DEPENDENCIES(commercial_process
   whisper_lib)
 TARGET_LINK_LIBRARIES(commercial_process
   osd_library
-  ${whisperstreamlib_LIBRARY}
-  ${whisperlib_LIBRARY})
+  whisper_lib
+  whisper_streamlib)

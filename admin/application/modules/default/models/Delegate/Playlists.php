@@ -8,7 +8,6 @@ class Model_Delegate_Playlists extends Model_Delegate_Streams {
     $interface = Whispercast::getInterface($this->_model->server_id);
 
     $playlists = new Whispercast_Playlists($interface);
-    $prefix = $interface->getStreamPrefix();
 
     $streams = new Model_DbTable_Streams();
 
@@ -17,7 +16,7 @@ class Model_Delegate_Playlists extends Model_Delegate_Streams {
       foreach ($setup['playlist'] as $id) {
         $stream = $streams->fetchRow($streams->select()->where('id = ?', $id));
         if ($stream) {
-          $playlist[] = $prefix.$stream->path;
+          $playlist[] = $interface->getStreamPath($stream->path);
         }
       }
     }
@@ -28,7 +27,6 @@ class Model_Delegate_Playlists extends Model_Delegate_Streams {
     $interface = Whispercast::getInterface($this->_model->server_id);
 
     $playlists = new Whispercast_Playlists($interface);
-    $prefix = $interface->getStreamPrefix();
 
     $cs = $playlists->getConfig($this->_model->id, $setup);
     if ($cs !== null) {
@@ -39,17 +37,9 @@ class Model_Delegate_Playlists extends Model_Delegate_Streams {
 
     $playlist = array();
     foreach ($setup['playlist'] as $path) {
-      $stream = $streams->fetchRow($streams->select()->where('path = ?', substr($path, strlen($prefix)+1)));
+      $stream = $streams->fetchRow($streams->select()->where('path LIKE ?', $interface->getPathForLike($path)));
       if ($stream) {
         $playlist[] = $stream->toArray();
-      } else {
-        // TODO: Remove this as it is a temporary hack
-        $p = substr($path, strlen($prefix)+1);
-        $p = preg_replace('/\/s\d+_\d+_normalizer\//', '/', $p);
-        $stream = $streams->fetchRow($streams->select()->where('path = ?', $p));
-        if ($stream) {
-          $playlist[] = $stream->toArray();
-        }
       }
     }
     return array('playlist' => $playlist, 'loop' => $setup['loop'] ? true : false);

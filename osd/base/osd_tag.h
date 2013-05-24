@@ -84,6 +84,7 @@ class OsdTag : public Tag {
   //
   virtual int64 duration_ms() const { return 0; }
   virtual uint32 size() const { return 0; }
+  virtual int64 composition_offset_ms() const { return 0; }
   virtual const char* ContentType() {
     return "Osd";
   }
@@ -94,6 +95,7 @@ class OsdTag : public Tag {
                                  static_cast<int>(ftype()), fname(),
                                  fparams().ToString().c_str());
   }
+  virtual const io::MemoryStream* Data() const { return NULL; }
   virtual Tag* Clone() const {
     return new OsdTag(*this);
   }

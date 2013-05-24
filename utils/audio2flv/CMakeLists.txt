@@ -6,5 +6,5 @@ ADD_DEPENDENCIES(audio2flv
   whisper_streamlib
   whisper_lib)
 TARGET_LINK_LIBRARIES(audio2flv
-  ${whisperstreamlib_LIBRARY}
-  ${whisperlib_LIBRARY})
+  whisper_lib
+  whisper_streamlib)

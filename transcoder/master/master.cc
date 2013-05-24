@@ -13,6 +13,7 @@
 #include <whisperlib/net/base/selector.h>
 #include <whisperlib/net/http/http_server_protocol.h>
 #include <whisperlib/net/rpc/lib/server/rpc_http_server.h>
+#include <whisperlib/net/rpc/lib/rpc_constants.h>
 
 #include "rpc_master_manager_service.h"
 #include "rpc_master_control_service.h"
@@ -24,21 +25,9 @@
 DEFINE_int32(http_port,
              8080,
              "The port on which we accept HTTP connections.");
-DEFINE_int64(gen_file_id_start,
-             1,
-             "Start value for file ID generator.");
-DEFINE_int64(gen_file_id_increment,
-             1,
-             "Increment value for file ID generator.");
-DEFINE_string(input_dir,
+DEFINE_string(output_dirs,
               "",
-              "Directory to monitor for input files.");
-DEFINE_string(process_dir,
-              "",
-              "Directory for files being processed");
-DEFINE_string(output_dir,
-              "",
-              "Directory to receive completed files.");
+              "Comma separated list of output directories.");
 DEFINE_string(scp_username,
               "",
               "The username for scp transfers.");
@@ -54,7 +43,6 @@ DEFINE_string(slaves,
               "user=radiolynx rpc_uri=http://192.168.1.2:8080/rpc_slave_manager?codec=json\"");
 
 DEFINE_string(state_dir, "", "Directory where to save state.");
-DEFINE_string(state_name, "", "A unique name for state saving.");
 
 DEFINE_string(http_auth_user,
               "",
@@ -119,13 +107,6 @@ class MasterManagerApp : public app::App {
   int InitializeMaster() {
     common::Init(argc_, argv_);
 
-    CHECK(io::IsDir(FLAGS_input_dir));
-    CHECK(io::IsDir(FLAGS_process_dir));
-    CHECK(io::IsDir(FLAGS_output_dir));
-    CHECK_NE(FLAGS_input_dir, FLAGS_output_dir);
-    CHECK_NE(FLAGS_input_dir, FLAGS_process_dir);
-    CHECK_NE(FLAGS_process_dir, FLAGS_output_dir);
-
     //////////////////////////////////////////////////////////////////////
     //
     // Create the selector
@@ -167,6 +148,8 @@ class MasterManagerApp : public app::App {
     const net::IpAddress external_ip(FLAGS_external_ip.c_str());
 
     const string rpc_http_path = "/rpc_master_manager";
+    vector<string> output_dirs;
+    strutil::SplitString(FLAGS_output_dirs, ",", &output_dirs);
 
     master_manager_ = new manager::master::RPCMasterManagerService(
         *selector_,
@@ -178,14 +161,9 @@ class MasterManagerApp : public app::App {
         FLAGS_http_auth_user,
         FLAGS_http_auth_pswd,
         rpc::CONNECTION_HTTP,
-        rpc::CID_JSON,
-        FLAGS_gen_file_id_start,
-        FLAGS_gen_file_id_increment,
-        FLAGS_input_dir,
-        FLAGS_process_dir,
-        FLAGS_output_dir,
-        FLAGS_state_dir,
-        FLAGS_state_name);
+        rpc::kCodecIdJson,
+        output_dirs,
+        FLAGS_state_dir);
     vector<string> slaves;
     strutil::SplitString(FLAGS_slaves, ",", &slaves);
     for (vector<string>::const_iterator it = slaves.begin();
@@ -199,11 +177,11 @@ class MasterManagerApp : public app::App {
       string http_auth_user;
       string http_auth_pswd;
       rpc::CONNECTION_TYPE connection_type;
-      rpc::CODEC_ID codec_id;
+      rpc::CodecId codec_id;
       bool success = rpc::ParseUri(slave,
-                                   host_port, http_path,
-                                   http_auth_user, http_auth_pswd,
-                                   connection_type, codec_id);
+                                   &host_port, &http_path,
+                                   &http_auth_user, &http_auth_pswd,
+                                   &connection_type, &codec_id);
       if (!success) {
         LOG_ERROR << "Bad slave RPC URI: [" << slave << "] , ignoring slave..";
         continue;

@@ -8,6 +8,7 @@
 #include <whisperlib/net/rpc/lib/client/rpc_client_connection_tcp.h>
 #include <whisperlib/net/rpc/lib/client/rpc_client_connection_http.h>
 #include "master_wrapper.h"
+#include "media_file.h"
 
 namespace manager {
 namespace slave {
@@ -20,7 +21,7 @@ MasterWrapper::MasterWrapper(net::Selector& selector,
                              const std::string& rpc_http_user,
                              const std::string& rpc_http_pswd,
                              rpc::CONNECTION_TYPE rpc_connection_type,
-                             rpc::CODEC_ID rpc_codec_id)
+                             rpc::CodecId rpc_codec_id)
   : selector_(selector),
     net_factory_(net_factory),
     uri_(uri),
@@ -78,25 +79,25 @@ ServiceWrapperMasterManager& MasterWrapper::RPCWrapper() {
 
 void MasterWrapper::AddFile(MediaFile* file) {
   std::pair<std::set<MediaFile*>::iterator, bool> result = files_.insert(file);
-  CHECK(result.second) << "Duplicate AddFile file: " << *file;
+  CHECK(result.second) << "Duplicate AddFile file: " << file->ToString();
 }
 void MasterWrapper::RemFile(MediaFile* file) {
   int result = files_.erase(file);
-  CHECK(result == 1) << "Missing RemFile file: " << *file;
+  CHECK(result == 1) << "Missing RemFile file: " << file->ToString();
 }
 const std::set<MediaFile*> MasterWrapper::Files() const {
   return files_;
 }
 
-void MasterWrapper::RPCPin() {
-  rpc_pin_count_++;
+void MasterWrapper::Pin() {
+  pin_count_++;
 }
-void MasterWrapper::RPCUnpin() {
-  CHECK_GE(rpc_pin_count_, 1);
-  rpc_pin_count_--;
+void MasterWrapper::Unpin() {
+  CHECK_GE(pin_count_, 1);
+  pin_count_--;
 }
-uint32 MasterWrapper::RPCPinCount() const {
-  return rpc_pin_count_;
+uint32 MasterWrapper::PinCount() const {
+  return pin_count_;
 }
 
 const std::string& MasterWrapper::uri() const {
@@ -114,13 +115,9 @@ std::string MasterWrapper::ToString() const {
       << ", rpc_connection_type_: " << rpc_connection_type_
       << ", rpc_codec_id_: " << rpc_codec_id_
       << ", files_=#" << files_.size()
-      << ", rpc_pin_count_=" << RPCPinCount()
+      << ", pin_count_=" << pin_count_
       << "}";
   return oss.str();
-}
-
-std::ostream& operator<<(std::ostream& os, const MasterWrapper& master) {
-  return os << master.ToString();
 }
 
 }    // namespace slave

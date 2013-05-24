@@ -10,57 +10,95 @@ namespace manager { namespace master {
 
 class MediaFile {
 public:
-  MediaFile();
-  MediaFile(int64 id,
+  MediaFile()
+    : id_(), path_(),
+      state_(FSTATE_PENDING), error_(), ts_state_change_(0),
+      transcoding_status_(kEmptyTranscodingStatus) {
+  }
+  MediaFile(const string& id,
             const string& path,
-            ProcessCmd process_cmd,
             const map<string, string>& process_params,
             FState state,
             const string& error,
             int64 ts_state_change,
             const string& slave,
-            const FileSlaveOutput& output,
-            const FileTranscodingStatus& transcoding_status);
-  MediaFile(const MediaFile& src);
-  ~MediaFile();
+            const TranscodingStatus& transcoding_status)
+    : id_(id),
+      path_(path),
+      process_params_(process_params),
+      state_(state),
+      error_(error),
+      ts_state_change_(ts_state_change),
+      slave_(slave),
+      transcoding_status_(transcoding_status) {
+  }
+  MediaFile(const MediaFile& other)
+    : id_(other.id()),
+      path_(other.path()),
+      process_params_(other.process_params()),
+      state_(other.state()),
+      error_(other.error()),
+      ts_state_change_(other.ts_state_change()),
+      slave_(other.slave()),
+      transcoding_status_(other.transcoding_status()) {
+  }
 
-  int64 id() const;
-  const string& path() const;
-  ProcessCmd process_cmd() const;
-  const string& process_cmd_name() const;
-  const map<string, string>& process_params() const;
-  FState state() const;
-  const string& state_name2() const;
-  const string& error() const;
-  int64 ts_state_change() const;
-  const string& slave() const;
-  const FileSlaveOutput& output() const;
-  const FileTranscodingStatus& transcoding_status() const;
+  virtual ~MediaFile() {
+  }
 
-  void set_id(int64 id);
-  void set_path(const string& path);
-  void set_process_cmd(ProcessCmd process_cmd);
-  void set_process_params(const map<string, string>& process_params);
-  void set_state(FState state);
-  void set_error(const string& error);
-  void set_state(FState state, const string& error);
-  void set_ts_state_change(int64 ts);
-  void set_slave(const string& slave);
-  void set_output(const FileSlaveOutput& output);
-  void set_transcoding_status(const FileTranscodingStatus& transcoding_status);
+  const string& id() const { return id_; }
+  const string& path() const { return path_; }
+  const map<string, string>& process_params() const { return process_params_; }
+  FState state() const { return state_; }
+  const char* state_name() const { return FStateName(state_); }
+  const string& error() const { return error_; }
+  int64 ts_state_change() const { return ts_state_change_; }
+  const string& slave() const { return slave_; }
+  const TranscodingStatus& transcoding_status() const { return transcoding_status_; }
 
-  const MediaFile& operator=(const MediaFile& src);
+  void set_id(const string& id) { id_ = id; }
+  void set_path(const string& path) { path_ = path; }
+  void set_process_params(const map<string, string>& process_params) { process_params_ = process_params; }
+  void set_state(FState state) { state_ = state; }
+  void set_error(const string& error) { error_ = error; }
+  void set_state(FState state, const string& error) { set_state(state); set_error(error); }
+  void set_ts_state_change(int64 ts) { ts_state_change_ = ts; }
+  void set_slave(const string& slave) { slave_ = slave; }
+  void set_transcoding_status(const TranscodingStatus& transcoding_status) { transcoding_status_ = transcoding_status; }
 
-  string ToString() const;
+  const MediaFile& operator=(const MediaFile& other) {
+    id_ = other.id();
+    path_ = other.path();
+    process_params_ = other.process_params();
+    state_ = other.state();
+    error_ = other.error();
+    ts_state_change_ = other.ts_state_change();
+    slave_ = other.slave();
+    transcoding_status_ = other.transcoding_status();
+    return *this;
+  }
+
+  string ToString() const {
+    ostringstream oss;
+    oss << "MediaFile{"
+        << "id=" << id()
+        << ", path_=" << path()
+        << ", process_params_=" << strutil::ToString(process_params())
+        << ", state_=" << state() << "(" << state_name() << ")"
+        << ", error_=" << error()
+        << ", ts_state_change_=" << timer::Date(ts_state_change())
+        << ", slave_=" << slave()
+        << ", transcoding_status_=" << transcoding_status()
+        << "}";
+    return oss.str();
+  }
 
 private:
   // file identifier
-  int64 id_;
+  string id_;
   // local file path, absolute
   string path_;
-  // what to do with this file (e.g. transcode, post-process or just copy ..)
-  ProcessCmd process_cmd_;
-  // parameters for process_cmd
+  // parameters for processing
   map<string, string> process_params_;
   // file state
   FState state_;
@@ -70,14 +108,16 @@ private:
   int64 ts_state_change_;
   // rpc-uri of the slave processing this file
   string slave_;
-  // path to output (result) files. These are slave relative paths.
-  FileSlaveOutput output_;
   // transcoding status
-  FileTranscodingStatus transcoding_status_;
+  TranscodingStatus transcoding_status_;
 };
 
-ostream& operator<<(ostream& os, const MediaFile& file);
+} // namespace master
+} // namespace manager
 
-}; }; // namespace master // namespace manager
+inline std::ostream& operator<<(std::ostream& os,
+    const manager::master::MediaFile& file) {
+  return os << file.ToString();
+}
 
 #endif /*MEDIA_FILE_H_*/

@@ -42,29 +42,32 @@ static const int kDefaultBufferSize = 1 << 18;
 
 // (2*K)    027 - key
 // (2*K + 1)027 - inter
-static const char kVP6_KEYFRAME[] = {
+static const uint8 kVP6_KEYFRAME[] = {
   0x14,   0x00,   0x78,   0x46,   0x02,   0x02,   0x02,   0x02,
   0x3f,   0x6a,   0xf9,   0x1f,   0x00,   0x08,   0x9f,   0x40,
   0x10,   0x9f,   0xe6,   0x8f,   0x7f,   0xeb,   0x03,
   0x7f,   0x57,   0x36,   0x00,   0x00,
 };
 
-static const char kVP6_INTRAFRAME[] = {
+static const uint8 kVP6_INTRAFRAME[] = {
   0x24,   0x00,   0xf8,   0x40,   0x00,   0x00,   0x05,   0x10,   0x00,
 };
 uint32 next_video_time_ = 27;
 int32 next_video_id_ = 0;
 
 void OutputBlankVideo(streaming::FlvFileWriter& writer) {
-  scoped_ref<streaming::FlvTag> vp6(new streaming::FlvTag(
-      0, streaming::kDefaultFlavourMask,
-      next_video_time_, streaming::FLV_FRAMETYPE_VIDEO));
+  scoped_ref<streaming::FlvTag> blank = new streaming::FlvTag(
+      0, streaming::kDefaultFlavourMask, 0, streaming::FLV_FRAMETYPE_VIDEO);
+  io::MemoryStream data;
   if ( (next_video_id_ % 2) == 0 ) {
-    vp6->mutable_video_body().append_data(kVP6_KEYFRAME, sizeof(kVP6_KEYFRAME));
+    data.Write(kVP6_KEYFRAME, sizeof(kVP6_KEYFRAME));
   } else {
-    vp6->mutable_video_body().append_data(kVP6_INTRAFRAME, sizeof(kVP6_INTRAFRAME));
+    data.Write(kVP6_INTRAFRAME, sizeof(kVP6_INTRAFRAME));
   }
-  writer.Write(vp6, -1);
+  streaming::TagReadStatus result =
+      blank->mutable_video_body().Decode(data, data.Size());
+  CHECK_EQ(result, streaming::READ_OK);
+  writer.Write(blank, next_video_time_);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -117,13 +120,17 @@ void OutputMp3Tag(const streaming::Mp3FrameTag* tag,
     next_video_id_++;
   }
 
-  io::MemoryStream frame;
-  io::NumStreamer::WriteByte(&frame, GetMp3HeaderByte(tag));
-  frame.AppendStreamNonDestructive(&tag->data());
+  io::MemoryStream data;
+  io::NumStreamer::WriteByte(&data, GetMp3HeaderByte(tag));
+  data.AppendStreamNonDestructive(&tag->data());
 
-  writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
-      0, streaming::kDefaultFlavourMask, tag->timestamp_ms(),
-      new streaming::FlvTag::Audio(frame))), -1);
+  scoped_ref<streaming::FlvTag> frame(new streaming::FlvTag(
+        0, streaming::kDefaultFlavourMask, 0, streaming::FLV_FRAMETYPE_AUDIO));
+  streaming::TagReadStatus result =
+      frame->mutable_audio_body().Decode(data, data.Size());
+  CHECK_EQ(result, streaming::READ_OK);
+
+  writer.Write(frame, tag->timestamp_ms());
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -166,8 +173,7 @@ void OutputAacHeadings(const streaming::AacFrameTag* tag,
       new streaming::FlvTag::Metadata(streaming::kOnMetaData, values))), -1);
 
   io::MemoryStream frame;
-  uint8 header = GetAacHeaderByte(tag);
-  io::NumStreamer::WriteByte(&frame, header);
+  io::NumStreamer::WriteByte(&frame, GetAacHeaderByte(tag));
   io::NumStreamer::WriteByte(&frame, 0x00);  // header
 
   // AAC Main           : start from  binary 00001 0000 0000 000
@@ -201,9 +207,13 @@ void OutputAacHeadings(const streaming::AacFrameTag* tag,
   }
   io::NumStreamer::WriteUInt16(&frame, pattern, common::BIGENDIAN);
 
-  writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
-      0, streaming::kDefaultFlavourMask, 0,
-      new streaming::FlvTag::Audio(frame))), -1);
+  scoped_ref<streaming::FlvTag> flv_tag(new streaming::FlvTag(
+        0, streaming::kDefaultFlavourMask, 0, streaming::FLV_FRAMETYPE_AUDIO));
+  streaming::TagReadStatus result =
+      flv_tag->mutable_audio_body().Decode(frame, frame.Size());
+  CHECK_EQ(result, streaming::READ_OK);
+
+  writer.Write(flv_tag, tag->timestamp_ms());
 }
 
 void OutputAacTag(const streaming::AacFrameTag* tag,
@@ -219,9 +229,13 @@ void OutputAacTag(const streaming::AacFrameTag* tag,
   io::NumStreamer::WriteByte(&frame, 0x01);  // raw data
   frame.AppendStreamNonDestructive(&tag->data());
 
-  writer.Write(*scoped_ref<streaming::FlvTag>(new streaming::FlvTag(
-      0, streaming::kDefaultFlavourMask, tag->timestamp_ms(),
-      new streaming::FlvTag::Audio(frame))), -1);
+  scoped_ref<streaming::FlvTag> flv_tag(new streaming::FlvTag(
+        0, streaming::kDefaultFlavourMask, 0, streaming::FLV_FRAMETYPE_AUDIO));
+  streaming::TagReadStatus result =
+      flv_tag->mutable_audio_body().Decode(frame, frame.Size());
+  CHECK_EQ(result, streaming::READ_OK);
+
+  writer.Write(flv_tag, tag->timestamp_ms());
 }
 
 //////////////////////////////////////////////////////////////////////

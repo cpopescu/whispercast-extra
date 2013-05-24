@@ -57,6 +57,7 @@ class ExtraElementLibrary : public ElementLibrary {
       const string& element_params,
       const streaming::Request* req,
       const CreationObjectParams& params,
+      bool is_temporary_template,
       // Output:
       vector<string>* needed_policies,
       string* error_description);
@@ -87,6 +88,7 @@ class ExtraElementLibrary : public ElementLibrary {
                                const streaming::Request* req,
                                const CreationObjectParams& params,
                                vector<string>* needed_policies,
+                               bool is_temporary_template,
                                string* error);
   streaming::Element*
   CreateTimeRangeElement(const string& name,
@@ -94,6 +96,15 @@ class ExtraElementLibrary : public ElementLibrary {
                          const streaming::Request* req,
                          const CreationObjectParams& params,
                          vector<string>* needed_policies,
+                         bool is_temporary_template,
+                         string* error);
+  streaming::Element*
+  CreateTimeShiftElement(const string& name,
+                         const TimeShiftElementSpec& spec,
+                         const streaming::Request* req,
+                         const CreationObjectParams& params,
+                         vector<string>* needed_policies,
+                         bool is_temporary_template,
                          string* error);
   streaming::Element*
   CreateFlavouringElement(const string& name,
@@ -101,6 +112,7 @@ class ExtraElementLibrary : public ElementLibrary {
                           const streaming::Request* req,
                           const CreationObjectParams& params,
                           vector<string>* needed_policies,
+                          bool is_temporary_template,
                           string* error);
   streaming::Policy*
   CreateSchedulePlaylistPolicy(const string& name,

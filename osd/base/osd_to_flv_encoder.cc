@@ -23,62 +23,59 @@ scoped_ref<FlvTag> OsdToFlvEncoder::Encode(const OsdTag& osd) {
 
   // encode fparams rpc::Object into a Json string
   //
-  io::MemoryStream tmp;
-  rpc::JsonEncoder encoder(tmp);
+  string fparams;
   switch ( osd.ftype() ) {
     case streaming::OsdTag::CREATE_OVERLAY:
-      encoder.Encode(
-          static_cast<const CreateOverlayParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const CreateOverlayParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::DESTROY_OVERLAY:
-      encoder.Encode(
-          static_cast<const DestroyOverlayParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const DestroyOverlayParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::SHOW_OVERLAYS:
-      encoder.Encode(
-          static_cast<const ShowOverlaysParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const ShowOverlaysParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::CREATE_CRAWLER:
-      encoder.Encode(
-          static_cast<const CreateCrawlerParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const CreateCrawlerParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::DESTROY_CRAWLER:
-      encoder.Encode(
-          static_cast<const DestroyCrawlerParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const DestroyCrawlerParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::SHOW_CRAWLERS:
-      encoder.Encode(
-          static_cast<const ShowCrawlersParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const ShowCrawlersParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::ADD_CRAWLER_ITEM:
-      encoder.Encode(
-          static_cast<const AddCrawlerItemParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const AddCrawlerItemParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::REMOVE_CRAWLER_ITEM:
-      encoder.Encode(
-          static_cast<const RemoveCrawlerItemParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const RemoveCrawlerItemParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::SET_PICTURE_IN_PICTURE:
-      encoder.Encode(
-          static_cast<const SetPictureInPictureParams &>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const SetPictureInPictureParams &>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::SET_CLICK_URL:
-      encoder.Encode(
-          static_cast<const SetClickUrlParams &>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const SetClickUrlParams &>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::CREATE_MOVIE:
-      encoder.Encode(
-          static_cast<const CreateMovieParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const CreateMovieParams&>(osd.fparams()), &fparams);
       break;
     case streaming::OsdTag::DESTROY_MOVIE:
-      encoder.Encode(
-          static_cast<const DestroyMovieParams&>(osd.fparams()));
+      rpc::JsonEncoder::EncodeToString(
+          static_cast<const DestroyMovieParams&>(osd.fparams()), &fparams);
       break;
     default:
       LOG_FATAL << "Unknown OSD function type: " << osd.ftype();
   };
-  string fparams;
-  tmp.ReadString(&fparams);
 
   // compose Flv Metadata tag
   //

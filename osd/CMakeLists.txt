@@ -80,8 +80,8 @@ ADD_DEPENDENCIES (osd_library
   whisper_streamlib)
 
 TARGET_LINK_LIBRARIES(osd_library
-  ${whisperlib_LIBRARY}
-  ${whisperstreamlib_LIBRARY})
+  whisper_lib
+  whisper_streamlib)
 
 INSTALL(TARGETS osd_library
   DESTINATION lib)

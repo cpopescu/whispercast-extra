@@ -4,7 +4,6 @@
 #include <string>
 #include "net/base/address.h"
 #include "net/rpc/lib/types/rpc_all_types.h"
-#include "net/rpc/lib/codec/rpc_codec_id.h"
 #include "constants.h"
 
 namespace manager {

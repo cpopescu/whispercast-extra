@@ -38,18 +38,23 @@ Type FeatureDetectorElementSpec {
 //////////
 
 Type TimeRangeElementSpec {
-  string home_dir_;             // Directory to be exported (under the server's
-                                // media storage directory)
-  string root_media_path_;      // we prepend this path to access the files
-                                // in our internal structures
-  string file_prefix_;          // we consider files w/ this prefix in home_dir
-                                // they should be in the 'buildup' form
-                                // produced  by whisperproc
-  optional bool utc_requests_;  // if true, we consider the times we receive
-                                // as UTC (default false). The timestamps
-                                // are always UTC
+  string internal_media_path_;    // path through an aio file element
+  int update_media_interval_sec_; // update media list from time to time
 }
 
+//////////
+
+Type TimeShiftElementSpec {
+  // this media is buffered. This element is a dead-end for the requests and
+  // it delivers media from this path;
+  string media_path_;
+  // directory where media files are saved
+  string save_dir_;
+  // time range element serving saved files
+  string time_range_element_on_save_dir_;
+  // the element buffers these many ms 
+  int buffer_size_ms_;
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -69,8 +74,13 @@ Type TimeDelayPolicySpec {
 //////////////////////////////////////////////////////////////////////
 
 Type HttpAuthorizerSpec {
+  // e.g. "http://localhost:8180/whispercast/authorize?action=${ACTION}&source=${RES}&user=${USER}&password=${PASSWD}"
+  //array<string> urls_format_;
+  
   array<string> servers_;
+  bool use_https_;
   string query_path_format_;
+  
   array<ExtraHeaders> http_headers_;
   array<string> body_lines_;
   bool include_auth_headers_;
@@ -200,32 +210,37 @@ Type LogicPlaylistPolicySpec {
 ////////////////////
 
 Service ExtraLibraryService {
-  MediaOperationErrorData AddFeatureDetectorElementSpec(
+  MediaOpResult AddFeatureDetectorElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       FeatureDetectorElementSpec spec);
-  MediaOperationErrorData AddTimeRangeElementSpec(
+  MediaOpResult AddTimeRangeElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       TimeRangeElementSpec spec);
-  MediaOperationErrorData AddFlavouringElementSpec(
+  MediaOpResult AddTimeShiftElementSpec(
+      string name,
+      bool is_global,
+      bool disable_rpc,
+      TimeShiftElementSpec spec);
+  MediaOpResult AddFlavouringElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       FlavouringElementSpec spec);
-  MediaOperationErrorData AddTimeDelayPolicySpec(
+  MediaOpResult AddTimeDelayPolicySpec(
       string name,
       TimeDelayPolicySpec spec);
-  MediaOperationErrorData AddSchedulePlaylistPolicySpec(
+  MediaOpResult AddSchedulePlaylistPolicySpec(
       string name,
       SchedulePlaylistPolicySpec spec);
-  MediaOperationErrorData AddLogicPlaylistPolicySpec(
+  MediaOpResult AddLogicPlaylistPolicySpec(
       string name,
       LogicPlaylistPolicySpec spec);
 
-  MediaOperationErrorData AddHttpAuthorizerSpec(
+  MediaOpResult AddHttpAuthorizerSpec(
       string name,
       HttpAuthorizerSpec spec);
 
@@ -233,7 +248,7 @@ Service ExtraLibraryService {
 
 Service LogicPlaylistPolicyService {
   LogicPlaylistSpec GetPlaylist();
-  MediaOperationErrorData SetPlaylist(LogicPlaylistSpec spec);
+  MediaOpResult SetPlaylist(LogicPlaylistSpec spec);
   string GetCurrentState();
   bool SetCurrentState(string state_name);
 }
@@ -242,7 +257,7 @@ Service SchedulePlaylistPolicyService {
   // returns an array of all items in playlist + default media
   SchedulePlaylistPolicySpec GetPlaylist();
   // clears playlist, sets new items + default media
-  MediaOperationErrorData SetPlaylist(SetSchedulePlaylistPolicySpec playlist);
+  MediaOpResult SetPlaylist(SetSchedulePlaylistPolicySpec playlist);
 
   // return default media name
   string GetDefaultMedia();
@@ -268,27 +283,27 @@ Service TimeDelayPolicyService {
 }
 
 Service TimeRangeElementService {
-  // Returns the <startdata>/<enddate> of the range
+  // Returns all the available time spans
+  array<TimeSpan> GetAllTimeSpans();
+  // Returns the <startdate>/<enddate> of the range
   string GetRange(string range_name);
   // Returns all the ranges we know about (list of names)
   array<string> GetAllRangeNames();
-  // Sets / adds / removes arange. Set an empty range_dates string
-  // to remove.
-  // Returns true if the range was set / added or false if it was
-  // removed / error
-  bool SetRange(string range_name, string range_dates);
+  // Add/Set/Delete a timerange alias.
+  // Use an empty range_dates to delete the range_name.
+  MediaOpResult SetRange(string range_name, string range_dates);
 }
 
 Service FlavouringElementService {
   // add a flavour.
   // returns: true, success.
   //          false, the new flavour overlaps with an existing flavour.
-  MediaOperationErrorData AddFlavour(FlavouringSpec spec);
+  MediaOpResult AddFlavour(FlavouringSpec spec);
   
   // delete a flavour.
   // returns: true, success.
   //          false, flavour not found.
-  MediaOperationErrorData DelFlavour(int flavour_mask);
+  MediaOpResult DelFlavour(int flavour_mask);
   
   // returns all flavours
   array<FlavouringSpec> GetFlavours();
@@ -297,5 +312,5 @@ Service FlavouringElementService {
   // returns: true, success.
   //          false, the new flavours are not exclusive. Some new flavours mask
   //          overlap.
-  MediaOperationErrorData SetFlavours(array<FlavouringSpec> flavours);
+  MediaOpResult SetFlavours(array<FlavouringSpec> flavours);
 }

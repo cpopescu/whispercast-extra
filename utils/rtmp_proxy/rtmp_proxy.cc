@@ -15,8 +15,8 @@
 #include <whisperstreamlib/rtmp/objects/amf/amf0_util.h>
 #include <whisperstreamlib/rtmp/objects/amf/amf_util.h>
 
-#include <whisperstreamlib/rtmp/rtmp_protocol_data.h>
 #include <whisperstreamlib/rtmp/rtmp_coder.h>
+#include <whisperstreamlib/rtmp/rtmp_util.h>
 #include <whisperstreamlib/rtmp/events/rtmp_event.h>
 #include <whisperstreamlib/rtmp/events/rtmp_event_notify.h>
 
@@ -47,7 +47,7 @@ struct RtmpDecoder {
       : prefix_(prefix),
         handshaked_(false),
         decode_buffer_(),
-        coder_(&protocol_data_, 4 << 20),
+        coder_(4 << 20),
         error_encountered_(false) {
   }
   void DecodeMore(io::MemoryStream* buffer);
@@ -56,7 +56,6 @@ struct RtmpDecoder {
   const char* prefix_;
   bool handshaked_;
   io::MemoryStream decode_buffer_;
-  rtmp::ProtocolData protocol_data_;
   rtmp::Coder coder_;
   bool error_encountered_;
 };
@@ -108,57 +107,13 @@ void RtmpDecoder::DecodeMore(io::MemoryStream* buffer) {
     }
     CHECK_NOT_NULL(event.get());
     printf("==========================================================\n");
-    printf("%sEVENT: %s\n", prefix_, event->header()->ToString().c_str());
+    printf("%sEVENT: %s\n", prefix_, event->header().ToString().c_str());
     printf("%s %s\n",prefix_, event->ToString().c_str());
     fflush(stdout);
-    if ( event->event_type() == rtmp::EVENT_CHUNK_SIZE ) {
-      const int chunk_size =
-          static_cast<rtmp::EventChunkSize*>(event.get())->chunk_size();
-      protocol_data_.set_read_chunk_size(chunk_size);
-    }
-    bool is_metadata = false;
-    if ( event->event_type() == rtmp::EVENT_NOTIFY ) {
-      rtmp::EventNotify* ev = static_cast<rtmp::EventNotify*>(event.get());
-      is_metadata = (ev->name().value() == "onMetaData");
-    }
-    if ( event->event_type() == rtmp::EVENT_MEDIA_DATA ) {
-      rtmp::ProtocolData protocol2;
-      rtmp::BulkDataEvent* bd  =
-          static_cast< rtmp::BulkDataEvent* >(event.get());
-      rtmp::AmfUtil::ReadStatus err2;
-      while ( !bd->data().IsEmpty() ) {
-        rtmp::Header* const header = new rtmp::Header(&protocol2);
-        err2 = header->ReadMediaFromMemoryStream(bd->mutable_data(),
-                                                 rtmp::AmfUtil::AMF0_VERSION);
-        if ( err2 != rtmp::AmfUtil::READ_OK ) {
-          printf("%s Error decoding header in media buffer w/ %d left\n",
-                 prefix_,
-                 bd->data().Size());
-          delete header;
-        } else {
-          scoped_ref<rtmp::Event> event2 = rtmp::Coder::CreateEvent(header);
-          if ( event2.get() == NULL ) {
-            printf("%s Error creating event from header: %s\n",
-                   prefix_,
-                   header->ToString().c_str());
-            delete header;
-          } else {
-            err2 = event2->ReadFromMemoryStream(bd->mutable_data(),
-                                                rtmp::AmfUtil::AMF0_VERSION);
-            if ( err2 == rtmp::AmfUtil::READ_OK ) {
-            const int32 len = io::NumStreamer::ReadInt32(bd->mutable_data(),
-                                                         common::BIGENDIAN);
-            printf("     INSIDE-EVENT: len: %d -- %s\n%s\n",
-                   len, event2->header()->ToString().c_str(),
-                   event2->ToString().c_str());
-            } else {
-              printf("%s Error decoding event after header: %s\n",
-                     prefix_,
-                     header->ToString().c_str());
-            }
-          }
-        }
-      }
+    vector<scoped_ref<streaming::FlvTag> > tags;
+    rtmp::ExtractFlvTags(*event.get(), event->header().timestamp_ms(), &tags);
+    for ( uint32 i = 0; i < tags.size(); i++ ) {
+       printf("     INSIDE-TAG: %s\n", tags[i]->ToString().c_str());
     }
     fflush(stdout);
   }

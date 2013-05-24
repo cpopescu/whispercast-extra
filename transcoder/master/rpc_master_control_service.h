@@ -26,19 +26,17 @@ public:
   /**********************************************************************/
   /*              ServiceInvokerSlaveManager methods                 */
   /**********************************************************************/
-  virtual void AddFile(rpc::CallContext<int64>* call,
-                       const string& rpc_file_path,
-                       const string& process_cmd,
+  virtual void AddFile(rpc::CallContext<rpc::Void>* call,
+                       const string& file_id,
+                       const string& file_path,
                        const map<string, string>& process_params);
+  virtual void DelFile(rpc::CallContext<rpc::Void>* call,
+                       const string& file_id,
+                       bool erase_original,
+                       bool erase_output);
   virtual void GetFileState(rpc::CallContext<FileStateControl>* call,
-                            int64 file_id);
+                            const string& file_id);
   virtual void ListFiles(rpc::CallContext<vector<FileStateControl> >* call);
-  virtual void DebugDumpFiles(rpc::CallContext<vector<FileStateControl> >* call);
-  virtual void Complete(rpc::CallContext<rpc::Void>* call, int64 file_id);
-  virtual void Delete(rpc::CallContext<rpc::Void>* call,
-                      int64 file_id,
-                      bool erase_master_original, bool erase_slave_output);
-  virtual void Retry(rpc::CallContext<string>* call, int64 file_id);
 
 private:
   net::Selector & selector_;

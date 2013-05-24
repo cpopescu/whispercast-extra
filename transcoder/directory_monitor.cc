@@ -52,9 +52,10 @@ bool DirectoryMonitor::Scan(std::set<std::string>* existing,
 bool DirectoryMonitor::ScanNow(const std::string& path,
                                std::set<std::string>& out, re::RE* regexp) {
   std::vector<std::string> filenames;
-  bool success = io::RecursiveListing(path, &filenames, regexp);
-  if(!success) {
-    LOG_ERROR << "ioutil::RecursiveListing failed: "
+  if ( !io::DirList(path,
+                    io::LIST_FILES | io::LIST_SYMLINKS | io::LIST_RECURSIVE,
+                    regexp, &filenames) ) {
+    LOG_ERROR << "ioutil::DirList failed: "
               << GetLastSystemErrorDescription();
     return false;
   }

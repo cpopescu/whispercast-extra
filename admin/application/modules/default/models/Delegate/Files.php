@@ -107,7 +107,7 @@ class Model_Delegate_Files extends Model_Delegate_Streams {
                   // TODO: What should these be in case of multiple outputs for the same file ?
                   $name = basename($status->filename_out_);
                   $prefix = Whispercast::getInterface($this->_model->server_id)->getElementPrefix();
-                  $path = '/'.$prefix.'_files/'.$name;
+                  $path = $prefix.'_files/'.$name;
                   $export = '/files/'.$name;
                 }
 

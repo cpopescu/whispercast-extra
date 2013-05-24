@@ -28,6 +28,3 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 project (whispersoft)
-
-WHISPER_TEST(multi_process_test multi_process_test.cc
-  media_manager_common "media_manager_common")

@@ -14,8 +14,7 @@ namespace streaming {
 //
 class OsdEncoderElement : public FilteringElement {
  public:
-  OsdEncoderElement(const char* name,
-                    const char* id,
+  OsdEncoderElement(const string& name,
                     ElementMapper* mapper,
                     net::Selector* selector);
   virtual ~OsdEncoderElement();
@@ -31,7 +30,7 @@ class OsdEncoderElement : public FilteringElement {
   //
   // FilteringElement methods
   //
-  virtual FilteringCallbackData* CreateCallbackData(const char* media_name,
+  virtual FilteringCallbackData* CreateCallbackData(const string& media_name,
                                                     Request* req);
 
  private:

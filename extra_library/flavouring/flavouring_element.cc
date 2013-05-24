@@ -24,10 +24,9 @@ bool FlavouringElement::RequestStruct::Register(FlavourStruct* fs,
   CHECK(reg_flavour != 0);
 
   const string up_media = strutil::JoinPaths(fs->media_, media);
-  Request* up_req = new Request(*req_);
-  up_req->mutable_caps()->flavour_mask_ = kDefaultFlavourMask;
+
   URL up_url("http://x/" + up_media);
-  up_req->SetFromUrl(up_url);
+  Request* up_req = new Request(up_url);
 
   SourceReg* sr = new SourceReg(fs, up_req, NULL);
   ProcessingCallback* up_callback = NewPermanentCallback(
@@ -104,14 +103,13 @@ void FlavouringElement::RequestStruct::ProcessTag(SourceReg* sr,
 
 FlavouringElement::FlavouringElement(
     const string& my_name,
-    const string& id,
     ElementMapper* mapper,
     net::Selector* selector,
     const string& rpc_path,
     rpc::HttpServer* rpc_server,
     io::StateKeepUser* global_state_keeper,
     const vector< pair<string, uint32> >& flav)
-    : Element(kElementClassName, my_name.c_str(), id.c_str(), mapper),
+    : Element(kElementClassName, my_name, mapper),
       ServiceInvokerFlavouringElementService(
           ServiceInvokerFlavouringElementService::GetClassName()),
       selector_(selector),
@@ -255,13 +253,8 @@ bool FlavouringElement::Initialize() {
   return success;
 }
 
-bool FlavouringElement::AddRequest(const char* media,
-                                   Request* req,
-                                   ProcessingCallback* callback) {
-  pair<string, string> media_pair = strutil::SplitFirst(media, '/');
-  if ( media_pair.first != name() ) {
-    return false;
-  }
+bool FlavouringElement::AddRequest(const string& media,
+    Request* req, ProcessingCallback* callback) {
   uint32 flavour_mask = 0;
   RequestStruct* rs = new RequestStruct(mapper_, req, callback, name());
   for ( FlavourMap::iterator it = flavours_.begin();
@@ -274,8 +267,8 @@ bool FlavouringElement::AddRequest(const char* media,
     if ( crt_flavour == 0 ) {
       continue; // req incompatible with current fs
     }
-    if ( !rs->Register(fs, media_pair.second) ) {
-      ILOG_ERROR << "Cannot register to media: [" << media_pair.second << "]";
+    if ( !rs->Register(fs, media) ) {
+      ILOG_ERROR << "Cannot register to media: [" << media << "]";
       continue;
     }
     flavour_mask |= crt_flavour;
@@ -316,64 +309,34 @@ void FlavouringElement::RemoveRequest(streaming::Request* req) {
   }
 }
 
-bool FlavouringElement::HasMedia(const char* media, Capabilities* out) {
-  pair<string, string> media_pair = strutil::SplitFirst(media, '/');
-  if ( media_pair.first != name() ) {
-    return false;
-  }
-  streaming::Capabilities caps(Tag::kAnyType, kAllFlavours);
-  uint32 flavour_mask = 0;
+bool FlavouringElement::HasMedia(const string& media) {
   for ( FlavourMap::const_iterator it = flavours_.begin();
         it != flavours_.end(); ++it ) {
     const FlavourStruct* fs = it->second;
-    const string crt = strutil::JoinMedia(fs->media_, media_pair.second);
-    streaming::Capabilities crt_caps;
-    if ( !mapper_->HasMedia(crt.c_str(), &crt_caps) ) {
+    const string crt = strutil::JoinMedia(fs->media_, media);
+    if ( !mapper_->HasMedia(crt) ) {
       return false;
     }
-    caps.IntersectCaps(crt_caps);
-    caps.flavour_mask_ = kAllFlavours;
-
-    flavour_mask |= crt_caps.flavour_mask_;
   }
-  caps.flavour_mask_ = flavour_mask;
-  *out = caps;
   return true;
 }
 
-void FlavouringElement::ListMedia(const char* media_dir,
-                                  ElementDescriptions* media) {
-  pair<string, string> media_pair = strutil::SplitFirst(media_dir, '/');
-  if ( media_pair.first != name() ) {
-    return;
-  }
-  hash_map<string, streaming::Capabilities> found_media;
+void FlavouringElement::ListMedia(const string& media_dir,
+    vector<string>* out) {
+  set<string> found_media;
   for ( FlavourMap::const_iterator it = flavours_.begin();
         it != flavours_.end(); ++it ) {
     const FlavourStruct* fs = it->second;
-    const string crt = strutil::JoinMedia(fs->media_, media_pair.second);
-    ElementDescriptions m;
-    mapper_->ListMedia(crt.c_str(), &m);
+    const string crt = strutil::JoinMedia(fs->media_, media_dir);
+    vector<string> m;
+    mapper_->ListMedia(crt, &m);
 
     for ( int j = 0; j < m.size(); ++j ) {
-      const string crt_name = name() + "/" + m[j].first.substr(
-          fs->media_.size());
-      hash_map<string, streaming::Capabilities>::iterator
-          it = found_media.find(crt_name);
-      if ( it == found_media.end() ) {
-        found_media.insert(make_pair(crt_name, m[j].second));
-      } else {
-        const uint32 sum_flavours = fs->flavour_mask_ |
-                                    it->second.flavour_mask_;
-        it->second.IntersectCaps(m[j].second);
-        it->second.flavour_mask_ = sum_flavours;
-      }
+      const string crt_name = strutil::JoinMedia(name(), m[j]);
+      found_media.insert(crt_name);
     }
   }
-  for ( hash_map<string, streaming::Capabilities>::const_iterator
-            it = found_media.begin(); it != found_media.end(); ++it ) {
-    media->push_back(*it);
-  }
+  std::copy(found_media.begin(), found_media.end(), std::back_inserter(*out));
 }
 bool FlavouringElement::DescribeMedia(const string& media,
                                       MediaInfoCallback* callback) {
@@ -400,24 +363,24 @@ string FlavouringElement::GetElementConfig() {
 }
 
 void FlavouringElement::AddFlavour(
-    rpc::CallContext< MediaOperationErrorData >* call,
+    rpc::CallContext< MediaOpResult >* call,
     const FlavouringSpec& spec) {
   string err;
   if ( !AddFlav(spec.flavour_mask_.get(), spec.media_prefix_.get(), &err) ) {
-    call->Complete(MediaOperationErrorData(1, err));
+    call->Complete(MediaOpResult(false, err));
     return;
   }
-  call->Complete(MediaOperationErrorData(0, ""));
+  call->Complete(MediaOpResult(true, ""));
 }
 void FlavouringElement::DelFlavour(
-    rpc::CallContext< MediaOperationErrorData >* call,
+    rpc::CallContext< MediaOpResult >* call,
     int32 flavour_mask) {
   string err;
   if ( !DelFlav(flavour_mask, &err) ) {
-    call->Complete(MediaOperationErrorData(1,err));
+    call->Complete(MediaOpResult(false, err));
     return;
   }
-  call->Complete(MediaOperationErrorData(0, ""));
+  call->Complete(MediaOpResult(true, ""));
 }
 void FlavouringElement::GetFlavours(
     rpc::CallContext< vector< FlavouringSpec > >* call) {
@@ -430,7 +393,7 @@ void FlavouringElement::GetFlavours(
   call->Complete(result);
 }
 void FlavouringElement::SetFlavours(
-    rpc::CallContext< MediaOperationErrorData >* call,
+    rpc::CallContext< MediaOpResult >* call,
     const vector<FlavouringSpec>& new_flav) {
   // check sanity of the new_flav
   uint32 all_flav = 0;
@@ -438,7 +401,7 @@ void FlavouringElement::SetFlavours(
     if ( (all_flav & new_flav[i].flavour_mask_.get()) != 0 ) {
       string err = "Overlapping flavour in: " + strutil::ToString(new_flav);
       ILOG_ERROR << err;
-      call->Complete(MediaOperationErrorData(1,err));
+      call->Complete(MediaOpResult(false, err));
       return;
     }
     all_flav |= new_flav[i].flavour_mask_.get();
@@ -460,7 +423,7 @@ void FlavouringElement::SetFlavours(
     CHECK(success) << " Curious thing, sanity check did pass";
   }
 
-  call->Complete(MediaOperationErrorData(0, ""));
+  call->Complete(MediaOpResult(true, ""));
 }
 
 }

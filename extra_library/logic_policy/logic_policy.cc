@@ -8,7 +8,7 @@ namespace streaming {
 const char LogicPlaylistPolicy::kPolicyClassName[] =
     "logic_playlist_policy";
 
-LogicPlaylistPolicy::LogicPlaylistPolicy(const char* name,
+LogicPlaylistPolicy::LogicPlaylistPolicy(const string& name,
                                          PolicyDrivenElement* element,
                                          ElementMapper* mapper,
                                          net::Selector* selector,
@@ -166,8 +166,7 @@ bool LogicPlaylistPolicy::Initialize() {
     streaming::Request* req = new streaming::Request(crt_url);
     streaming::ProcessingCallback* process_tag_callback = NewPermanentCallback(
         this, &LogicPlaylistPolicy::ProcessTag, i);
-    req->mutable_info()->internal_id_ = element_->id();
-    if ( !mapper_->AddRequest(req->info().path_.c_str(),
+    if ( !mapper_->AddRequest(req->info().path_,
                               req,
                               process_tag_callback) ) {
       LOG_ERROR << name() << ": Failed to register to media_name: "
@@ -423,10 +422,10 @@ void LogicPlaylistPolicy::GetPlaylist(
 }
 
 void LogicPlaylistPolicy::SetPlaylist(
-    rpc::CallContext<MediaOperationErrorData>* call,
+    rpc::CallContext<MediaOpResult>* call,
     const LogicPlaylistSpec& spec) {
   SetPlaylist(spec);
-  call->Complete(MediaOperationErrorData(0, ""));
+  call->Complete(MediaOpResult(true, ""));
 }
 
 void LogicPlaylistPolicy::GetCurrentState(

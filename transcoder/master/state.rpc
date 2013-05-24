@@ -4,14 +4,9 @@ Verbatim cc {
 }
 
 Type StateMediaFile {
-  bigint id_;
+  string id_;
   string path_;
-  string process_cmd_;
   map<string, string> process_params_;
   string state_;
   string error_;
-  bigint ts_state_change_;
-  FileSlaveOutput output_;
-  FileTranscodingStatus transcoding_status_;
-  bool complete_reported_;
 }

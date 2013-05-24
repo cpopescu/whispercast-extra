@@ -70,32 +70,32 @@ Service OsdLibraryService {
   //
   // Functions for adding specifications for different element types
   //
-  MediaOperationErrorData AddOsdDecoderElementSpec(
+  MediaOpResult AddOsdDecoderElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       OsdDecoderElementSpec spec);
-  MediaOperationErrorData AddOsdEncoderElementSpec(
+  MediaOpResult AddOsdEncoderElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       OsdEncoderElementSpec spec);
-  MediaOperationErrorData AddOsdInjectorElementSpec(
+  MediaOpResult AddOsdInjectorElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       OsdInjectorElementSpec spec);
-  MediaOperationErrorData AddOsdAssociatorElementSpec(
+  MediaOpResult AddOsdAssociatorElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       OsdAssociatorElementSpec spec);
-  MediaOperationErrorData AddOsdStateKeeperElementSpec(
+  MediaOpResult AddOsdStateKeeperElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,
       OsdStateKeeperElementSpec spec);
-  MediaOperationErrorData AddOsdAssociatorClientElementSpec(
+  MediaOpResult AddOsdAssociatorClientElementSpec(
       string name,
       bool is_global,
       bool disable_rpc,

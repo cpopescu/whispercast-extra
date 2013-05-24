@@ -881,9 +881,9 @@ protected:
         }
 
         // Decode the MediaStatEvent inside the record
-        rpc::JsonDecoder decoder(s);
+        rpc::JsonDecoder decoder;
         MediaStatEvent stat;
-        const rpc::DECODE_RESULT decode_result = decoder.Decode(stat);
+        const rpc::DECODE_RESULT decode_result = decoder.Decode(s, &stat);
         if ( decode_result != rpc::DECODE_RESULT_SUCCESS ) {
           LOG_ERROR << "Failed to decode MediaStatEvent"
                        ", result: " << decode_result << " ignoring..";
